@@ -58,7 +58,7 @@ Ces règles priment sur les consignes génériques de Boost.
 
 - Chaque pull request de code inscrit, dans le même lot, chacun de ses changements sous `## [Unreleased]` de `CHANGELOG.md` : fonctionnalité, outillage, CI, dépendances, consignes d'agent, suppression. Une ligne par changement, rangée sous `### Added`, `### Changed`, `### Removed` ou `### Fixed`. Format Keep a Changelog, en anglais.
 - Une pull request de documentation seule (proposition ou archive OpenSpec) n'y touche pas.
-- Seul le mainteneur publie une version : il renomme `## [Unreleased]` en `## [X.Y.Z] - YYYY-MM-DD`, met `X.Y.Z` dans `version.txt`, fusionne, puis pose le tag `vX.Y.Z` sur `main`. `tests/Feature/VersionFileTest.php` exige la section de toute version autre que `0.0.0`.
+- Une version se publie seulement par le skill `/release`, que le mainteneur lance. `tests/Feature/VersionFileTest.php` exige la section de toute version autre que `0.0.0`.
 
 ## Langue
 
