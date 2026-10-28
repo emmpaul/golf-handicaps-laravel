@@ -4,25 +4,25 @@ Plan du passage de l'application Next.js actuelle à une application Laravel 13 
 
 ## Décisions
 
-| #   | Sujet                 | Décision                                                                                                                                                                                         |
-| --- | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| 1   | Repo                  | Nouveau repo (`golf-handicaps-laravel`), bootstrappé selon SKELETON. Les specs OpenSpec actuelles servent de référence fonctionnelle. L'ancien repo reste déployable jusqu'au cutover, puis il est archivé. |
-| 2   | OCR                   | **Supprimé.** Plus de tesseract, sharp, détection de panneau, homographie ni templates. La photo entière part à l'IA via le **Laravel AI SDK**, qui rend le brouillon en sortie structurée.           |
-| 3   | Flux d'import         | Photo → job de file → IA → écran de correction (autosave conservé). L'écran `/recadrer`, les coins, `corners_source` et `ai_cells` disparaissent.                                               |
-| 4   | Budget IA             | Plafond mensuel gardé, défaut **5 $** (`AI_MONTHLY_BUDGET_USD`), table `ai_usage` gardée. Au-delà du plafond, l'import échoue avec « Budget IA du mois atteint » et la carte se saisit à la main. Modèle configurable par env. |
-| 5   | Auth                  | Code d'accès partagé (`APP_PASSCODE`) + session Laravel, même UX `/login`. Pas de comptes.                                                                                                       |
-| 6   | Identifiants          | UUID partout, comme dans le squelette. L'importeur génère les UUID et garde la correspondance en mémoire. Les anciennes URL (`/rounds/12`) cassent, ce qui est accepté.                          |
-| 7   | Front                 | Port de l'UI actuelle : thème scoreboard, tokens, composants base-ui/shadcn, recharts. Pages adaptées à Inertia (props serveur, `useForm`, Wayfinder). Le starter kit est nettoyé.              |
-| 8   | Tests                 | **Pas de Playwright, ni de tests navigateur.** Pest pour le back, Vitest pour le front. La passe navigateur de fin d'apply (`browser-use`) reste un outil d'agent, pas une suite de tests.     |
-| 9   | Photos                | Disque Laravel local sur un volume nommé. Conversion WebP via `intervention/image` (driver Imagick). Les photos importées, déjà en WebP, sont copiées telles quelles.                            |
-| 10  | Déploiement           | Une stack **docker-compose** Dokploy. Image unique publiée sur GHCR par la CI. Services `web`, `worker` (`queue:work`), `migrate` (one-shot) et `pgsql` 18 avec volume.                        |
-| 11  | Import SQLite         | Commande artisan one-shot stricte, avec vérification (voir plus bas).                                                                                                                             |
-| 12  | Cutover               | Fenêtre courte, même domaine, après répétition sur staging. L'ancien volume est gardé 30 jours pour le retour arrière.                                                                          |
-| 13  | Couches sautées       | Fortify (retiré du kit), access-control (spatie/permission, `/admin`), audit-trail (activitylog), Mailpit/SMTP.                                                                                  |
-| 14  | Découpage             | 10 changements OpenSpec, plus le bootstrap hors OpenSpec.                                                                                                                                        |
-| 15  | Ordre du déploiement  | Tôt : le changement de déploiement vient juste après app-access. Staging Dokploy dès la première page protégée.                                                                                |
+| #   | Sujet                | Décision                                                                                                                                                                                                                       |
+| --- | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 1   | Repo                 | Nouveau repo (`golf-handicaps-laravel`), bootstrappé selon SKELETON. Les specs OpenSpec actuelles servent de référence fonctionnelle. L'ancien repo reste déployable jusqu'au cutover, puis il est archivé.                    |
+| 2   | OCR                  | **Supprimé.** Plus de tesseract, sharp, détection de panneau, homographie ni templates. La photo entière part à l'IA via le **Laravel AI SDK**, qui rend le brouillon en sortie structurée.                                    |
+| 3   | Flux d'import        | Photo → job de file → IA → écran de correction (autosave conservé). L'écran `/recadrer`, les coins, `corners_source` et `ai_cells` disparaissent.                                                                              |
+| 4   | Budget IA            | Plafond mensuel gardé, défaut **5 $** (`AI_MONTHLY_BUDGET_USD`), table `ai_usage` gardée. Au-delà du plafond, l'import échoue avec « Budget IA du mois atteint » et la carte se saisit à la main. Modèle configurable par env. |
+| 5   | Auth                 | Code d'accès partagé (`APP_PASSCODE`) + session Laravel, même UX `/login`. Pas de comptes.                                                                                                                                     |
+| 6   | Identifiants         | UUID partout, comme dans le squelette. L'importeur génère les UUID et garde la correspondance en mémoire. Les anciennes URL (`/rounds/12`) cassent, ce qui est accepté.                                                        |
+| 7   | Front                | Port de l'UI actuelle : thème scoreboard, tokens, composants base-ui/shadcn, recharts. Pages adaptées à Inertia (props serveur, `useForm`, Wayfinder). Le starter kit est nettoyé.                                             |
+| 8   | Tests                | **Pas de Playwright, ni de tests navigateur.** Pest pour le back, Vitest pour le front. La passe navigateur de fin d'apply (`browser-use`) reste un outil d'agent, pas une suite de tests.                                     |
+| 9   | Photos               | Disque Laravel local sur un volume nommé. Conversion WebP via `intervention/image` (driver Imagick). Les photos importées, déjà en WebP, sont copiées telles quelles.                                                          |
+| 10  | Déploiement          | Une stack **docker-compose** Dokploy. Image unique publiée sur GHCR par la CI. Services `web`, `worker` (`queue:work`), `migrate` (one-shot) et `pgsql` 18 avec volume.                                                        |
+| 11  | Import SQLite        | Commande artisan one-shot stricte, avec vérification (voir plus bas).                                                                                                                                                          |
+| 12  | Cutover              | Fenêtre courte, même domaine, après répétition sur staging. L'ancien volume est gardé 30 jours pour le retour arrière.                                                                                                         |
+| 13  | Couches sautées      | Fortify (retiré du kit), access-control (spatie/permission, `/admin`), audit-trail (activitylog), Mailpit/SMTP.                                                                                                                |
+| 14  | Découpage            | 10 changements OpenSpec, plus le bootstrap hors OpenSpec.                                                                                                                                                                      |
+| 15  | Ordre du déploiement | Tôt : le changement de déploiement vient juste après app-access. Staging Dokploy dès la première page protégée.                                                                                                                |
 
-## Écarts au squelette (ADR à écrire)
+## Écarts au squelette (ADR 0005)
 
 - **Pas de Fortify, de comptes ni de rôles** : un code partagé suffit pour un groupe d'amis. Les étapes 9 (`access-control`) et 12 (`audit-trail`) du bootstrap sont sautées. La couche 2.7 (sécurité des requêtes) est fusionnée dans `app-access`.
 - **Pas de Mailpit** : `compose.yaml` de dev avec `laravel.test` + `pgsql` seulement.
@@ -40,7 +40,7 @@ Chaque changement suit le squelette : deux PR (code, puis archivage), `make chec
 
 ### 1. `project-skeleton-and-quality-gates`
 
-Étape 6 du squelette, sans Playwright : Makefile, Pint, Larastan 7, Pest sur PostgreSQL, Vitest, jscpd, tests d'architecture, UUID, fuseau (`app.display_timezone` = `America/Montreal`), CI GitHub Actions, release-please, route de version (`app-version`).
+Étape 6 du squelette, sans Playwright : Makefile, Pint, Larastan 8, Pest sur PostgreSQL, Vitest, jscpd, tests d'architecture, UUID, fuseau (`app.display_timezone` = `America/Montreal`), CI GitHub Actions, route de version (`app-version`), `version.txt` et `CHANGELOG.md` tenus à la main.
 
 - Capacités : `quality-gates`, `local-development-environment`, `persistence-identifiers`, `date-time-presentation`, `app-version`, `ci-pipeline`.
 
@@ -113,19 +113,19 @@ php artisan golf:import-sqlite /chemin/app.db --uploads=/chemin/uploads [--force
 
 Correspondance des tables :
 
-| SQLite                | Postgres            | Traitement                                                                                                         |
-| --------------------- | ------------------- | ------------------------------------------------------------------------------------------------------------------ |
-| `players`             | `players`           | Nouvel UUID, `created_at` ms → `timestamptz` UTC.                                                                  |
-| `player_aliases`      | `player_aliases`    | FK remappée.                                                                                                       |
-| `rounds`              | `rounds`            | Nouvel UUID, `played_on` → `date`, photo copiée.                                                                   |
-| `round_holes`         | `round_holes`       | FK remappée.                                                                                                       |
-| `round_players`       | `round_players`     | FK remappées.                                                                                                      |
-| `scores`              | `scores`            | FK remappées.                                                                                                      |
-| `player_round_stats`  | —                   | **Non copiée** : recalculée par le code PHP, puis comparée ligne à ligne aux valeurs SQLite. Un écart fait échouer l'import. |
-| `course_ratings`      | `course_ratings`    | Copiée. Les statuts non terminaux (`pending`) sont remis en file après le commit.                                  |
-| `imports`             | `imports`           | `draft` et `correction` copiés. `corners`, `corners_source` et `ai_cells` abandonnés. `queued` / `reading` → `failed`, note « Import interrompu par la migration ». |
-| `ai_usage`            | `ai_usage`          | Copiée (le budget du mois en cours reste juste).                                                                   |
-| `jobs`                | —                   | Ignorée. La file Next est vidée avant le cutover.                                                                  |
+| SQLite               | Postgres         | Traitement                                                                                                                                                          |
+| -------------------- | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `players`            | `players`        | Nouvel UUID, `created_at` ms → `timestamptz` UTC.                                                                                                                   |
+| `player_aliases`     | `player_aliases` | FK remappée.                                                                                                                                                        |
+| `rounds`             | `rounds`         | Nouvel UUID, `played_on` → `date`, photo copiée.                                                                                                                    |
+| `round_holes`        | `round_holes`    | FK remappée.                                                                                                                                                        |
+| `round_players`      | `round_players`  | FK remappées.                                                                                                                                                       |
+| `scores`             | `scores`         | FK remappées.                                                                                                                                                       |
+| `player_round_stats` | —                | **Non copiée** : recalculée par le code PHP, puis comparée ligne à ligne aux valeurs SQLite. Un écart fait échouer l'import.                                        |
+| `course_ratings`     | `course_ratings` | Copiée. Les statuts non terminaux (`pending`) sont remis en file après le commit.                                                                                   |
+| `imports`            | `imports`        | `draft` et `correction` copiés. `corners`, `corners_source` et `ai_cells` abandonnés. `queued` / `reading` → `failed`, note « Import interrompu par la migration ». |
+| `ai_usage`           | `ai_usage`       | Copiée (le budget du mois en cours reste juste).                                                                                                                    |
+| `jobs`               | —                | Ignorée. La file Next est vidée avant le cutover.                                                                                                                   |
 
 Photos : chaque `photo_path` (`uploads/<uuid>.webp`) est copié vers le disque Laravel. Une photo qui n'est pas en WebP est convertie. Une photo absente fait échouer l'import et la commande liste les chemins manquants.
 
@@ -159,5 +159,5 @@ Les variables vivent dans l'environnement Dokploy : `APP_KEY`, `APP_PASSCODE`, `
 
 - Modèle IA par défaut : le Sonnet le plus récent, par `AI_MODEL`. Le prix par modèle est gardé dans une table de config pour `ai_usage`.
 - Healthcheck du worker : un battement écrit dans `/tmp` à chaque job et à chaque tour de boucle (`Queue::looping`), seuil de 5 min, comme aujourd'hui.
-- Versionnement : release-please et Conventional Commits, comme dans le repo actuel.
+- Versionnement : version tenue à la main dans `version.txt`, `CHANGELOG.md` en français complété par chaque pull request de code, tags `vX.Y.Z` posés par le mainteneur. Pas de release-please. Conventional Commits restent vérifiés par commitlint (ADR 0005).
 - Prose, specs et UI en français (décision 8 du squelette).

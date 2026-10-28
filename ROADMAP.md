@@ -10,7 +10,7 @@ Ordre des changements OpenSpec du port. Le détail de chacun et les décisions q
 
 **Dépend de** : 0. **Statut** : à proposer.
 
-Makefile, Pint, Larastan 7, Pest sur PostgreSQL, Vitest, jscpd, tests d'architecture, UUID, fuseau d'affichage `America/Montreal`, CI GitHub Actions, release-please, route de version.
+Makefile, Pint, Larastan 8, Pest sur PostgreSQL, Vitest, jscpd, tests d'architecture, UUID, fuseau d'affichage `America/Montreal`, CI GitHub Actions, route de version. Version tenue à la main dans `version.txt` et `CHANGELOG.md`, tags `vX.Y.Z` posés par le mainteneur : pas de release-please (ADR 0005).
 
 **Terminé lorsque** : `make check` est vert en local et en CI, et les capacités `quality-gates`, `local-development-environment`, `persistence-identifiers`, `date-time-presentation`, `app-version` et `ci-pipeline` sont spécifiées.
 
@@ -25,6 +25,8 @@ Thème scoreboard clair et sombre, polices, primitives `components/ui`, shell de
 **Dépend de** : 2. **Statut** : à proposer.
 
 Code d'accès partagé, `/login`, déconnexion, session chiffrée de 90 jours, limiteur, en-têtes de sécurité, `TRUSTED_PROXIES`.
+
+`/api/version` reste hors du middleware du code d'accès : la route se lit sans session ni code (capacité `app-version`).
 
 ## 4. `production-deployment`
 
