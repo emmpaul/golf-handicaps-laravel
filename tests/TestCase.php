@@ -66,6 +66,33 @@ abstract class TestCase extends BaseTestCase
         return $this->withSessionCookie($sessionId)->post($uri);
     }
 
+    /**
+     * Read config/{$name}.php again under these environment values, as a fresh boot would, then
+     * restore the environment.
+     *
+     * @param  array<string, string>  $environment
+     */
+    public function loadConfigUnder(string $name, array $environment): void
+    {
+        $saved = [];
+
+        foreach ($environment as $key => $value) {
+            $saved[$key] = [getenv($key), $_ENV[$key] ?? null, $_SERVER[$key] ?? null];
+            putenv("{$key}={$value}");
+            $_ENV[$key] = $_SERVER[$key] = $value;
+        }
+
+        try {
+            config([$name => require config_path("{$name}.php")]);
+        } finally {
+            foreach ($saved as $key => [$getenv, $env, $server]) {
+                putenv($getenv === false ? $key : "{$key}={$getenv}");
+                $_ENV[$key] = $env;
+                $_SERVER[$key] = $server;
+            }
+        }
+    }
+
     private function withSessionCookie(string $sessionId): static
     {
         $this->flushSession();

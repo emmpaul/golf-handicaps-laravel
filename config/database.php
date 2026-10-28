@@ -97,6 +97,9 @@ return [
             'prefix_indexes' => true,
             'search_path' => 'public',
             'sslmode' => env('DB_SSLMODE', 'prefer'),
+            // A query exception keeps its SQL with ? and leaves out the bound values: base down,
+            // the session lookup would otherwise log the identifier that reopens a session (D11).
+            'mask_bindings_in_exception_messages' => true,
         ],
 
         'sqlsrv' => [
