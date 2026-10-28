@@ -27,7 +27,7 @@ test('every public make target has a help description', function () {
 
 test('make help lists every documented target', function () {
     $required = [
-        'setup', 'up', 'down', 'dev', 'dev-stop', 'browser', 'build', 'migrate', 'openspec',
+        'setup', 'up', 'down', 'dev', 'dev-stop', 'browser', 'build', 'migrate', 'fresh', 'demo', 'openspec',
         'lint', 'format', 'analyse', 'duplicates', 'arch-test', 'test-backend', 'test-frontend',
         'test', 'update-shards', 'check', 'commitlint', 'changed-code', 'image', 'image-smoke', 'image-tags',
     ];

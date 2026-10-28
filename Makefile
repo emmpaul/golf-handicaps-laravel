@@ -18,7 +18,7 @@ PNPM := $(if $(RUN),$(RUN) pnpm,pnpm)
 # Pas d'image laravelsail/php85-composer : l'image 8.4 installe vendor avec --ignore-platform-reqs.
 COMPOSER_BOOTSTRAP_IMAGE := laravelsail/php84-composer:latest
 
-.PHONY: help setup passcode-check up down dev dev-stop browser build migrate openspec \
+.PHONY: help setup passcode-check up down dev dev-stop browser build migrate fresh demo openspec \
 	lint format analyse duplicates arch-test test-backend test-frontend test update-shards check \
 	commitlint changed-code wayfinder image image-smoke image-tags
 
@@ -56,6 +56,13 @@ down: ## Arrête les conteneurs (données conservées)
 
 migrate: ## Applique les migrations en attente, sans rien effacer
 	$(ARTISAN) migrate --ansi
+
+fresh: ## Recrée la base de développement : migrations, puis les joueurs Gab, Manu et Sean, sans round
+	$(ARTISAN) migrate:fresh --seed --ansi
+
+demo: ## Recrée la base de développement et y écrit le jeu de démonstration (joueurs, rounds, photo)
+	$(ARTISAN) migrate:fresh --ansi
+	$(ARTISAN) db:seed --class=DemoDatabaseSeeder --ansi
 
 openspec: ## Lance la CLI OpenSpec épinglée ; ARGS="list", ARGS="validate --all"…
 	$(PNPM) exec openspec $(ARGS)

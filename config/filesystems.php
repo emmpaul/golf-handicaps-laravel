@@ -47,6 +47,16 @@ return [
             'report' => false,
         ],
 
+        // Photos of the scorecards, under the storage volume but outside the root of local:
+        // never served by storage/{path}, only by rounds.photo behind the session (design D7).
+        'photos' => [
+            'driver' => 'local',
+            'root' => storage_path('app/photos'),
+            'serve' => false,
+            'throw' => false,
+            'report' => false,
+        ],
+
         's3' => [
             'driver' => 's3',
             'key' => env('AWS_ACCESS_KEY_ID'),

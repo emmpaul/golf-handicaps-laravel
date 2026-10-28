@@ -1,0 +1,142 @@
+<?php
+
+/*
+ * Mutations that turn these tests red:
+ * - fake()->seed(2026) removed from DemoRoundsSeeder: the generated scores change from one run
+ *   to the next and the signatures of the first five rounds differ from the literal list;
+ * - the guard of DemoDatabaseSeeder against a filled base removed: on a base with Gab the
+ *   seeder does not fail with its message (it writes rounds or fails elsewhere);
+ * - the reference photo not copied, or copied under another path: the photo is missing from
+ *   the photos disk;
+ * - a generated card with a stroke index in double: RoundCardChecks refuses it and the seeding
+ *   fails;
+ * - the photos directory not emptied first: the stale file stays on the disk.
+ */
+
+use App\Domain\Rounds\RoundCard;
+use App\Domain\Rounds\RoundCardChecks;
+use App\Models\Player;
+use App\Models\Round;
+use App\Models\RoundPlayer;
+use Database\Seeders\DemoDatabaseSeeder;
+use Illuminate\Support\Facades\Storage;
+
+/**
+ * The first rounds of the Rounds page, as « date course / tees : player gross, … ».
+ *
+ * @return list<string>
+ */
+function demoRoundSignatures(int $limit): array
+{
+    return Round::query()
+        ->with(['lines.player', 'scores'])
+        ->orderByDesc('played_on')
+        ->orderByDesc('created_at')
+        ->limit($limit)
+        ->get()
+        ->map(fn (Round $round): string => sprintf(
+            '%s %s / %s : %s',
+            $round->played_on->toDateString(),
+            $round->course_name,
+            $round->tees,
+            $round->lines->map(fn (RoundPlayer $line): string => $line->player->name.' '
+                .$round->scores->where('player_id', $line->player_id)->sum('strokes'))->implode(', '),
+        ))
+        ->values()
+        ->all();
+}
+
+/**
+ * Every round with its whole card and the names of its players, to compare two runs.
+ *
+ * @return list<array<string, mixed>>
+ */
+function demoRoundCards(): array
+{
+    $names = Player::query()->pluck('name', 'id');
+
+    return Round::query()->orderBy('played_on')->get()
+        ->map(function (Round $round) use ($names): array {
+            $card = RoundCard::fromRound($round)->toArray();
+            $card['lines'] = array_map(fn (array $line): array => [
+                'player' => $names[$line['playerId']],
+                'strokes' => $line['strokes'],
+            ], $card['lines']);
+
+            return $card;
+        })
+        ->values()
+        ->all();
+}
+
+const DEMO_FIRST_FIVE = [
+    '2026-10-17 BETHPAGE BLACK / Red : Gab 72, Manu 88',
+    '2026-10-15 CALA NOVA / White : Manu 95, Gab 75, Sean 89',
+    '2026-10-06 PAYNES VALLEY / Blue : Manu 99, Gab 71',
+    '2026-09-27 BETHPAGE BLACK / Red : Gab 70, Sean 88, Manu 94',
+    '2026-09-19 CALA NOVA / White : Gab 76, Manu 96',
+];
+
+beforeEach(function () {
+    Storage::fake('photos');
+});
+
+test('the demonstration base has the development players, the reference round with its photo and generated rounds', function () {
+    Storage::disk('photos')->put('rounds/stale.webp', 'old');
+
+    $this->seed(DemoDatabaseSeeder::class);
+
+    expect(playersWithAliases())->toBe(['Gab' => ['GAB'], 'Manu' => ['MANU'], 'Sean' => ['SEAN']])
+        ->and(Round::query()->count())->toBe(25)
+        ->and(Round::query()->selectRaw("course_name || ' / ' || tees as course")->distinct()->orderBy('course')->pluck('course')->all())
+        ->toBe(['BETHPAGE BLACK / Red', 'CALA NOVA / White', 'PAYNES VALLEY / Blue'])
+        ->and(Round::query()->min('played_on'))->toBe('2026-04-01')
+        ->and(Round::query()->where('played_on', '<', '2026-10-17')->max('played_on'))->toBe('2026-10-15');
+
+    $reference = Round::query()->whereDate('played_on', '2026-10-17')->sole();
+    expect($reference->photo_path)->toBe("rounds/{$reference->id}.webp")
+        ->and(Storage::disk('photos')->get("rounds/{$reference->id}.webp"))
+        ->toBe(file_get_contents(base_path('database/data/img3064.webp')))
+        ->and(Round::query()->whereNotNull('photo_path')->count())->toBe(1)
+        ->and(Storage::disk('photos')->exists('rounds/stale.webp'))->toBeFalse();
+
+    foreach (Round::query()->get() as $round) {
+        expect(RoundCardChecks::problems(RoundCard::fromRound($round)))->toBe([], "round of {$round->played_on->toDateString()}");
+    }
+});
+
+test('two runs on an emptied base write the same rounds', function () {
+    $this->seed(DemoDatabaseSeeder::class);
+    $firstSignatures = demoRoundSignatures(5);
+    $firstCards = demoRoundCards();
+
+    Round::query()->delete();
+    Player::query()->delete();
+
+    $this->seed(DemoDatabaseSeeder::class);
+
+    expect($firstSignatures)->toBe(DEMO_FIRST_FIVE)
+        ->and(demoRoundSignatures(5))->toBe(DEMO_FIRST_FIVE)
+        ->and(demoRoundCards())->toBe($firstCards);
+});
+
+test('the demonstration refuses a base that already has a player and writes nothing', function () {
+    Player::factory()->create(['name' => 'Gab']);
+
+    expect(fn () => $this->seed(DemoDatabaseSeeder::class))
+        ->toThrow(RuntimeException::class, 'Le jeu de démonstration ne s’écrit que sur une base sans joueur ni round : lancer make demo.');
+
+    expect(Player::query()->pluck('name')->all())->toBe(['Gab'])
+        ->and(Round::query()->count())->toBe(0);
+});
+
+// Mutation: the guard that only counts players: the seeder writes next to the existing round.
+test('the demonstration refuses a base that already has a round and writes nothing', function () {
+    Round::factory()->create(['course_name' => 'OLD COURSE']);
+
+    expect(fn () => $this->seed(DemoDatabaseSeeder::class))
+        ->toThrow(RuntimeException::class, 'Le jeu de démonstration ne s’écrit que sur une base sans joueur ni round : lancer make demo.');
+
+    expect(Player::query()->count())->toBe(0)
+        ->and(Round::query()->pluck('course_name')->all())->toBe(['OLD COURSE']);
+});

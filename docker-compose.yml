@@ -17,6 +17,8 @@ x-app: &app
         APP_DISPLAY_TIMEZONE: ${APP_DISPLAY_TIMEZONE:-America/Montreal}
         LOG_LEVEL: ${LOG_LEVEL:-info}
         TRUSTED_PROXIES: ${TRUSTED_PROXIES:-}
+        # Joueurs créés par golf:initial-players (service migrate) sur une base sans joueur.
+        INITIAL_PLAYERS: ${INITIAL_PLAYERS:-}
         DB_CONNECTION: pgsql
         DB_HOST: pgsql
         DB_PORT: 5432
@@ -50,7 +52,14 @@ services:
 
     migrate:
         <<: *app
-        command: ['php', 'artisan', 'migrate', '--force']
+        # Migrations, puis joueurs initiaux : l'échec de l'une ou de l'autre garde web et worker
+        # arrêtés. L'entrypoint fait exec "$@" : sh sort avec le code de la commande en échec.
+        command:
+            [
+                'sh',
+                '-c',
+                'php artisan migrate --force && php artisan golf:initial-players',
+            ]
         restart: 'no'
         depends_on:
             pgsql:

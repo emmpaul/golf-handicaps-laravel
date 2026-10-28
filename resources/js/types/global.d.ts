@@ -19,6 +19,8 @@ declare module '@inertiajs/core' {
         };
         flashDataType: {
             toast?: FlashToast;
+            /** A saved round that the card sent looks like (RoundController, design D5). */
+            duplicate?: { roundId: string };
         };
     }
 }

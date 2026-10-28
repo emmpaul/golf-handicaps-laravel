@@ -1,5 +1,6 @@
 <?php
 
+use App\Domain\DomainException;
 use App\Http\Middleware\AddSecurityHeaders;
 use App\Http\Middleware\EnsurePasscodeConfigured;
 use App\Http\Middleware\HandleInertiaRequests;
@@ -12,6 +13,7 @@ use Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets;
 use Illuminate\Http\Request;
 use Illuminate\Session\Middleware\StartSession;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
+use Inertia\Inertia;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -46,4 +48,14 @@ return Application::configure(basePath: dirname(__DIR__))
         $exceptions->shouldRenderJsonWhen(
             fn (Request $request) => $request->is('api/*') || $request->expectsJson(),
         );
+
+        // A business refusal: an error toast back on the previous page, or 422 for a JSON
+        // request outside Inertia (ARCHITECTURE.md, design D4).
+        $exceptions->render(function (DomainException $exception, Request $request) {
+            if ($request->expectsJson() && ! $request->header('X-Inertia')) {
+                return response()->json(['error' => $exception->getMessage()], 422);
+            }
+
+            return Inertia::flash('toast', ['type' => 'error', 'message' => $exception->getMessage()])->back();
+        });
     })->create();
