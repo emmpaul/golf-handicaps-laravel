@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\AppBuild;
 use Illuminate\Http\JsonResponse;
 
 class VersionController extends Controller
@@ -13,11 +14,9 @@ class VersionController extends Controller
      */
     public function __invoke(): JsonResponse
     {
-        $commit = config('app.commit');
-
         return response()->json([
-            'version' => config('app.version'),
-            'commit' => is_string($commit) && preg_match('/^[0-9a-f]{40}$/', $commit) === 1 ? $commit : null,
+            'version' => AppBuild::version(),
+            'commit' => AppBuild::commit(),
         ])->header('Cache-Control', 'no-store');
     }
 }

@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Support\AppBuild;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -38,6 +39,10 @@ class HandleInertiaRequests extends Middleware
         return [
             ...parent::share($request),
             'name' => config('app.name'),
+            'app' => [
+                'version' => AppBuild::version(),
+                'commit' => AppBuild::commit(),
+            ],
         ];
     }
 }

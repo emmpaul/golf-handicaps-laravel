@@ -1,0 +1,76 @@
+import { describe, expect, it } from 'vite-plus/test';
+import { contrast, hex } from './palette';
+
+// Text pairs: 4.5:1 (WCAG 1.4.3), in both modes. Lists ported from Next.
+// Mutation: dark --color-ink-2 set to oklch(0.28 0.03 262) in tokens.css → the
+// muted-foreground text pairs go red.
+const textPairs = [
+    ['foreground', 'background'],
+    ['foreground', 'popover'],
+    ['foreground', 'accent'],
+    ['muted-foreground', 'background'],
+    ['muted-foreground', 'muted'],
+    ['muted-foreground', 'accent'],
+    ['color-ink-3', 'background'],
+    ['color-ink-3', 'muted'],
+    ['primary-foreground', 'primary'],
+    ['sidebar-primary-foreground', 'sidebar-primary'],
+    ['color-band-ink', 'color-band'],
+    ['birdie', 'background'],
+    ['birdie', 'muted'],
+    ['destructive', 'background'],
+    ['destructive', 'muted'],
+    ['background', 'destructive'],
+] as const;
+
+// Non-text marks and edges: 3:1 (WCAG 1.4.11).
+const markPairs = [
+    ['bogey', 'background'],
+    ['ai', 'background'],
+    ['input', 'background'],
+    ['ring', 'background'],
+    ['ring', 'muted'],
+    ['ring', 'accent'],
+] as const;
+
+describe('scoreboard palette contrast', () => {
+    for (const mode of ['light', 'dark'] as const) {
+        for (const [fg, bg] of textPairs) {
+            it(`${mode}: ${fg}/${bg} >= 4.5:1`, () => {
+                expect(contrast(mode, fg, bg)).toBeGreaterThanOrEqual(4.5);
+            });
+        }
+
+        for (const [fg, bg] of markPairs) {
+            it(`${mode}: ${fg}/${bg} >= 3:1`, () => {
+                expect(contrast(mode, fg, bg)).toBeGreaterThanOrEqual(3);
+            });
+        }
+    }
+});
+
+// Literal values of the visual-theme spec, written by hand.
+// Mutation: light --color-paper set to oklch(0.97 0.008 91) in tokens.css →
+// "light: --background is #F4F7FB" goes red.
+describe('scoreboard palette values', () => {
+    for (const [mode, name, expected] of [
+        ['light', 'background', '#F4F7FB'],
+        ['dark', 'background', '#0A111F'],
+        ['light', 'foreground', '#0F1D3E'],
+        ['dark', 'foreground', '#EAEFF4'],
+        ['light', 'primary', '#0F1D3E'],
+        ['dark', 'primary', '#EAEFF4'],
+        ['light', 'birdie', '#CB1E21'],
+        ['dark', 'birdie', '#F86B65'],
+        ['light', 'bogey', '#46566E'],
+        ['dark', 'bogey', '#A9B9CA'],
+        ['light', 'destructive', '#9B540C'],
+        ['dark', 'destructive', '#EB9854'],
+        ['light', 'color-band', '#0F1D3E'],
+        ['dark', 'color-band', '#223251'],
+    ] as const) {
+        it(`${mode}: --${name} is ${expected}`, () => {
+            expect(hex(mode, name)).toBe(expected);
+        });
+    }
+});
