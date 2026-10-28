@@ -57,7 +57,7 @@ La version de l'application SHALL être lue dans le fichier `version.txt` à la 
 - **THEN** un test échoue en citant le contenu du fichier
 
 ### Requirement: Journal des changements
-Le dépôt SHALL tenir un fichier `CHANGELOG.md` en français, avec en tête une section « Non publié » qui reçoit les changements de chaque pull request de code. Toute version autre que `0.0.0` inscrite dans `version.txt` MUST avoir sa section `## [X.Y.Z] - AAAA-MM-JJ` dans `CHANGELOG.md`.
+Le dépôt SHALL tenir un fichier `CHANGELOG.md` en anglais, avec en tête une section `## [Unreleased]` qui reçoit les changements de chaque pull request de code. Toute version autre que `0.0.0` inscrite dans `version.txt` MUST avoir sa section `## [X.Y.Z] - YYYY-MM-DD` dans `CHANGELOG.md`.
 
 #### Scenario: Version publiée sans section
 - **GIVEN** `version.txt` contient `0.2.0` et `CHANGELOG.md` n'a pas de section `## [0.2.0]`
@@ -65,6 +65,6 @@ Le dépôt SHALL tenir un fichier `CHANGELOG.md` en français, avec en tête une
 - **THEN** un test échoue en nommant la version `0.2.0`
 
 #### Scenario: Avant la première version
-- **GIVEN** `version.txt` contient `0.0.0` et `CHANGELOG.md` n'a qu'une section « Non publié »
+- **GIVEN** `version.txt` contient `0.0.0` et `CHANGELOG.md` n'a qu'une section `## [Unreleased]`
 - **WHEN** on lance `make test-backend`
 - **THEN** le test du journal passe
