@@ -9,3 +9,4 @@ Une ADR par décision d'architecture, numérotée, écrite dans le même lot que
 | [0003](0003-openspec-tdd-makefile.md)   | OpenSpec, TDD et Makefile             | Acceptée |
 | [0004](0004-utc-et-fuseau-affichage.md) | Stockage en UTC et fuseau d'affichage | Acceptée |
 | [0005](0005-ecarts-au-squelette.md)     | Écarts au squelette                   | Acceptée |
+| [0006](0006-systeme-de-design.md)       | Système de design                     | Acceptée |
