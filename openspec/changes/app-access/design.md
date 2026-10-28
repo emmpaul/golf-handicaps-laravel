@@ -43,7 +43,7 @@ Après une déconnexion, le navigateur garde un jeton CSRF que la nouvelle sessi
 Dans `RequirePasscode`, sans session valide :
 
 - requête `GET`/`HEAD` qui n'attend pas de JSON : `redirect('/login')` ;
-- en-tête `X-Inertia` présent : `redirect('/login')`. Le middleware Inertia, qui tourne après dans la pile et reçoit la réponse au retour, change le 302 en 303 pour `PUT`/`PATCH`/`DELETE` ; le client Inertia suit et affiche `/login` sans fenêtre d'erreur ;
+- en-tête `X-Inertia` présent : `redirect('/login')`. `HandleInertiaRequests` tourne à l'intérieur de `RequirePasscode` et ne voit pas cette réponse ; le middleware global `Inertia\Middleware\EnsureGetOnRedirect`, que le fournisseur de services d'Inertia ajoute à la pile globale, change le 302 en 303 pour `PUT`/`PATCH`/`DELETE` ; le client Inertia suit et affiche `/login` sans fenêtre d'erreur ;
 - sinon (écriture hors Inertia, ou `expectsJson()`) : `response()->json(['error' => 'Session requise'], 401)`.
 
 L'action de la route n'est jamais appelée : rien n'est enregistré.
@@ -76,13 +76,13 @@ L'action de la route n'est jamais appelée : rien n'est enregistré.
 
 ### D8. Démarrage sans code
 
-`App\Http\Middleware\EnsurePasscodeConfigured`, en tête de la pile globale (`$middleware->prepend()`), lève une `RuntimeException('APP_PASSCODE must be set: the shared passcode protects every page.')` quand `config('app.passcode')` est vide. Elle est journalisée et rend 500, `/up` compris : le healthcheck de Dokploy tombe. Les commandes artisan ne passent pas par la pile HTTP et tournent sans code, ce qu'exige le build de l'image (`config:cache`).
+`App\Http\Middleware\EnsurePasscodeConfigured`, premier contrôle de la pile globale (`$middleware->prepend()`, juste après `AddSecurityHeaders`), lève une `RuntimeException('APP_PASSCODE must be set: the shared passcode protects every page.')` quand `config('app.passcode')` est vide. Elle est journalisée et rend 500, `/up` compris : le healthcheck de Dokploy tombe. Les commandes artisan ne passent pas par la pile HTTP et tournent sans code, ce qu'exige le build de l'image (`config:cache`).
 
 **Alternative écartée** : lever l'exception dans `AppServiceProvider::boot()`. Elle casserait `composer install`, `config:cache` et chaque commande artisan sans le secret.
 
 ### D9. En-têtes et mandataires
 
-- `App\Http\Middleware\AddSecurityHeaders` ajouté à la pile globale (`$middleware->append()`), pour couvrir pages d'erreur, redirections, `/up` et JSON. Il pose les quatre en-têtes et ne remplace pas une `Content-Security-Policy` déjà présente.
+- `App\Http\Middleware\AddSecurityHeaders` en tête de la pile globale (`$middleware->prepend()`, avant `EnsurePasscodeConfigured`), pour couvrir pages d'erreur, le 500 d'un code manquant compris, redirections, `/up` et JSON. Il pose les quatre en-têtes et ne remplace pas une `Content-Security-Policy` déjà présente.
 - `config/trustedproxy.php` : `proxies` = liste tirée de `TRUSTED_PROXIES` (séparée par des virgules, espaces retirés, entrée `*` ou `**` retirée), `null` si la liste est vide. Rien dans `bootstrap/app.php`.
 
 ### D10. Sessions chiffrées
