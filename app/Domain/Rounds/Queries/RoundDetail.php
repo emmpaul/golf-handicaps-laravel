@@ -2,18 +2,22 @@
 
 namespace App\Domain\Rounds\Queries;
 
+use App\Domain\Handicaps\Queries\RoundLeaderboard;
 use App\Models\Round;
 use App\Models\RoundHole;
 use App\Models\RoundPlayer;
 use App\Models\Score;
 
 /**
- * The page of a round (spec rounds, « En-tête d'un round », « Bruts d'un round », « Carte de
- * score d'un round », « Photo d'un round »): header, total par, gross of each player in the
- * order of the card, the card itself and whether the round has a photo.
+ * The page of a round (spec rounds, « En-tête d'un round », « Classement net d'un round »,
+ * « Rating affichée sur le round », « Carte de score d'un round », « Photo d'un round »):
+ * header, total par, the net leaderboard (gross of each player in the order of the card), the
+ * rating used, the card itself and whether the round has a photo.
  */
 final class RoundDetail
 {
+    public function __construct(private readonly RoundLeaderboard $leaderboard) {}
+
     /**
      * @return array{
      *     id: string,
@@ -22,7 +26,8 @@ final class RoundDetail
      *     playedOn: string,
      *     par: int,
      *     hasPhoto: bool,
-     *     players: list<array{name: string, gross: int}>,
+     *     leaderboard: list<array{playerId: string, name: string, gross: int, indexBeforeT: int|null, playingHandicap: int|null, net: int|null, rank: int|null}>,
+     *     rating: array{rated: bool, ratingT: int, slope: int},
      *     card: array{
      *         holes: list<array{par: int, strokeIndex: int, distance: int|null}>,
      *         lines: list<array{playerId: string, name: string, strokes: list<int>}>,
@@ -32,6 +37,8 @@ final class RoundDetail
     public function for(Round $round): array
     {
         $round->loadMissing(['holes', 'lines.player:id,name', 'scores']);
+        // Read once for the page and its leaderboard.
+        $rating = $this->leaderboard->rating($round);
 
         $lines = array_values($round->lines->map(fn (RoundPlayer $line): array => [
             'playerId' => $line->player_id,
@@ -50,10 +57,8 @@ final class RoundDetail
             'playedOn' => $round->played_on->toDateString(),
             'par' => (int) $round->holes->sum('par'),
             'hasPhoto' => $round->photo_path !== null,
-            'players' => array_map(
-                fn (array $line): array => ['name' => $line['name'], 'gross' => array_sum($line['strokes'])],
-                $lines,
-            ),
+            'leaderboard' => $this->leaderboard->for($round, $rating),
+            'rating' => $rating,
             'card' => [
                 'holes' => array_values($round->holes->map(fn (RoundHole $hole): array => [
                     'par' => $hole->par,

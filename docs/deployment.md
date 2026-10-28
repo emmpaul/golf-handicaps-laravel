@@ -4,15 +4,15 @@ L'application tourne sur un hôte Docker piloté par [Dokploy](https://dokploy.c
 
 ## La stack
 
-| Service   | Rôle                                                                      | Sain quand                              |
-| --------- | ------------------------------------------------------------------------- | --------------------------------------- |
-| `pgsql`   | PostgreSQL 18, données dans le volume `pgdata`                            | `pg_isready` répond                     |
-| `migrate` | `php artisan migrate --force`, puis `golf:initial-players`, puis s'arrête | sort en 0 (il reste alors `Exited (0)`) |
-| `web`     | FrankenPHP sur le port 8080, sans port publié                             | `/up` répond 200                        |
-| `worker`  | `php artisan queue:work`, relancé chaque heure par `--max-time=3600`      | son battement a moins de 300 s          |
-| `backup`  | `pg_dump` au démarrage puis toutes les 24 h dans le volume `backups`      | un dump réussi a moins de 26 h          |
+| Service   | Rôle                                                                                                   | Sain quand                              |
+| --------- | ------------------------------------------------------------------------------------------------------ | --------------------------------------- |
+| `pgsql`   | PostgreSQL 18, données dans le volume `pgdata`                                                         | `pg_isready` répond                     |
+| `migrate` | `php artisan migrate --force`, puis `golf:initial-players`, puis `golf:recompute-stats`, puis s'arrête | sort en 0 (il reste alors `Exited (0)`) |
+| `web`     | FrankenPHP sur le port 8080, sans port publié                                                          | `/up` répond 200                        |
+| `worker`  | `php artisan queue:work`, relancé chaque heure par `--max-time=3600`                                   | son battement a moins de 300 s          |
+| `backup`  | `pg_dump` au démarrage puis toutes les 24 h dans le volume `backups`                                   | un dump réussi a moins de 26 h          |
 
-`web` et `worker` démarrent seulement après la sortie en 0 de `migrate`. Si une migration ou la création des joueurs initiaux échoue, ils ne démarrent pas sur la nouvelle image et restent sur `Created`. Lire alors `docker logs "$P-migrate-1"`, corriger, redéployer. Ce que deviennent les conteneurs de l'ancienne version pendant ce temps reste à observer sur le staging. Ils partagent le volume `storage`, monté sur `storage/app`. Les journaux partent sur la sortie d'erreur des conteneurs (`docker logs`, onglet Logs de Dokploy). Aucun fichier de journal ne grossit dans un conteneur.
+`web` et `worker` démarrent seulement après la sortie en 0 de `migrate`. Si une migration, la création des joueurs initiaux ou le recalcul de l'historique d'index échoue, ils ne démarrent pas sur la nouvelle image et restent sur `Created`. Lire alors `docker logs "$P-migrate-1"`, corriger, redéployer. Ce que deviennent les conteneurs de l'ancienne version pendant ce temps reste à observer sur le staging. Ils partagent le volume `storage`, monté sur `storage/app`. Les journaux partent sur la sortie d'erreur des conteneurs (`docker logs`, onglet Logs de Dokploy). Aucun fichier de journal ne grossit dans un conteneur.
 
 ## Lancer les commandes de cette page
 
@@ -304,6 +304,8 @@ Essai sur staging : **à faire (tâche 8.3 de `production-deployment`), date à 
     ```sh
     docker start -a "$P-migrate-1"
     ```
+
+    Le même conteneur recalcule ensuite l'historique d'index de tous les joueurs à partir des rounds et des ratings du dump : la sortie finit par « N joueurs recalculés. ».
 
 7. Redémarrer, puis vérifier :
 

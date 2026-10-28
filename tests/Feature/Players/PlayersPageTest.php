@@ -30,6 +30,19 @@ use App\Models\Player;
 use App\Models\PlayerAlias;
 use Inertia\Testing\AssertableInertia as Assert;
 
+/**
+ * Each line of the card on the page of a round: its name and the sum of its strokes.
+ *
+ * @return list<array{name: string, gross: int}>
+ */
+function grossOnRoundPage(string $roundId): array
+{
+    return array_map(
+        fn (array $line): array => ['name' => $line['name'], 'gross' => array_sum($line['strokes'])],
+        test()->get("/rounds/{$roundId}")->assertOk()->inertiaProps('round.card.lines'),
+    );
+}
+
 test('without a session /players redirects to /login', function () {
     $this->get('/players')->assertRedirect('/login');
 });
@@ -195,8 +208,7 @@ describe('with a session', function () {
 
             expect(playersWithAliases())->toBe(['Gab' => ['GAB'], 'Manu' => []]);
 
-            $this->get("/rounds/{$this->round->id}")->assertInertia(fn (Assert $page) => $page
-                ->where('round.players', [['name' => 'Gab', 'gross' => 72], ['name' => 'Manu', 'gross' => 88]]));
+            expect(grossOnRoundPage($this->round->id))->toBe([['name' => 'Gab', 'gross' => 72], ['name' => 'Manu', 'gross' => 88]]);
         });
 
         test('a renamed player keeps its alias and carries its new name on the rounds it played', function () {
@@ -209,8 +221,7 @@ describe('with a session', function () {
             expect(array_map(fn (array $player): array => [$player['name'], array_column($player['aliases'], 'alias')], $players))
                 ->toBe([['Emmanuel', ['MANU']], ['Gab', ['GAB']]]);
 
-            $this->get("/rounds/{$this->round->id}")->assertInertia(fn (Assert $page) => $page
-                ->where('round.players', [['name' => 'Gab', 'gross' => 72], ['name' => 'Emmanuel', 'gross' => 88]]));
+            expect(grossOnRoundPage($this->round->id))->toBe([['name' => 'Gab', 'gross' => 72], ['name' => 'Emmanuel', 'gross' => 88]]);
         });
     });
 

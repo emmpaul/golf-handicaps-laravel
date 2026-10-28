@@ -7,28 +7,34 @@ import {
     store as storePlayer,
     update as updatePlayer,
 } from '@/actions/App/Http/Controllers/PlayerController';
+import { ComputationHelp } from '@/components/handicaps/computation-help';
 import { PageTitle } from '@/components/page-title';
 import { InlineForm } from '@/components/players/inline-form';
 import { Button } from '@/components/ui/button';
+import { formatIndex } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
 export type PlayerOverview = {
     id: string;
     name: string;
     aliases: { id: string; alias: string }[];
+    /** Index d'après le dernier round joué, en dixièmes ; `null` sans round. */
+    indexT: number | null;
+    provisional: boolean;
 };
 
 /**
- * Colonnes de la table à partir de 1 024 px : joueur, alias, renommer, nouvel
- * alias. En dessous, chaque rangée empile ces quatre parties.
+ * Colonnes de la table à partir de 1 024 px : joueur et index, alias,
+ * renommer, nouvel alias. En dessous, chaque rangée empile ces quatre parties.
  */
 const PLAYER_COLUMNS =
     'lg:grid lg:grid-cols-[12rem_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)] lg:items-start lg:gap-x-6';
 
 /**
- * Joueurs du groupe : ajout, renommage, alias ajoutés et retirés (spec
- * `players`). La liste arrive triée par nom sans tenir compte de la casse,
- * chaque joueur avec ses alias par ordre alphabétique.
+ * Joueurs du groupe : index actuel, ajout, renommage, alias ajoutés et retirés
+ * (spec `players`), puis l'explication du calcul. La liste arrive triée par nom
+ * sans tenir compte de la casse, chaque joueur avec ses alias par ordre
+ * alphabétique.
  */
 export default function PlayersIndex({
     players,
@@ -85,9 +91,21 @@ export default function PlayersIndex({
                                 PLAYER_COLUMNS,
                             )}
                         >
-                            <h2 className="font-heading text-2xl leading-tight font-bold [overflow-wrap:anywhere]">
-                                {player.name}
-                            </h2>
+                            <div className="flex flex-wrap items-baseline justify-between gap-x-3 lg:flex-col lg:gap-0.5">
+                                <h2 className="font-heading text-2xl leading-tight font-bold [overflow-wrap:anywhere]">
+                                    {player.name}
+                                </h2>
+                                <span
+                                    data-testid="player-index"
+                                    className="text-sm text-muted-foreground tabular-nums"
+                                >
+                                    Index{' '}
+                                    {formatIndex(
+                                        player.indexT,
+                                        player.provisional,
+                                    )}
+                                </span>
+                            </div>
                             <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm lg:min-h-8">
                                 {/* Sous l'en-tête « Alias » à partir de 1 024 px : le libellé reste pour les lecteurs d'écran. */}
                                 <span className="text-muted-foreground lg:sr-only">
@@ -161,6 +179,7 @@ export default function PlayersIndex({
                     ))}
                 </ul>
             </div>
+            <ComputationHelp />
         </>
     );
 }

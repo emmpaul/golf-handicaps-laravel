@@ -25,7 +25,11 @@ import PlayersIndex from '@/pages/players/index';
 // pending test goes red; `aria-describedby` dropped → the error test goes red;
 // « Aucun alias » replaced by « — » → the empty aliases test goes red; an
 // alias label written with the straight apostrophe (« Retirer l'alias »,
-// « Ajouter l'alias ») instead of the typographic one → the alias tests go red.
+// « Ajouter l'alias ») instead of the typographic one → the alias tests go red;
+// « (provisoire) » dropped from the index → the index test goes red;
+// ComputationHelp removed from the page → the explanation test goes red.
+// Spec players « Index sur la page Joueurs »: Gab 10,0, Manu 14,5 provisional,
+// Sean without round.
 
 vi.mock('@inertiajs/react', async (importOriginal) => ({
     ...(await importOriginal<typeof import('@inertiajs/react')>()),
@@ -41,8 +45,10 @@ const MANU = '0190a6b2-7c3e-7000-8000-000000000002';
 const MANU_ALIAS = '0190a6b2-7c3e-7000-8000-000000000003';
 const EMMA_ALIAS = '0190a6b2-7c3e-7000-8000-000000000004';
 
+const SEAN = '0190a6b2-7c3e-7000-8000-000000000005';
+
 const players = [
-    { id: GAB, name: 'gab', aliases: [] },
+    { id: GAB, name: 'gab', aliases: [], indexT: 100, provisional: false },
     {
         id: MANU,
         name: 'Manu',
@@ -50,7 +56,10 @@ const players = [
             { id: EMMA_ALIAS, alias: 'EMMA' },
             { id: MANU_ALIAS, alias: 'MANU' },
         ],
+        indexT: 145,
+        provisional: true,
     },
+    { id: SEAN, name: 'Sean', aliases: [], indexT: null, provisional: false },
 ];
 
 type VisitOptions = {
@@ -85,7 +94,7 @@ describe('Players page', () => {
             .getAllByRole('heading', { level: 2 })
             .map((heading) => heading.textContent);
 
-        expect(names).toEqual(['gab', 'Manu']);
+        expect(names).toEqual(['gab', 'Manu', 'Sean']);
         expect(
             within(screen.getByRole('list', { name: 'Alias de Manu' }))
                 .getAllByRole('listitem')
@@ -94,6 +103,27 @@ describe('Players page', () => {
                         item.querySelector('[data-slot="alias"]')?.textContent,
                 ),
         ).toEqual(['EMMA', 'MANU']);
+    });
+
+    it('shows « Index 10,0 », « Index 14,5 (provisoire) » and « Index — »', () => {
+        render(<PlayersIndex players={players} />);
+
+        expect(
+            screen
+                .getAllByTestId('player-index')
+                .map((index) => index.textContent),
+        ).toEqual(['Index 10,0', 'Index 14,5 (provisoire)', 'Index —']);
+    });
+
+    it('offers « Comment l’index est calculé », closed', () => {
+        render(<PlayersIndex players={players} />);
+
+        const title = screen.getByText('Comment l’index est calculé');
+
+        expect(title.tagName).toBe('SUMMARY');
+        expect((title.closest('details') as HTMLDetailsElement).open).toBe(
+            false,
+        );
     });
 
     it('shows « Aucun alias » for a player without alias', () => {

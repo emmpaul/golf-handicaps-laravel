@@ -1,9 +1,10 @@
 <?php
 
 /*
- * Spec rounds « Liste des rounds », « En-tête d'un round », « Bruts d'un round », « Round
- * introuvable », « Saisie entièrement manuelle », « Parcours connus », « Correction d'un round
- * enregistré », « Détection de doublon », « Suppression d'un round »; design D3, D5 and D8.
+ * Spec rounds « Liste des rounds », « En-tête d'un round », « Classement net d'un round »,
+ * « Rating affichée sur le round », « Round introuvable », « Saisie entièrement manuelle »,
+ * « Parcours connus », « Correction d'un round enregistré », « Détection de doublon »,
+ * « Suppression d'un round »; design D3, D5 and D8 of players-and-rounds, D5 of handicap-index.
  *
  * Mutations that turn these tests red:
  * - RoundList sorted without created_at (played_on then id): of the two rounds of 2026-10-17,
@@ -19,16 +20,27 @@
  *   unchanged finds itself and comes back with the duplicate flash;
  * - RoundDetail that reads the holes of the latest round on the same course and tees
  *   (Round::query()->where('course_name', …)->where('tees', …)->latest()->first()->holes)
- *   instead of the round's own: the first round reads the par 5 of the second at hole 1.
+ *   instead of the round's own: the first round reads the par 5 of the second at hole 1;
+ * - the net winners taken at the rank 2 instead of 1: the reference card after a round of each
+ *   lists no winner, Gab and Manu sharing the rank 1;
+ * - the rating of the round read without lower(trim(...)), on the page of the round or in the
+ *   list: « Bethpage Black / red » does not match the round on « BETHPAGE BLACK / Red », which
+ *   reads rated false and lists Gab and Manu as net winners instead of Manu alone;
+ * - the gross per line still sent on the page of a round (`players`, spec « Bruts d'un round »
+ *   removed): round.players is present;
+ * - RoundDetail that lets the leaderboard read the rating again (for($round) without it): the
+ *   page of a round reads course_ratings twice.
  */
 
 use App\Domain\Rounds\Actions\CreateRound;
 use App\Domain\Rounds\RoundCard;
+use App\Models\CourseRating;
 use App\Models\Player;
 use App\Models\Round;
 use App\Models\RoundHole;
 use App\Models\Score;
 use Carbon\CarbonImmutable;
+use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Support\Facades\DB;
 use Inertia\Testing\AssertableInertia as Assert;
 
@@ -59,8 +71,7 @@ test('without a session every round address redirects to /login', function (stri
 describe('with a session', function () {
     beforeEach(function () {
         $this->withPasscodeSession();
-        $this->gab = Player::factory()->create(['name' => 'Gab']);
-        $this->manu = Player::factory()->create(['name' => 'Manu']);
+        createPlayersOnTest('Gab', 'Manu');
     });
 
     test('a round address that is not a UUID or names no round answers 404', function (string $uri) {
@@ -104,7 +115,43 @@ describe('with a session', function () {
                 'courseName' => 'BETHPAGE BLACK',
                 'tees' => 'Red',
                 'players' => [['name' => 'Gab', 'gross' => 72], ['name' => 'Manu', 'gross' => 88]],
+                'netWinners' => ['Gab', 'Manu'],
             ]);
+    });
+
+    test('the list names the net winners, all of them when tied', function () {
+        storeRoundCard(referenceCardOn('2026-10-10', [
+            [$this->gab->id, strokesOverPar(1)],
+            [$this->manu->id, strokesOverPar(17)],
+        ]));
+        storeRoundCard(referenceCardData($this->gab->id, $this->manu->id));
+
+        $this->get('/rounds')->assertInertia(fn (Assert $page) => $page
+            ->where('rounds.0.playedOn', '2026-10-17')
+            ->where('rounds.0.netWinners', ['Gab', 'Manu'])
+            ->where('rounds.1.netWinners', []));
+    });
+
+    test('the net winners of a round on a rated course follow the course handicap', function () {
+        CourseRating::factory()->create(['course_name' => 'Bethpage Black', 'tees' => 'red', 'rating_t' => 714, 'slope' => 144]);
+        $paynes = referenceCardOn('2026-10-10', [
+            [$this->gab->id, strokesOverPar(1)],
+            [$this->manu->id, strokesOverPar(17)],
+        ]);
+        $paynes['courseName'] = 'PAYNES VALLEY';
+        $paynes['tees'] = 'Blue';
+        storeRoundCard($paynes);
+        storeRoundCard(referenceCardData($this->gab->id, $this->manu->id));
+
+        // Handicaps 2 and 22 on 71,4 / 144, par 71: nets 70 and 66.
+        $this->get('/rounds')->assertInertia(fn (Assert $page) => $page
+            ->where('rounds.0.netWinners', ['Manu']));
+    });
+
+    test('the first round of everyone has no net winner', function () {
+        storeRoundCard(referenceCardData($this->gab->id, $this->manu->id));
+
+        $this->get('/rounds')->assertInertia(fn (Assert $page) => $page->where('rounds.0.netWinners', []));
     });
 
     test('the gross of the list follow the order of the card', function () {
@@ -135,8 +182,9 @@ describe('with a session', function () {
 
         $this->get('/rounds')->assertOk()->assertInertia(fn (Assert $page) => $page->has('rounds', 10));
 
-        // The rounds, their lines, the players of the lines, the gross per line.
-        expect($queries)->toBe(4);
+        // The rounds, their lines, the players of the lines, the gross per line, the
+        // statistics of every line with the rating of its round.
+        expect($queries)->toBe(5);
     });
 
     test('the manual entry gets the day in Montreal and the known courses', function () {
@@ -178,7 +226,7 @@ describe('with a session', function () {
             ]));
     });
 
-    test('the page of a round gets its header, gross, card and photo flag', function () {
+    test('the page of a round gets its header, card and photo flag, without a gross per line', function () {
         $round = storeRoundCard(referenceCardData($this->gab->id, $this->manu->id));
 
         $response = $this->get("/rounds/{$round->id}")
@@ -191,7 +239,7 @@ describe('with a session', function () {
                 ->where('round.playedOn', '2026-10-17')
                 ->where('round.par', 71)
                 ->where('round.hasPhoto', false)
-                ->where('round.players', [['name' => 'Gab', 'gross' => 72], ['name' => 'Manu', 'gross' => 88]]));
+                ->missing('round.players'));
 
         $card = $response->inertiaProps('round.card');
 
@@ -202,6 +250,45 @@ describe('with a session', function () {
                 ['playerId' => $this->gab->id, 'name' => 'Gab', 'strokes' => [5, 5, 3, 5, 4, 4, 4, 3, 5, 4, 4, 4, 4, 3, 4, 5, 3, 3]],
                 ['playerId' => $this->manu->id, 'name' => 'Manu', 'strokes' => [7, 5, 3, 7, 6, 5, 5, 3, 5, 3, 6, 5, 7, 4, 5, 4, 3, 5]],
             ]);
+    });
+
+    test('the page of a round without rating gets its leaderboard and the fallback rating', function () {
+        storeRoundCard(referenceCardOn('2026-10-10', [
+            [$this->gab->id, strokesOverPar(1)],
+            [$this->manu->id, strokesOverPar(17)],
+        ]));
+        $round = storeRoundCard(referenceCardData($this->gab->id, $this->manu->id));
+
+        $this->get("/rounds/{$round->id}")->assertInertia(fn (Assert $page) => $page
+            ->where('round.rating', ['rated' => false, 'ratingT' => 710, 'slope' => 113])
+            ->where('round.leaderboard', [
+                ['playerId' => $this->gab->id, 'name' => 'Gab', 'gross' => 72, 'indexBeforeT' => 10, 'playingHandicap' => 1, 'net' => 71, 'rank' => 1],
+                ['playerId' => $this->manu->id, 'name' => 'Manu', 'gross' => 88, 'indexBeforeT' => 170, 'playingHandicap' => 17, 'net' => 71, 'rank' => 1],
+            ]));
+    });
+
+    test('the page of a round on a rated course gets its rating', function () {
+        CourseRating::factory()->create(['course_name' => 'Bethpage Black', 'tees' => 'red', 'rating_t' => 714, 'slope' => 144]);
+        $round = storeRoundCard(referenceCardData($this->gab->id, $this->manu->id));
+
+        $this->get("/rounds/{$round->id}")->assertInertia(fn (Assert $page) => $page
+            ->where('round.rating', ['rated' => true, 'ratingT' => 714, 'slope' => 144])
+            ->where('round.leaderboard', [
+                ['playerId' => $this->gab->id, 'name' => 'Gab', 'gross' => 72, 'indexBeforeT' => null, 'playingHandicap' => null, 'net' => null, 'rank' => null],
+                ['playerId' => $this->manu->id, 'name' => 'Manu', 'gross' => 88, 'indexBeforeT' => null, 'playingHandicap' => null, 'net' => null, 'rank' => null],
+            ]));
+    });
+
+    test('the page of a round reads the rating of its course once', function () {
+        $round = storeRoundCard(referenceCardData($this->gab->id, $this->manu->id));
+        $ratingReads = 0;
+        DB::listen(function (QueryExecuted $query) use (&$ratingReads): void {
+            $ratingReads += str_contains($query->sql, 'from "course_ratings"') ? 1 : 0;
+        });
+
+        $this->get("/rounds/{$round->id}")->assertOk();
+
+        expect($ratingReads)->toBe(1);
     });
 
     test('a round keeps its own pars when a later round on the same course has others', function () {

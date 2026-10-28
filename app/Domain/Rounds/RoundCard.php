@@ -67,6 +67,16 @@ final readonly class RoundCard
     }
 
     /**
+     * The players of the lines that have one, in the order of the card.
+     *
+     * @return list<string>
+     */
+    public function playerIds(): array
+    {
+        return array_values(array_filter(array_column($this->lines, 'playerId'), fn (?string $id): bool => $id !== null));
+    }
+
+    /**
      * The card of a saved round, to correct it or to check it again.
      */
     public static function fromRound(Round $round): self

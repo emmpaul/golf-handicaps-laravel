@@ -1,6 +1,10 @@
 <?php
 
+use App\Domain\Rounds\Actions\CreateRound;
+use App\Domain\Rounds\RoundCard;
 use App\Models\Player;
+use App\Models\PlayerRoundStat;
+use App\Models\Round;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -17,6 +21,16 @@ function playersWithAliases(): array
         ->mapWithKeys(fn (Player $player): array => [
             $player->name => $player->aliases->pluck('alias')->sort()->values()->all(),
         ])->all();
+}
+
+/**
+ * Creates one player per name and keeps each on the running test, as $this->gab for « Gab ».
+ */
+function createPlayersOnTest(string ...$names): void
+{
+    foreach ($names as $name) {
+        test()->{strtolower($name)} = Player::factory()->create(['name' => $name]);
+    }
 }
 
 /**
@@ -44,4 +58,94 @@ function referenceCardData(?string $gabId, ?string $manuId): array
             ['playerId' => $manuId, 'strokes' => [7, 5, 3, 7, 6, 5, 5, 3, 5, 3, 6, 5, 7, 4, 5, 4, 3, 5]],
         ],
     ];
+}
+
+/**
+ * Strokes on the 18 holes of the reference card, $over strokes over its par 71 in all: one
+ * more (or one less) on the first holes, never above par + 4. Port of strokesOverPar of the
+ * Next.js tests.
+ *
+ * @return list<int>
+ */
+function strokesOverPar(int $over): array
+{
+    $pars = [4, 4, 3, 5, 4, 4, 5, 3, 4, 4, 4, 4, 5, 3, 4, 4, 3, 4];
+    $step = $over <=> 0;
+
+    return array_map(
+        fn (int $par, int $hole): int => $par + $step * (intdiv(abs($over), 18) + ($hole < abs($over) % 18 ? 1 : 0)),
+        $pars,
+        array_keys($pars),
+    );
+}
+
+/**
+ * The reference card played on another day by other lines, keyed as the editor sends it.
+ *
+ * @param  list<array{string, list<int>}>  $lines  [playerId, strokes] in the order of the card
+ * @return array{courseName: string, tees: string, playedOn: string, holes: list<array{par: int, strokeIndex: int, distance: int}>, lines: list<array{playerId: string|null, strokes: list<int>}>}
+ */
+function referenceCardOn(string $playedOn, array $lines): array
+{
+    $card = referenceCardData(null, null);
+    $card['playedOn'] = $playedOn;
+    $card['lines'] = array_map(fn (array $line): array => ['playerId' => $line[0], 'strokes' => $line[1]], $lines);
+
+    return $card;
+}
+
+/**
+ * Saves a card through CreateRound, which recomputes the history of its players.
+ *
+ * @param  array<string, mixed>  $card  keyed as the editor sends it
+ */
+function createRoundCard(array $card): Round
+{
+    return app(CreateRound::class)->handle(RoundCard::fromArray($card));
+}
+
+/**
+ * The rows of player_round_stats of a player by date of play, each reduced to the values of
+ * $columns in their order.
+ *
+ * @param  list<string>  $columns
+ * @return list<list<mixed>>
+ */
+function statsByDateOf(Player $player, array $columns): array
+{
+    return array_values(PlayerRoundStat::query()
+        ->join('rounds', 'rounds.id', '=', 'player_round_stats.round_id')
+        ->where('player_round_stats.player_id', $player->id)
+        ->orderBy('rounds.played_on')
+        ->get()
+        ->map(fn (PlayerRoundStat $stat): array => array_map(fn (string $column): mixed => $stat->getAttribute($column), $columns))
+        ->all());
+}
+
+/**
+ * Saves Manu's strokes of the reference card for $player on « Bethpage Black / RED », the course
+ * of the reference card in another case, on 2026-10-24.
+ */
+function createManuStrokesInAnotherCase(Player $player): Round
+{
+    $card = referenceCardOn('2026-10-24', [[$player->id, referenceCardData(null, null)['lines'][1]['strokes']]]);
+    $card['courseName'] = 'Bethpage Black';
+    $card['tees'] = 'RED';
+
+    return createRoundCard($card);
+}
+
+/**
+ * The differential of each player who has a row of player_round_stats, keyed by name; one
+ * round per player.
+ *
+ * @return array<string, int>
+ */
+function differentialsByName(): array
+{
+    return PlayerRoundStat::query()
+        ->join('players', 'players.id', '=', 'player_round_stats.player_id')
+        ->orderBy('players.name')
+        ->pluck('player_round_stats.differential_t', 'players.name')
+        ->all();
 }

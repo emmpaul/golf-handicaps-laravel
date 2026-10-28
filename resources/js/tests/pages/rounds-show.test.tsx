@@ -21,8 +21,8 @@ import {
     ROUND,
 } from '@/tests/reference-round';
 
-// Spec rounds « En-tête d'un round », « Bruts d'un round », « Carte de score
-// d'un round », « Photo d'un round », « Suppression d'un round » and
+// Spec rounds « En-tête d'un round », « Classement net d'un round », « Rating
+// affichée sur le round », « Carte de score d'un round », « Photo d'un round », « Suppression d'un round » and
 // loading-feedback « Attentes des joueurs et des rounds ». The router's delete
 // verb is stubbed (jsdom cannot run a visit); the visit callbacks it receives
 // drive the dialog's own state. Head renders nothing outside createInertiaApp;
@@ -31,7 +31,10 @@ import {
 // red; OUT summed over holes 1 to 8 (withTotals) → the card test reads 33 and
 // goes red; the photo shown without `hasPhoto` → the photo test goes red; the
 // pending label without « … » → the delete test goes red; « Annuler » wired to
-// the delete visit → the cancel test goes red.
+// the delete visit → the cancel test goes red; « · » put between the rating
+// and the slope → the rating test goes red; the par of the round replaced by
+// 71 in « Sans rating » → the unrated test goes red; ComputationHelp removed
+// from the page → the explanation test goes red.
 
 vi.mock('@inertiajs/react', async (importOriginal) => ({
     ...(await importOriginal<typeof import('@inertiajs/react')>()),
@@ -49,10 +52,27 @@ const round = {
     playedOn: '2026-10-17',
     par: 71,
     hasPhoto: false,
-    players: [
-        { name: 'Gab', gross: 72 },
-        { name: 'Manu', gross: 88 },
+    leaderboard: [
+        {
+            playerId: GAB,
+            name: 'Gab',
+            gross: 72,
+            indexBeforeT: 10,
+            playingHandicap: 2,
+            net: 70,
+            rank: 2,
+        },
+        {
+            playerId: MANU,
+            name: 'Manu',
+            gross: 88,
+            indexBeforeT: 174,
+            playingHandicap: 23,
+            net: 65,
+            rank: 1,
+        },
     ],
+    rating: { rated: true, ratingT: 714, slope: 144 },
     card: {
         holes: HOLES,
         lines: [
@@ -115,13 +135,15 @@ describe('Round page', () => {
         expect(summary.textContent).not.toContain('·');
     });
 
-    it('shows the gross of each player in the order of the card', () => {
+    it('shows the net leaderboard in the order of the card, instead of the gross', () => {
         render(<RoundsShow round={round} />);
 
-        const gross = screen.getByRole('table', { name: 'Bruts' });
+        const leaderboard = screen.getByRole('table', {
+            name: 'Classement net',
+        });
 
         expect(
-            within(gross)
+            within(leaderboard)
                 .getAllByRole('row')
                 .slice(1)
                 .map((row) =>
@@ -130,9 +152,52 @@ describe('Round page', () => {
                         .map((cell) => cell.textContent),
                 ),
         ).toEqual([
-            ['Gab', '72'],
-            ['Manu', '88'],
+            ['Gab', '72', '2', '70', '2'],
+            ['Manu', '88', '23', '65', '1'],
         ]);
+        expect(screen.queryByRole('table', { name: 'Bruts' })).toBeNull();
+    });
+
+    it('shows « Rating 71,4 » and « Slope 144 » apart, without « · », in a link to /courses', () => {
+        render(<RoundsShow round={round} />);
+
+        const rating = screen.getByTestId('round-rating');
+
+        expect(rating.tagName).toBe('A');
+        expect(rating.getAttribute('href')).toBe('/courses');
+        expect([...rating.children].map((part) => part.textContent)).toEqual([
+            'Rating 71,4',
+            'Slope 144',
+        ]);
+        expect(rating.textContent).not.toContain('·');
+    });
+
+    it('shows « Sans rating (par 72, slope 113) » in a link to /courses without rating', () => {
+        render(
+            <RoundsShow
+                round={{
+                    ...round,
+                    par: 72,
+                    rating: { rated: false, ratingT: 720, slope: 113 },
+                }}
+            />,
+        );
+
+        const rating = screen.getByTestId('round-rating');
+
+        expect(rating.textContent).toBe('Sans rating (par 72, slope 113)');
+        expect(rating.getAttribute('href')).toBe('/courses');
+    });
+
+    it('offers « Comment l’index est calculé », closed', () => {
+        render(<RoundsShow round={round} />);
+
+        const title = screen.getByText('Comment l’index est calculé');
+
+        expect(title.tagName).toBe('SUMMARY');
+        expect((title.closest('details') as HTMLDetailsElement).open).toBe(
+            false,
+        );
     });
 
     it('shows the card with the holes, the totals and the score marks', () => {

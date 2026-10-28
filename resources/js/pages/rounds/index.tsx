@@ -1,7 +1,8 @@
 import { Head, Link } from '@inertiajs/react';
+import { index as coursesIndex } from '@/actions/App/Http/Controllers/CourseController';
 import { create, show } from '@/actions/App/Http/Controllers/RoundController';
 import { PageTitle } from '@/components/page-title';
-import { formatPlayedOn } from '@/lib/format';
+import { formatPlayedOn, NO_VALUE } from '@/lib/format';
 import { ACTION_LINK, cn } from '@/lib/utils';
 
 export type RoundListItem = {
@@ -10,20 +11,22 @@ export type RoundListItem = {
     courseName: string;
     tees: string;
     players: { name: string; gross: number }[];
+    /** Joueurs classés premiers en net, ex æquo compris ; vide si personne n'avait d'index. */
+    netWinners: string[];
 };
 
 /**
- * Colonnes du registre à partir de 768 px : date, parcours, tees, bruts. Sous
- * 768 px, deux lignes par round (parcours, tees et date ; bruts), sans colonne
- * masquée. Le gagnant net arrive avec handicap-index.
+ * Colonnes du registre à partir de 768 px : date, parcours, tees, bruts,
+ * gagnant net. Sous 768 px, deux lignes par round (parcours, tees et date ;
+ * bruts et gagnant), sans colonne masquée.
  */
 const REGISTER_COLUMNS =
-    'md:grid-cols-[9rem_minmax(0,1.3fr)_6rem_minmax(0,1.7fr)] md:items-baseline md:gap-x-4';
+    'md:grid-cols-[9rem_minmax(0,1.3fr)_6rem_minmax(0,1.7fr)_minmax(0,1fr)] md:items-baseline md:gap-x-4';
 
 /**
  * Rounds du plus récent au plus ancien, avec les bruts dans l'ordre de la
- * carte (spec `rounds`, « Liste des rounds »), en registre. L'ordre vient du
- * serveur (RoundList).
+ * carte et le ou les gagnants nets (spec `rounds`, « Liste des rounds »), en
+ * registre. L'ordre vient du serveur (RoundList).
  */
 export default function RoundsIndex({ rounds }: { rounds: RoundListItem[] }) {
     return (
@@ -31,9 +34,20 @@ export default function RoundsIndex({ rounds }: { rounds: RoundListItem[] }) {
             <Head title="Rounds" />
             <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
                 <PageTitle>Rounds</PageTitle>
-                <Link href={create()} className={cn(ACTION_LINK, 'text-sm')}>
-                    Saisie manuelle
-                </Link>
+                <div className="flex flex-wrap gap-x-4">
+                    <Link
+                        href={coursesIndex()}
+                        className={cn(ACTION_LINK, 'text-sm')}
+                    >
+                        Parcours
+                    </Link>
+                    <Link
+                        href={create()}
+                        className={cn(ACTION_LINK, 'text-sm')}
+                    >
+                        Saisie manuelle
+                    </Link>
+                </div>
             </div>
             {rounds.length === 0 ? (
                 <p className="border-t-2 border-foreground pt-3 text-muted-foreground">
@@ -52,6 +66,7 @@ export default function RoundsIndex({ rounds }: { rounds: RoundListItem[] }) {
                         <span>Parcours</span>
                         <span>Tees</span>
                         <span>Bruts</span>
+                        <span>Gagnant net</span>
                     </div>
                     <ul
                         aria-label="Rounds"
@@ -83,7 +98,7 @@ export default function RoundsIndex({ rounds }: { rounds: RoundListItem[] }) {
                                             <span>{round.tees}</span>
                                         </span>
                                     </span>
-                                    <span className="col-span-2 col-start-1 row-start-2 flex flex-wrap gap-x-3 text-sm md:col-span-1 md:col-start-4 md:row-start-1 md:text-base">
+                                    <span className="col-start-1 row-start-2 flex flex-wrap gap-x-3 text-sm md:col-start-4 md:row-start-1 md:text-base">
                                         {round.players.map(
                                             ({ name, gross }) => (
                                                 <span
@@ -96,6 +111,22 @@ export default function RoundsIndex({ rounds }: { rounds: RoundListItem[] }) {
                                                     </span>
                                                 </span>
                                             ),
+                                        )}
+                                    </span>
+                                    <span
+                                        data-testid="round-winner"
+                                        className="col-start-2 row-start-2 text-right text-sm text-muted-foreground md:col-start-5 md:row-start-1 md:text-left"
+                                    >
+                                        {/* Sous l'en-tête « Gagnant net » à partir de 768 px : le libellé reste pour les lecteurs d'écran. */}
+                                        <span className="md:sr-only">
+                                            Gagnant net :{' '}
+                                        </span>
+                                        {round.netWinners.length > 0 ? (
+                                            <span className="font-medium text-signal">
+                                                {round.netWinners.join(', ')}
+                                            </span>
+                                        ) : (
+                                            NO_VALUE
                                         )}
                                     </span>
                                 </Link>

@@ -52,13 +52,14 @@ services:
 
     migrate:
         <<: *app
-        # Migrations, puis joueurs initiaux : l'échec de l'une ou de l'autre garde web et worker
-        # arrêtés. L'entrypoint fait exec "$@" : sh sort avec le code de la commande en échec.
+        # Migrations, joueurs initiaux, puis recalcul de l'historique d'index de tous les joueurs :
+        # l'échec de l'une des trois garde web et worker arrêtés. L'entrypoint fait exec "$@" : sh
+        # sort avec le code de la commande en échec.
         command:
             [
                 'sh',
                 '-c',
-                'php artisan migrate --force && php artisan golf:initial-players',
+                'php artisan migrate --force && php artisan golf:initial-players && php artisan golf:recompute-stats',
             ]
         restart: 'no'
         depends_on:
