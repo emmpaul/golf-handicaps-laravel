@@ -36,7 +36,7 @@ Image unique sur GHCR, stack docker-compose Dokploy (`web`, `worker`, `migrate`,
 
 ## 5. `players-and-rounds`
 
-**Dépend de** : 4. **Statut** : à proposer.
+**Dépend de** : 4. **Statut** : fait.
 
 Joueurs, alias, rounds, saisie manuelle, données de démonstration et cibles `migrate` / `fresh` / `demo`.
 
