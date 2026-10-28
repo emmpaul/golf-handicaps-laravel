@@ -1,0 +1,33 @@
+name: zizmor
+
+on:
+  push:
+    branches: [main]
+    paths: ['.github/**']
+  pull_request:
+    paths: ['.github/**']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  zizmor:
+    name: zizmor
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Audit the workflows
+        uses: zizmorcore/zizmor-action@53290badfa369cb0bf7ad16342cb62c2fa47ac7b # v0.8.0
+        with:
+          # Dependabot ne relève pas cette version : la mettre à jour à la main.
+          version: 1.31.1
+          advanced-security: false
