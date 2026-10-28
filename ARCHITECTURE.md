@@ -37,7 +37,17 @@ Monolithe Laravel 13 + Inertia 3 + React 19, PostgreSQL 18, monté selon le sque
 - Sans `APP_PASSCODE`, `EnsurePasscodeConfigured`, premier contrôle de la pile globale, fait répondre 500 à toute requête HTTP, `/up` compris, avec un message qui nomme la variable. Les commandes artisan tournent sans elle.
 - En-têtes : `AddSecurityHeaders`, en tête de la pile globale, juste avant `EnsurePasscodeConfigured`, pose `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin` et `Content-Security-Policy: frame-ancestors 'none'` sur toute réponse, erreurs (le 500 d'un code manquant aussi), redirections, `/up` et JSON compris. Une réponse qui pose sa propre `Content-Security-Policy` la garde.
 - Mandataires : `config/trustedproxy.php` lit `TRUSTED_PROXIES` (adresses ou plages CIDR séparées par des virgules) pour le `TrustProxies` de Laravel. Vide, aucun mandataire n'est de confiance ; `*` et `**` sont retirés. Le limiteur voit ainsi l'IP du client derrière le proxy de Dokploy.
-- Hors périmètre jusqu'à `production-deployment` : HSTS, témoin de session `Secure` et valeur de production de `TRUSTED_PROXIES`.
+
+## Déploiement (ADR 0008)
+
+- Une seule image de production (`Dockerfile`, FrankenPHP en mode classique, PHP 8.5), sans secret, sous l'utilisateur `app`. La commande lancée choisit le rôle : web (`frankenphp run`, port 8080, `docker/Caddyfile`), worker (`queue:work`) ou migrations. `docker/entrypoint.sh` construit les caches Laravel (`php artisan optimize`) au démarrage, une fois l'environnement connu.
+- La CI construit l'image, lance la stack (`make image`, `make image-smoke`) et publie sur `ghcr.io/emmpaul/golf-handicaps-laravel` l'image qu'elle a testée : `:main` et `:<sha>` depuis `main`, `:vX.Y.Z`, `:latest` et `:<sha>` depuis un tag dont `version.txt` porte la version (`make image-tags`).
+- Stack `docker-compose.yml` pour Dokploy : `pgsql`, `migrate` (une fois par déploiement), `web` et `worker` (après la réussite de `migrate`), `backup`. Volumes nommés `pgdata`, `storage` (monté sur `storage/app` pour `web` et `worker`) et `backups`. Aucun port publié.
+- Santé : `web` est sain quand `/up` répond 200. `worker` l'est tant que `App\Support\WorkerHeartbeat` a écrit `/tmp/worker-heartbeat` il y a moins de 300 s ; le battement suit `Queue::looping`, `JobProcessed` et `JobFailed`, donc seul `queue:work` l'écrit. `backup` l'est tant qu'un dump réussi a moins de 26 h.
+- Sauvegardes : `pg_dump -Fc` au démarrage puis toutes les 24 h, gardées 14 jours. La restauration est dans `docs/deployment.md`.
+- TLS chez Traefik (Dokploy). `AddSecurityHeaders` pose `Strict-Transport-Security: max-age=31536000` sur toute réponse servie en HTTPS, d'après `isSecure()` lu après les mandataires de confiance. Le témoin de session est `Secure` par défaut quand `APP_ENV=production` (`config/session.php`). `TRUSTED_PROXIES` vaut en production le sous-réseau du proxy de Dokploy, jamais `*`.
+- Journaux sur la sortie d'erreur du conteneur (`LOG_CHANNEL=stderr`), gardés et tournés par Docker.
+- Procédures (installation, version, santé, sauvegarde, restauration, retour arrière, fermeture des sessions) : `docs/deployment.md`.
 
 ## Frontend (ADR 0006)
 

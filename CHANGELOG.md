@@ -60,6 +60,8 @@ All notable changes to this application, version by version. The format follows 
 - Production image assets built with `VITE_APP_NAME="Handicaps golf"`: browser tabs read `Connexion - Handicaps golf`, not `Connexion - Laravel`.
 - Logged query exceptions keep their SQL with `?` placeholders and drop the bound values, so a session identifier never reaches the logs; the error response is unchanged.
 - `COMPOSE_FILE=compose.yaml` exported by the Makefile and set in `.env.example`: Sail reads only the development stack and no longer warns about two compose files (an existing clone adds the line to its `.env`).
+- `docs/deployment.md`: Dokploy setup, variables, `TRUSTED_PROXIES`, deploying a version, `/api/version` check, worker health, backup and restore, rollback, closing every session.
+- ADR 0008 (single image and Dokploy stack) and a Deployment section in `ARCHITECTURE.md`.
 - `/release` skill, launched by the maintainer only: release PR, `vX.Y.Z` tag, published image and `/api/version` checks, GitHub Release, guided Dokploy deployment; commit scope `release`.
 
 ### Changed
@@ -75,6 +77,7 @@ All notable changes to this application, version by version. The format follows 
 - Sessions are encrypted by default (`SESSION_ENCRYPT` defaults to `true`).
 - `.env.example` documents `APP_PASSCODE`, `SESSION_LIFETIME` and `TRUSTED_PROXIES`, and `phpunit.xml` sets `APP_PASSCODE`.
 - The session cookie is `Secure` by default when `APP_ENV=production`; `SESSION_SECURE_COOKIE` still forces either value, and `.env.example` explains it.
+- ADR 0005 points layer 12 to ADR 0008.
 
 ### Removed
 
