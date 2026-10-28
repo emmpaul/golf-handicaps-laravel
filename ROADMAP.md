@@ -16,7 +16,7 @@ Makefile, Pint, Larastan 8, Pest sur PostgreSQL, Vitest, jscpd, tests d'architec
 
 ## 2. `visual-theme-port`
 
-**Dépend de** : 1. **Statut** : à proposer.
+**Dépend de** : 1. **Statut** : fait.
 
 Thème scoreboard clair et sombre, polices, primitives `components/ui`, shell de l'application, retours de chargement.
 
