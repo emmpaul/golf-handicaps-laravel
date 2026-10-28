@@ -6,7 +6,7 @@
 
 - Kit React vierge, sans Fortify, `components/ui` ni mode sombre. `app/` ne contient que `Models/User.php`, `Http/Middleware/HandleInertiaRequests.php` (qui partage `auth.user`), `Http/Controllers/Controller.php` et `Providers/AppServiceProvider.php` (défauts de production de la couche 2.6 déjà posés).
 - Migrations du kit encore en entiers : `users`, `password_reset_tokens`, `sessions.user_id` (`foreignId`).
-- `phpstan.neon` (niveau 7) et `pint.json` sont déjà là, sans cible pour les lancer. `phpunit.xml` n'a que les suites `Unit` et `Feature`, sans `DB_CONNECTION=pgsql`.
+- `phpstan.neon` (niveau 7, porté à 8 par ce changement) et `pint.json` sont déjà là, sans cible pour les lancer. `phpunit.xml` n'a que les suites `Unit` et `Feature`, sans `DB_CONNECTION=pgsql`.
 - `vite.config.ts` n'a pas de bloc `test` et son lint n'a pas `typeCheck`. Aucune dépendance Vitest côté DOM (`jsdom`), ni jscpd, ni Paratest.
 - Pas de `.github/`, pas de `Makefile`. Les scripts Composer concurrents sont retirés, mais `post-update-cmd` ne lance pas `boost:update`.
 - PNPM 12.15.0 (`packageManager`), Node de l'hôte pour le hook `commit-msg`, Sail avec `laravel.test` et `pgsql` (port hôte 5433).
@@ -62,7 +62,7 @@ Alternatives écartées : garder `users` en UUID comme le squelette (table morte
   - `date(CarbonInterface|string $instant): string` : raccourci `Y-m-d`.
   - `startOfDay(string $date): CarbonImmutable` : minuit local du jour `AAAA-MM-JJ`, rendu en UTC. La fin exclue d'un jour est `startOfDay` du lendemain.
 - Tests Unit avec les littéraux de la spec (2026-11-01, 2026-03-08, 2026-07-15). Mutation qui les rend rouges : utiliser `config('app.timezone')` au lieu de `app.display_timezone`, ou `addHours(24)` pour la fin du jour.
-- Vitest : `test.env.TZ = 'America/Montreal'` dans `vite.config.ts`. Premier test `resources/js/tests/timezone.test.ts` : `Intl.DateTimeFormat().resolvedOptions().timeZone` vaut `'America/Montreal'` et `new Date('2026-11-02').getDate()` vaut `1`. Mutation : retirer `env.TZ` (le conteneur est en UTC, le test rougit).
+- Vitest : `test.env.TZ = 'America/Montreal'` dans `vite.config.ts`. Premier test `resources/js/tests/timezone.test.ts` : `new Date('2026-11-02T04:30:00Z').getHours()` vaut `23` (heure normale), `new Date('2026-07-15T03:30:00Z').getHours()` vaut `23` (heure avancée) et `new Date('2026-11-02').getDate()` vaut `1`. Le nom du fuseau n'est pas vérifié, car ICU renomme `America/Montreal` en son alias canonique `America/Toronto`. Mutation : retirer `env.TZ` (le conteneur est en UTC, le test rougit).
 
 Alternatives écartées : `app.timezone` local, cast par modèle, formatage côté client (couche 2.8, « Pourquoi »).
 

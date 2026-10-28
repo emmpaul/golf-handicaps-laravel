@@ -7,7 +7,7 @@ Le bootstrap (entrée 0 de `ROADMAP.md`, fait) a livré un projet Laravel qui to
 ## What Changes
 
 - **Makefile** à la racine, interface unique en local et en CI (couche 5 du squelette) : `help`, `setup`, `up`, `down`, `dev`, `dev-stop`, `browser`, `build`, `migrate`, `openspec`, `lint`, `format`, `analyse`, `duplicates`, `arch-test`, `test-backend` (`FILES`, `FILTER`, `SHARD`, `JUNIT`), `test-frontend`, `test`, `update-shards`, `check`, `commitlint`, `changed-code`, `wayfinder`. Les cibles `fresh` et `demo` arrivent avec `players-and-rounds`.
-- **Contrôles de qualité** : Pint, Larastan niveau 7 (déjà configuré), jscpd seuil 0, Pest en parallèle sur PostgreSQL (Paratest), suite `Arch`, Vitest (`vp test`) sous `TZ=America/Montreal` avec un premier test qui vérifie ce fuseau, `TestCase::seed()` avec `ANALYZE`.
+- **Contrôles de qualité** : Pint, Larastan porté du niveau 7 du squelette au niveau 8 pour vérifier les types nullables, jscpd seuil 0, Pest en parallèle sur PostgreSQL (Paratest), suite `Arch`, Vitest (`vp test`) sous `TZ=America/Montreal` avec un premier test qui vérifie ce fuseau, `TestCase::seed()` avec `ANALYZE`.
 - **Tests d'architecture** de départ (preset php, helpers de débogage, UUID des modèles, couches du domaine et des intégrations) et **test de garde** d'`AGENTS.md` contre les prescriptions qui contournent le Makefile.
 - **Identifiants UUID** : règle d'architecture `HasUuids` sur chaque modèle de `App\Models`. **Suppression des comptes du kit** : table `users`, table `password_reset_tokens`, colonne `sessions.user_id`, `App\Models\User`, `UserFactory`, garde `web` sur le provider Eloquent.
 - **Fuseau d'affichage** : `app.timezone` reste `UTC`, nouvelle clé `app.display_timezone` = `America/Montreal`, une seule classe de conversion `App\Domain\LocalTime`.
@@ -59,12 +59,13 @@ Les règles laissées ouvertes par le brief ont été posées au mainteneur et t
 5. **Fichiers de version** : `version.txt` compte comme documentation pour `changed-code` ; `CHANGELOG.md` l'est déjà (`.md` à la racine). Une PR de version seule saute les tests.
 6. **Étape 11 du squelette** : ce changement reprend le test de garde d'`AGENTS.md`, `make browser` et `make dev-stop`. Le skill `babysit-pr` est laissé de côté.
 7. **Premier test Vitest** : un test qui vérifie le fuseau fixe, plutôt que `passWithNoTests`.
+8. **Niveau de Larastan** : 8 au lieu du 7 du squelette, pour que le scénario « Erreur de type PHP » (une méthode déclarée `string` qui renvoie `?string`) fasse échouer `make analyse`.
 
 ## Impact
 
 - Fichiers nouveaux : `Makefile`, `.jscpd.json`, `version.txt`, `CHANGELOG.md`, `.github/` (workflows `ci.yml` et `zizmor.yml`, action `setup`, `dependabot.yml`, `zizmor.yml`), `routes/api.php`, `app/Domain/LocalTime.php`, `tests/Arch/`, tests Feature et Unit, premier test Vitest, `docs/adr/0001` à `0005`.
 - Fichiers supprimés : `app/Models/User.php`, `database/factories/UserFactory.php`, `resources/js/types/auth.ts` s'il ne sert plus.
-- Fichiers modifiés : `composer.json`, `composer.lock`, `package.json`, `pnpm-lock.yaml`, `phpunit.xml`, `tests/Pest.php`, `tests/TestCase.php`, `vite.config.ts`, `config/app.php`, `config/auth.php`, `bootstrap/app.php`, migration initiale des utilisateurs, `database/seeders/DatabaseSeeder.php`, `.env.example`, `.ai/guidelines/golf-handicaps.md`, `AGENTS.md` (généré), `ARCHITECTURE.md`, `docs/PORT_TO_LARAVEL.md`, `docs/adr/README.md`, `ROADMAP.md`.
+- Fichiers modifiés : `phpstan.neon`, `composer.json`, `composer.lock`, `package.json`, `pnpm-lock.yaml`, `phpunit.xml`, `tests/Pest.php`, `tests/TestCase.php`, `vite.config.ts`, `config/app.php`, `config/auth.php`, `bootstrap/app.php`, migration initiale des utilisateurs, `database/seeders/DatabaseSeeder.php`, `.env.example`, `.ai/guidelines/golf-handicaps.md`, `AGENTS.md` (généré), `ARCHITECTURE.md`, `docs/PORT_TO_LARAVEL.md`, `docs/adr/README.md`, `ROADMAP.md`.
 - API : nouvelle route publique `GET /api/version`, sans donnée du groupe.
 - Domaines : aucun domaine métier ; `App\Domain` naît avec `LocalTime`.
 - Vie privée : la route de version ne révèle que la version et le sha du commit, déjà publics sur GitHub. La suppression de `sessions.user_id` retire le seul lien entre une session et une personne.

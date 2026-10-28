@@ -95,10 +95,10 @@ La suite backend SHALL tourner sur PostgreSQL, dans une base `testing` distincte
 
 #### Scenario: Poste réglé sur un autre fuseau
 - **WHEN** le poste est réglé sur `Europe/Paris` et qu'on lance `make test-frontend`
-- **THEN** les tests voient `America/Montreal` comme fuseau courant
+- **THEN** les tests lisent l'instant `2026-11-02T04:30:00Z` à 23 h 30, heure de Montréal
 
 ### Requirement: Analyse statique et duplication
-`make analyse` SHALL lancer Larastan au niveau 7 sur `app/`, `bootstrap/app.php`, `config/`, `database/` et `routes/`. `make duplicates` SHALL échouer dès qu'un bloc dupliqué est trouvé dans le code PHP ou TypeScript du projet (seuil 0), hors exclusions nommées.
+`make analyse` SHALL lancer Larastan au niveau 8 sur `app/`, `bootstrap/app.php`, `config/`, `database/` et `routes/`. `make duplicates` SHALL échouer dès qu'un bloc dupliqué est trouvé dans le code PHP ou TypeScript du projet (seuil 0), hors exclusions nommées.
 
 #### Scenario: Bloc dupliqué
 - **WHEN** deux fonctions TypeScript de `resources/js` partagent plus de 70 jetons identiques
