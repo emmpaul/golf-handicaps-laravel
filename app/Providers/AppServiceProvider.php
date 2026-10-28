@@ -3,10 +3,15 @@
 namespace App\Providers;
 
 use App\Http\Session\AnonymousDatabaseSessionHandler;
+use App\Support\WorkerHeartbeat;
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Foundation\Application;
+use Illuminate\Queue\Events\JobFailed;
+use Illuminate\Queue\Events\JobProcessed;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
@@ -28,6 +33,17 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->configureDefaults();
         $this->configureSessionStorage();
+        $this->configureWorkerHeartbeat();
+    }
+
+    /**
+     * Write the worker heartbeat on each loop of queue:work and at the end of each job.
+     */
+    protected function configureWorkerHeartbeat(): void
+    {
+        Queue::looping(fn () => WorkerHeartbeat::beat());
+        Event::listen(JobProcessed::class, fn () => WorkerHeartbeat::beat());
+        Event::listen(JobFailed::class, fn () => WorkerHeartbeat::beat());
     }
 
     /**

@@ -1,0 +1,38 @@
+# Contexte de build de l'image de production (design D2) : ni secret, ni dépendance installée,
+# ni donnée locale. version.txt reste dans le contexte : config/app.php y lit la version.
+.git
+.github
+.env*
+docker/smoke.env
+node_modules
+vendor
+public/build
+public/hot
+reports
+tests
+openspec
+docs
+
+# Données et caches locaux : seuls les .gitignore gardent l'arborescence de storage/ et bootstrap/cache/.
+storage/**
+!storage/**/.gitignore
+bootstrap/cache/*
+!bootstrap/cache/.gitignore
+
+# Dossiers d'agents et d'éditeurs
+.ai
+.agents
+.amp
+.claude
+.codex
+.cursor
+.factory
+.grok
+.junie
+.kiro
+.pi
+.fleet
+.idea
+.nova
+.vscode
+.zed
