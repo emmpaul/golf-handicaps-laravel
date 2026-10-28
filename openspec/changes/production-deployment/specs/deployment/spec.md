@@ -131,7 +131,7 @@ L'opérateur SHALL pouvoir revenir à l'image précédente en changeant seulemen
 - **THEN** `GET /api/version` répond `"version": "0.1.0"` et les données sont intactes
 
 ### Requirement: Journaux sur la sortie du conteneur
-En production, le web, le worker et les migrations SHALL écrire leurs journaux sur la sortie d'erreur du conteneur, lisibles par `docker compose logs` et Dokploy, sans fichier de journal qui grossit dans le conteneur. Un journal MUST NOT contenir le code d'accès.
+En production, le web, le worker et les migrations SHALL écrire leurs journaux sur la sortie d'erreur du conteneur, lisibles par `docker compose logs` et Dokploy, sans fichier de journal qui grossit dans le conteneur. Un journal MUST NOT contenir le code d'accès ni l'identifiant d'une session. Une erreur de requête SQL MUST être journalisée avec sa requête, sans les valeurs liées.
 
 #### Scenario: Erreur côté serveur
 - **WHEN** une requête provoque une exception sur le service `web`
@@ -140,3 +140,8 @@ En production, le web, le worker et les migrations SHALL écrire leurs journaux 
 #### Scenario: Code faux saisi
 - **WHEN** un visiteur envoie le code `birdie-2025` sur `/login`
 - **THEN** aucun journal de la stack ne contient `birdie-2025`
+
+#### Scenario: Base arrêtée pendant une session
+- **GIVEN** le service `pgsql` est arrêté
+- **WHEN** une requête qui porte un témoin de session arrive sur `web`
+- **THEN** l'erreur journalisée nomme la requête `select * from "sessions" where "id" = ?` sans sa valeur liée, et aucun journal de la stack ne contient l'identifiant de cette session

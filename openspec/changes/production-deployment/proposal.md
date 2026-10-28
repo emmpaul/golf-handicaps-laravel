@@ -15,9 +15,10 @@ Il remplit aussi la couche 12 du squelette (ADR 0005). Il reprend enfin ce qu'`a
 - **Santé du worker** (décision du mainteneur, 2026-10-28 : ici plutôt qu'au changement 9) : le worker écrit un battement dans le `/tmp` de son conteneur à chaque tour de boucle et après chaque job. Le healthcheck le déclare malade au-delà de 5 minutes sans battement.
 - **Sauvegardes PostgreSQL** (décision du mainteneur, 2026-10-28) : le service `backup` fait un `pg_dump` au démarrage puis chaque jour dans le volume `backups`, et garde 14 jours. Son healthcheck vire au rouge quand le dernier dump a plus de 26 heures. La restauration est documentée, puis essayée sur staging.
 - **TLS en production** : en-tête `Strict-Transport-Security` sur les réponses servies en HTTPS. Témoin de session `Secure` par défaut quand `APP_ENV=production`. Valeur de `TRUSTED_PROXIES` documentée pour le réseau du proxy de Dokploy.
-- **Journaux** sur la sortie d'erreur du conteneur en production (`LOG_CHANNEL=stderr`). Leur rotation est laissée à Docker.
+- **Journaux** sur la sortie d'erreur du conteneur en production (`LOG_CHANNEL=stderr`). Leur rotation est laissée à Docker. Une erreur SQL y est écrite sans ses valeurs liées, pour qu'aucun identifiant de session n'y apparaisse (décision du mainteneur, 2026-10-28).
 - **Makefile** : cibles `image` (construit l'image locale) et `image-smoke` (lance la stack de production en local et attend l'état sain). La CI passe par elles.
-- **Documentation** : `docs/deployment.md` couvre la première installation Dokploy, les variables, le déploiement d'une version, la vérification par `/api/version`, la santé du worker, la sauvegarde et la restauration, le retour arrière et la fermeture de toutes les sessions. S'y ajoutent l'ADR 0008 (déploiement), la couche 12 notée dans l'ADR 0005, `ARCHITECTURE.md`, `ROADMAP.md` et `CHANGELOG.md`.
+- **Documentation** : `docs/deployment.md` couvre la première installation Dokploy, les variables, le déploiement d'une version, la vérification par `/api/version`, la santé du worker, la sauvegarde et la restauration, le retour arrière et la fermeture de toutes les sessions. S'y ajoutent l'ADR 0008 (déploiement), la couche 12 et le renvoi de la puce « Versionnement manuel » au skill `/release` dans l'ADR 0005, `ARCHITECTURE.md`, `ROADMAP.md` et `CHANGELOG.md`.
+- **Skill `/release`** (décision du mainteneur, 2026-10-28) : seul le mainteneur le lance (`disable-model-invocation: true`). Il propose la version d'après `## [Unreleased]`, ouvre la PR `chore(release): vX.Y.Z` (`CHANGELOG.md`, `version.txt`), la fusionne et pose le tag après accord du mainteneur, puis vérifie l'image publiée et crée la GitHub Release. Le scope `release` entre dans `commitlint.config.js`. La consigne du dépôt et l'ADR 0005 disent qu'une version ne se publie que par ce skill. Aucun requirement de spec ne change.
 - **Staging Dokploy** monté par le mainteneur à partir de `docs/deployment.md`, image `:main`, avec un domaine HTTPS. La restauration d'une sauvegarde y est essayée une fois.
 
 ### Hors périmètre
@@ -53,9 +54,10 @@ Il remplit aussi la couche 12 du squelette (ADR 0005). Il reprend enfin ce qu'`a
 
 ## Impact
 
-- **Code** : nouveau `Dockerfile`, `.dockerignore`, `docker-compose.yml` de production, configuration FrankenPHP, script de démarrage du conteneur, classe de battement du worker et son enregistrement, `AddSecurityHeaders` (HSTS), `config/session.php` (défaut de `secure`).
+- **Code** : nouveau `Dockerfile`, `.dockerignore`, `docker-compose.yml` de production, configuration FrankenPHP, script de démarrage du conteneur, classe de battement du worker et son enregistrement, `AddSecurityHeaders` (HSTS), `config/session.php` (défaut de `secure`), `bootstrap/app.php` (valeurs liées retirées des `QueryException` journalisées).
 - **CI** : `.github/workflows/ci.yml` gagne les jobs `image` et `publish`, et se déclenche aussi sur les tags `v*`. Le job `publish` est le seul qui écrit des paquets (`packages: write`).
-- **Makefile** : cibles `image` et `image-smoke`. `docker-compose.yml`, `Dockerfile` et `.dockerignore` comptent comme du code pour `make changed-code`.
+- **Makefile** : cibles `image` et `image-smoke`, et `COMPOSE_FILE=compose.yaml` exporté (aussi dans `.env.example`) pour que Sail ne lise que la stack de développement. `docker-compose.yml`, `Dockerfile` et `.dockerignore` comptent comme du code pour `make changed-code`.
+- **Outillage d'agent** : nouveau skill `.ai/skills/release/SKILL.md`, copié dans `.claude/skills/` par `boost:update`. Scope `release` dans `commitlint.config.js`. Consigne de publication de `.ai/guidelines/golf-handicaps.md` réécrite, et `AGENTS.md` régénéré.
 - **Tests** : Pest pour le battement du worker, HSTS et le témoin `Secure`. Le test de fumée de la CI couvre l'image et la stack, qu'aucun test Pest ne peut démarrer.
 - **Dépendances** : aucun paquet Composer ni PNPM. Images de base `dunglas/frankenphp` et `postgres:18-alpine`, épinglées par digest.
 - **Systèmes** : GHCR (paquet public, comme le dépôt), un projet Dokploy de staging, un domaine HTTPS de staging.
