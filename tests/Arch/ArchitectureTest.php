@@ -25,3 +25,10 @@ arch('integrations do not depend on controllers or the frontend')
 arch('demo seeders refuse to run in production')
     ->expect('Database\Seeders')->classes()->toExtend(DemoSeeder::class)
     ->ignoring(DemoSeeder::class);
+
+// Whs, NetRanking and their values: everything of App\Domain\Handicaps but the Actions and
+// the Queries, which read and write the base.
+// Mutation that turns this test red: `use Illuminate\Support\Facades\DB` in Whs, called in a method.
+arch('the handicap computation is pure: no framework, no model')
+    ->expect('App\Domain\Handicaps')->not->toUse(['Illuminate', 'App\Models'])
+    ->ignoring(['App\Domain\Handicaps\Actions', 'App\Domain\Handicaps\Queries']);

@@ -32,3 +32,25 @@ export function formatPlayedOn(playedOn: string): string {
 
 /** An empty value in a table: a name or a figure that does not exist yet. */
 export const NO_VALUE = '—';
+
+/** The mention of a player without index before a round (spec `rounds`). */
+export const NO_INDEX = "pas encore d'index";
+
+/** Integer tenths to « 17,4 » (design D2): the server sends tenths, the page formats them. */
+export function formatTenths(tenths: number): string {
+    return (tenths / 10).toFixed(1).replace('.', ',');
+}
+
+/** Index shown: « 10,0 », « 14,5 (provisoire) », or « — » without round. */
+export function formatIndex(
+    indexT: number | null,
+    provisional: boolean,
+): string {
+    if (indexT === null) {
+        return NO_VALUE;
+    }
+
+    return provisional
+        ? `${formatTenths(indexT)} (provisoire)`
+        : formatTenths(indexT);
+}

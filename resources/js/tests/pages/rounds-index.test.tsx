@@ -9,7 +9,9 @@ import { ROUND } from '@/tests/reference-round';
 // Mutations: « · » put back between the course and the tees → the line test
 // goes red; « Aucun round enregistré. » dropped or the « Saisie manuelle » link
 // pointed elsewhere → the empty test goes red; the gross rendered as
-// « Gab : 72 » → the line test goes red.
+// « Gab : 72 » → the line test goes red; the net winners joined by « / » →
+// the winners test goes red; « Parcours » pointed elsewhere → the courses
+// link test goes red.
 
 vi.mock('@inertiajs/react', async (importOriginal) => ({
     ...(await importOriginal<typeof import('@inertiajs/react')>()),
@@ -25,7 +27,15 @@ const reference = {
         { name: 'Gab', gross: 72 },
         { name: 'Manu', gross: 88 },
     ],
+    netWinners: ['Gab', 'Manu'],
 };
+
+/** The « Gagnant net » cell of each line, in the order shown. */
+function winners(): string[] {
+    return screen
+        .getAllByTestId('round-winner')
+        .map((winner) => winner.textContent ?? '');
+}
 
 describe('Rounds page', () => {
     it('shows the date, course, tees and gross of a round, without « · »', () => {
@@ -48,6 +58,41 @@ describe('Rounds page', () => {
         ).toEqual(['Gab 72', 'Manu 88']);
         expect(line.textContent).not.toContain('·');
         expect(screen.queryByText('Aucun round enregistré.')).toBeNull();
+    });
+
+    it('shows « Gab, Manu » as tied net winners, and « — » when nobody had an index', () => {
+        render(
+            <RoundsIndex
+                rounds={[
+                    reference,
+                    {
+                        ...reference,
+                        id: '0190a6b2-7c3e-7000-8000-0000000000ab',
+                        playedOn: '2026-10-10',
+                        netWinners: [],
+                    },
+                ]}
+            />,
+        );
+
+        expect(winners()).toEqual([
+            'Gagnant net : Gab, Manu',
+            'Gagnant net : —',
+        ]);
+    });
+
+    it('heads the register with « Gagnant net »', () => {
+        render(<RoundsIndex rounds={[reference]} />);
+
+        expect(screen.getByText('Gagnant net').textContent).toBe('Gagnant net');
+    });
+
+    it('links « Parcours » to /courses, beside « Saisie manuelle »', () => {
+        render(<RoundsIndex rounds={[]} />);
+
+        expect(
+            screen.getByRole('link', { name: 'Parcours' }).getAttribute('href'),
+        ).toBe('/courses');
     });
 
     it('keeps the order received from the server', () => {

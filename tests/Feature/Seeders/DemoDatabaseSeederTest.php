@@ -10,12 +10,18 @@
  *   the photos disk;
  * - a generated card with a stroke index in double: RoundCardChecks refuses it and the seeding
  *   fails;
- * - the photos directory not emptied first: the stale file stays on the disk.
+ * - the photos directory not emptied first: the stale file stays on the disk;
+ * - the demonstration rating written by CourseRating::factory() instead of SaveCourseRating:
+ *   the differentials are not recomputed and Manu stays at 170 on the reference round;
+ * - DemoCourseRatingsSeeder called before DemoRoundsSeeder: SaveCourseRating finds no round on
+ *   BETHPAGE BLACK / Red and the seeding fails with « Parcours introuvable ».
  */
 
 use App\Domain\Rounds\RoundCard;
 use App\Domain\Rounds\RoundCardChecks;
+use App\Models\CourseRating;
 use App\Models\Player;
+use App\Models\PlayerRoundStat;
 use App\Models\Round;
 use App\Models\RoundPlayer;
 use Database\Seeders\DemoDatabaseSeeder;
@@ -139,4 +145,18 @@ test('the demonstration refuses a base that already has a round and writes nothi
 
     expect(Player::query()->count())->toBe(0)
         ->and(Round::query()->pluck('course_name')->all())->toBe(['OLD COURSE']);
+});
+
+test('the demonstration rates BETHPAGE BLACK / Red only and computes the index history of every round', function () {
+    $this->seed(DemoDatabaseSeeder::class);
+
+    expect(CourseRating::query()->get(['course_name', 'tees', 'rating_t', 'slope'])->toArray())
+        ->toBe([['course_name' => 'BETHPAGE BLACK', 'tees' => 'Red', 'rating_t' => 714, 'slope' => 144]])
+        ->and(PlayerRoundStat::query()->count())->toBe(RoundPlayer::query()->count());
+
+    $reference = Round::query()->whereDate('played_on', '2026-10-17')->sole();
+    $manu = Player::query()->where('name', 'Manu')->sole();
+
+    expect(PlayerRoundStat::query()->where('round_id', $reference->id)->where('player_id', $manu->id)->value('differential_t'))
+        ->toBe(130);
 });

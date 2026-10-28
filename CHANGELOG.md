@@ -75,6 +75,14 @@ All notable changes to this application, version by version. The format follows 
 - Development data: `DatabaseSeeder` writes Gab, Manu and Sean; `DemoDatabaseSeeder` adds the reference round `IMG_3064` with its photo (`database/data/img3064.webp`) and 24 generated rounds on three courses, the same at every run, on an empty base only. Every seeder extends `DemoSeeder`, which refuses production, enforced by an architecture rule.
 - `make fresh` and `make demo` targets.
 - ADR 0009 (rounds data model and coherence checks) and a Players and rounds section in `ARCHITECTURE.md`.
+- WHS handicap index ported from the Next.js app, to the tenth: adjusted score (par + 4 per hole), differential from the course rating and slope (par and 113 without rating), index over the best differentials of the last 20 rounds with the WHS table and adjustments, capped at 54.0, provisional below 3 rounds. Pure computation in `App\Domain\Handicaps\Whs` and `NetRanking`, kept free of the framework by an architecture rule.
+- `player_round_stats` table: gross, adjusted, differential, index before and after and `counts_in_current` of each player on each round, in integer tenths, recomputed for every touched player inside the transaction of each round write and rating change, under a lock on the players.
+- `course_ratings` table and `/courses` page: course rating and slope typed by hand per course and tees ("Rating entre 40,0 et 90,0", "Slope entre 55 et 155"), removed with "Retirer la rating"; a change applies to every round of that course and tees.
+- Net leaderboard on the round page (gross, playing handicap, net, net rank, "pas encore d'index"), rating line linked to `/courses`, "Gagnant net" column and "Parcours" link on `/rounds`, current index of each player on `/players`.
+- "Comment l’index est calculé" explanation, folded by default, on the round page, `/players` and `/courses`.
+- `golf:recompute-stats` artisan command: recomputes the index history of every player who has a round, idempotent.
+- Demonstration data: `DemoCourseRatingsSeeder` types 71,4 / 144 on BETHPAGE BLACK / Red, so `make demo` shows a course with and without rating.
+- ADR 0010 (index in integer tenths and derived table) and an Index and ratings section in `ARCHITECTURE.md`.
 
 ### Changed
 
@@ -92,10 +100,12 @@ All notable changes to this application, version by version. The format follows 
 - ADR 0005 points layer 12 to ADR 0008.
 - The `migrate` service of `docker-compose.yml` runs `golf:initial-players` after the migrations; `.env.example` and `docs/deployment.md` document `INITIAL_PLAYERS`.
 - `/rounds` and `/players` serve their own pages instead of "Section à venir"; an unknown sub-address under them answers 404.
+- The `migrate` service of `docker-compose.yml` runs `golf:recompute-stats` after `golf:initial-players`; a failed recompute keeps `web` and `worker` stopped. `docs/deployment.md` documents it.
 
 ### Removed
 
 - Starter kit accounts: `users` and `password_reset_tokens` tables, `sessions.user_id` column, `User` model and its factory.
 - Account configuration in `config/auth.php`: Eloquent provider, password reset and password confirmation timeout.
 - The kit's `ExampleTest` files and the authentication types in `resources/js` (`auth.ts`, shared `auth` prop).
+- `rounds/round-gross` component, replaced by the net leaderboard.
 - The starter kit welcome page (`welcome.tsx`) and the kit's `favicon.ico`.

@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Controllers\CourseController;
+use App\Http\Controllers\CourseRatingController;
 use App\Http\Controllers\LoginController;
 use App\Http\Controllers\PlayerAliasController;
 use App\Http\Controllers\PlayerController;
@@ -57,6 +59,14 @@ Route::controller(PlayerAliasController::class)->scopeBindings()->group(function
     Route::delete('/players/{player}/aliases/{alias}', 'destroy')
         ->whereUuid(['player', 'alias'])
         ->name('players.aliases.destroy');
+});
+
+// Courses (design D6): the rating is addressed by its course and tees in the body, a course
+// without rating having no row.
+Route::get('/courses', [CourseController::class, 'index'])->name('courses.index');
+Route::controller(CourseRatingController::class)->group(function () {
+    Route::put('/courses/rating', 'update')->name('courses.rating.update');
+    Route::delete('/courses/rating', 'destroy')->name('courses.rating.destroy');
 });
 
 // Unknown addresses go through the web group: without a session they redirect to /login.
