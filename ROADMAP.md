@@ -30,7 +30,7 @@ Code d'accès partagé, `/login`, déconnexion, session chiffrée de 90 jours, l
 
 ## 4. `production-deployment`
 
-**Dépend de** : 3. **Statut** : à proposer.
+**Dépend de** : 3. **Statut** : en cours.
 
 Image unique sur GHCR, stack docker-compose Dokploy (`web`, `worker`, `migrate`, `pgsql`), sauvegardes, staging. Remplit la couche 12 du squelette.
 

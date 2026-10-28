@@ -20,8 +20,8 @@ Le projet est monté selon le squelette Laravel du mainteneur (`SKELETON.md`). L
 - **Worker de file dès le départ** en production : l'import par l'IA et la recherche sur Simulator Golf Tour tournent en jobs. Sessions, cache et files restent en base, sans Redis.
 - **Pas de tests navigateur** : `make check` réunit Pint, Larastan, jscpd, Pest et Vitest. La passe `browser-use` de fin d'apply reste un outil d'agent, pas une suite versionnée.
 - **Larastan au niveau 8 au lieu du niveau 7 du squelette**, décidé le 2026-10-27 : le niveau 8 signale une valeur nullable utilisée là où la signature ne l'admet pas, ce que le scénario « Erreur de type PHP » de `quality-gates` exige.
-- **Couche 12 remplie par le projet**, après le premier déploiement réel (`production-deployment`).
-- **Versionnement manuel, sans release-please.** La version est dans `version.txt`, tenu à la main (`0.0.0` jusqu'à la première version). Chaque pull request de code ajoute ses lignes sous `## [Unreleased]` dans `CHANGELOG.md`, en anglais, au format Keep a Changelog. Pour publier, le mainteneur renomme `## [Unreleased]` en `## [X.Y.Z] - YYYY-MM-DD`, met `X.Y.Z` dans `version.txt`, fusionne, puis pose le tag `vX.Y.Z` sur `main`. `version.txt` compte comme documentation pour `make changed-code`.
+- **Couche 12 remplie par le projet** : image unique et stack Dokploy, décidées dans l'ADR 0008 (`production-deployment`).
+- **Versionnement manuel, sans release-please.** La version est dans `version.txt`, tenu à la main (`0.0.0` jusqu'à la première version). Chaque pull request de code ajoute ses lignes sous `## [Unreleased]` dans `CHANGELOG.md`, en anglais, au format Keep a Changelog. Le mainteneur publie une version par le skill `/release` (`.ai/skills/release/SKILL.md`) : PR de version qui renomme `## [Unreleased]` en `## [X.Y.Z] - YYYY-MM-DD` et met `X.Y.Z` dans `version.txt`, fusion, puis tag `vX.Y.Z` sur `main`. `version.txt` compte comme documentation pour `make changed-code`.
 - **Route de version en 405** pour une méthode autre que `GET` ou `HEAD`, le comportement natif de Laravel, au lieu du 401 de l'application Next.js.
 
 ## Conséquences
@@ -29,5 +29,5 @@ Le projet est monté selon le squelette Laravel du mainteneur (`SKELETON.md`). L
 - Aucune table, aucun paquet ni aucun workflow mort dans le dépôt.
 - La suppression de `sessions.user_id` demande un gestionnaire de session `database` propre au projet (ADR 0002), à relire à chaque version majeure de Laravel.
 - Sans release-please, aucune pull request de version ne s'ouvre seule : un agent qui oublie sa ligne de `CHANGELOG.md` n'est arrêté que par la revue. `tests/Feature/VersionFileTest.php` vérifie seulement le format de `version.txt` et la présence de la section de chaque version publiée.
-- Le tag `vX.Y.Z` déclenchera la publication de l'image quand `production-deployment` l'ajoutera.
+- Le tag `vX.Y.Z` déclenche la publication de l'image `vX.Y.Z` sur GHCR, si `version.txt` vaut `X.Y.Z` (ADR 0008).
 - Reprendre plus tard une couche sautée (comptes, audit) demandera son propre changement OpenSpec et une ADR qui remplace la partie concernée de celle-ci.
