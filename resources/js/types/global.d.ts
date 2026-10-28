@@ -1,4 +1,4 @@
-export {};
+import type { FlashToast } from '@/lib/flash-toast';
 
 declare module 'react' {
     interface InputHTMLAttributes<T> {
@@ -11,7 +11,14 @@ declare module '@inertiajs/core' {
         sharedPageProps: {
             name: string;
             sidebarOpen: boolean;
+            app: {
+                version: string;
+                commit: string | null;
+            };
             [key: string]: unknown;
+        };
+        flashDataType: {
+            toast?: FlashToast;
         };
     }
 }

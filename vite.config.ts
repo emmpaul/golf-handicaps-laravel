@@ -4,7 +4,7 @@ import babel from '@rolldown/plugin-babel';
 import tailwindcss from '@tailwindcss/vite';
 import react, { reactCompilerPreset } from '@vitejs/plugin-react';
 import laravel from 'laravel-vite-plugin';
-import { bunny } from 'laravel-vite-plugin/fonts';
+import { fontsource } from 'laravel-vite-plugin/fonts';
 import { defineConfig, lazyPlugins } from 'vite-plus';
 
 export default defineConfig({
@@ -13,8 +13,15 @@ export default defineConfig({
             input: ['resources/css/app.css', 'resources/js/app.tsx'],
             refresh: true,
             fonts: [
-                bunny('Instrument Sans', {
+                fontsource('Sofia Sans Condensed', {
+                    weights: [400, 600, 800],
+                    subsets: ['latin', 'latin-ext'],
+                    variable: '--font-sofia-sans-condensed',
+                }),
+                fontsource('IBM Plex Sans', {
                     weights: [400, 500, 600],
+                    subsets: ['latin', 'latin-ext'],
+                    variable: '--font-ibm-plex-sans',
                 }),
             ],
         }),
@@ -42,6 +49,7 @@ export default defineConfig({
     test: {
         environment: 'jsdom',
         include: ['resources/js/**/*.test.{ts,tsx}'],
+        setupFiles: ['resources/js/tests/setup.ts'],
         env: {
             TZ: 'America/Montreal',
         },

@@ -1,11 +1,179 @@
 @import 'tailwindcss';
+@import 'tw-animate-css';
+@import './tokens.css';
+@import './base.css' layer(base);
 
 @source '../views';
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
+@source not '../../docs';
 
-@theme {
-    --font-sans:
-        'Instrument Sans', ui-sans-serif, system-ui, sans-serif,
-        'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol',
-        'Noto Color Emoji';
+/* Dark mode follows the device only: no class, no cookie (design D2). */
+@custom-variant dark (@media (prefers-color-scheme: dark));
+
+/* The two variants of shadcn/tailwind.css that the base-ui primitives use. */
+@custom-variant data-open {
+    &:where([data-state='open']),
+    &:where([data-open]:not([data-open='false'])) {
+        @slot;
+    }
+}
+
+@custom-variant data-closed {
+    &:where([data-state='closed']),
+    &:where([data-closed]:not([data-closed='false'])) {
+        @slot;
+    }
+}
+
+@theme inline {
+    --color-background: var(--background);
+    --color-foreground: var(--foreground);
+    --font-sans: var(--font-body);
+    --font-heading: var(--font-display);
+    --color-sidebar-ring: var(--sidebar-ring);
+    --color-sidebar-border: var(--sidebar-border);
+    --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+    --color-sidebar-accent: var(--sidebar-accent);
+    --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+    --color-sidebar-primary: var(--sidebar-primary);
+    --color-sidebar-foreground: var(--sidebar-foreground);
+    --color-sidebar: var(--sidebar);
+    --color-chart-5: var(--chart-5);
+    --color-chart-4: var(--chart-4);
+    --color-chart-3: var(--chart-3);
+    --color-chart-2: var(--chart-2);
+    --color-chart-1: var(--chart-1);
+    --color-ring: var(--ring);
+    --color-input: var(--input);
+    --color-border: var(--border);
+    --color-destructive: var(--destructive);
+    --color-birdie: var(--birdie);
+    --color-bogey: var(--bogey);
+    --color-accent-foreground: var(--accent-foreground);
+    --color-accent: var(--accent);
+    --color-muted-foreground: var(--muted-foreground);
+    --color-muted: var(--muted);
+    --color-secondary-foreground: var(--secondary-foreground);
+    --color-secondary: var(--secondary);
+    --color-primary-foreground: var(--primary-foreground);
+    --color-primary: var(--primary);
+    --color-popover-foreground: var(--popover-foreground);
+    --color-popover: var(--popover);
+    --color-card-foreground: var(--card-foreground);
+    --color-card: var(--card);
+    --radius-sm: calc(var(--radius) * 0.6);
+    --radius-md: calc(var(--radius) * 0.8);
+    --radius-lg: var(--radius);
+    --radius-xl: calc(var(--radius) * 1.4);
+    --radius-2xl: calc(var(--radius) * 1.8);
+    --radius-3xl: calc(var(--radius) * 2.2);
+    --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+/* Variables shadcn et de l'app pointées sur les tokens (design D1). Les tokens
+ * changent de valeur en mode sombre dans tokens.css, ces renvois suivent sans
+ * second bloc. */
+:root {
+    --background: var(--color-paper);
+    --foreground: var(--color-ink);
+    --card: var(--color-paper);
+    --card-foreground: var(--color-ink);
+    --popover: var(--color-paper-2);
+    --popover-foreground: var(--color-ink);
+    --primary: var(--color-ink);
+    --primary-foreground: var(--color-paper);
+    --secondary: var(--color-paper-2);
+    --secondary-foreground: var(--color-ink);
+    --muted: var(--color-paper-2);
+    --muted-foreground: var(--color-ink-2);
+    --accent: var(--color-paper-3);
+    --accent-foreground: var(--color-ink);
+    --destructive: var(--color-error);
+    --ai: var(--color-ai);
+    --border: var(--color-rule);
+    --input: var(--color-ink-3);
+    --ring: var(--color-focus);
+    --chart-1: var(--color-ink);
+    --chart-2: var(--color-ink-2);
+    --chart-3: var(--color-ink-3);
+    --chart-4: var(--color-focus);
+    --chart-5: var(--color-rule);
+    --radius: var(--radius-card);
+    --sidebar: var(--color-paper);
+    --sidebar-foreground: var(--color-ink);
+    --sidebar-primary: var(--color-ink);
+    --sidebar-primary-foreground: var(--color-paper);
+    --sidebar-accent: var(--color-paper-3);
+    --sidebar-accent-foreground: var(--color-ink);
+    --sidebar-border: var(--color-rule);
+    --sidebar-ring: var(--color-focus);
+    /* Zones sûres (encoche, barre d'accueil) : 0 hors plein écran. */
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+    /* En-tête collé sous md : zone sûre, 8 px, rangée de 44 px, 8 px et son filet. */
+    --top-chrome: calc(var(--safe-top) + 3.75rem + 1px);
+    /* Barre d'onglets du bas : icône + libellé, cibles de plus de 44 px. */
+    --tabbar-h: 3.5rem;
+    /* Hauteur occupée en bas de l'écran : onglets et barre d'accueil sous md, barre d'accueil au-delà. */
+    --bottom-chrome: calc(var(--tabbar-h) + var(--safe-bottom));
+    --birdie: var(--color-under);
+    --bogey: var(--color-over);
+    color-scheme: light;
+}
+
+@media (width >= 48rem) {
+    :root {
+        --bottom-chrome: var(--safe-bottom);
+    }
+}
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        color-scheme: dark;
+    }
+}
+
+@layer base {
+    * {
+        @apply border-border outline-ring/50;
+    }
+
+    body {
+        @apply bg-background text-foreground;
+    }
+
+    /* Même fond que body et que l'en-tête collé : Safari iOS prend sa teinte
+     * de barre d'état dans l'un ou l'autre. */
+    html {
+        @apply bg-background font-sans;
+    }
+}
+
+/* Fondus des cadres défilants (ScrollFrame) : un fondu au bord de chaque côté
+ * où il reste du contenu, posé par data-overflow-start et data-overflow-end. */
+.scroll-frame::before,
+.scroll-frame::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 24px;
+    z-index: 20;
+    pointer-events: none;
+    opacity: 0;
+}
+
+.scroll-frame::before {
+    left: var(--scroll-label-width);
+    background: linear-gradient(to right, var(--background), transparent);
+}
+
+.scroll-frame::after {
+    right: 0;
+    background: linear-gradient(to left, var(--background), transparent);
+}
+
+.scroll-frame[data-overflow-start]::before,
+.scroll-frame[data-overflow-end]::after {
+    opacity: 1;
 }
