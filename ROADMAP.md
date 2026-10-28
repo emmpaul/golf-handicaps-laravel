@@ -22,7 +22,7 @@ Thème scoreboard clair et sombre, polices, primitives `components/ui`, shell de
 
 ## 3. `app-access`
 
-**Dépend de** : 2. **Statut** : à proposer.
+**Dépend de** : 2. **Statut** : fait.
 
 Code d'accès partagé, `/login`, déconnexion, session chiffrée de 90 jours, limiteur, en-têtes de sécurité, `TRUSTED_PROXIES`.
 
