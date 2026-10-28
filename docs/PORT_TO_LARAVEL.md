@@ -159,5 +159,5 @@ Les variables vivent dans l'environnement Dokploy : `APP_KEY`, `APP_PASSCODE`, `
 
 - Modèle IA par défaut : le Sonnet le plus récent, par `AI_MODEL`. Le prix par modèle est gardé dans une table de config pour `ai_usage`.
 - Healthcheck du worker : un battement écrit dans `/tmp` à chaque job et à chaque tour de boucle (`Queue::looping`), seuil de 5 min, comme aujourd'hui.
-- Versionnement : version tenue à la main dans `version.txt`, `CHANGELOG.md` en français complété par chaque pull request de code, tags `vX.Y.Z` posés par le mainteneur. Pas de release-please. Conventional Commits restent vérifiés par commitlint (ADR 0005).
+- Versionnement : version tenue à la main dans `version.txt`, `CHANGELOG.md` en anglais complété par chaque pull request de code, tags `vX.Y.Z` posés par le mainteneur. Pas de release-please. Conventional Commits restent vérifiés par commitlint (ADR 0005).
 - Prose, specs et UI en français (décision 8 du squelette).

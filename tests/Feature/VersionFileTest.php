@@ -16,8 +16,8 @@ test('every released version has its CHANGELOG.md section', function () {
     $version = trim(versionFileContent());
     $changelog = (string) @file_get_contents(base_path('CHANGELOG.md'));
 
-    // 0.0.0 means nothing has been released yet: only "Non publié" exists.
+    // 0.0.0 means nothing has been released yet: only "## [Unreleased]" exists.
     $missing = $version === '0.0.0' || str_contains($changelog, "## [{$version}] - ") ? [] : [$version];
 
-    expect($missing)->toBe([], sprintf('CHANGELOG.md has no "## [%s] - AAAA-MM-JJ" section for version.txt', $version));
+    expect($missing)->toBe([], sprintf('CHANGELOG.md has no "## [%s] - YYYY-MM-DD" section for version.txt', $version));
 });
