@@ -48,6 +48,8 @@ All notable changes to this application, version by version. The format follows 
 - `make setup` warns when `APP_PASSCODE` is empty in `.env`, without writing a value.
 - Test helper `withPasscodeSession()` for tests that open a protected page, and a guard test that keeps test files out of `resources/js/pages`, which the Inertia Vite plugin bundles as pages.
 - ADR 0007 (shared passcode access) and an Access section in `ARCHITECTURE.md`.
+- `Strict-Transport-Security: max-age=31536000` on every response served over HTTPS.
+- Logged query exceptions keep their SQL with `?` placeholders and drop the bound values, so a session identifier never reaches the logs; the error response is unchanged.
 
 ### Changed
 
@@ -61,6 +63,7 @@ All notable changes to this application, version by version. The format follows 
 - Sessions last 90 days from the last request (`SESSION_LIFETIME=129600`) instead of 120 minutes.
 - Sessions are encrypted by default (`SESSION_ENCRYPT` defaults to `true`).
 - `.env.example` documents `APP_PASSCODE`, `SESSION_LIFETIME` and `TRUSTED_PROXIES`, and `phpunit.xml` sets `APP_PASSCODE`.
+- The session cookie is `Secure` by default when `APP_ENV=production`; `SESSION_SECURE_COOKIE` still forces either value, and `.env.example` explains it.
 
 ### Removed
 
