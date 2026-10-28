@@ -2,14 +2,14 @@
 
 ## Why
 
-L'application Laravel n'a encore aucune interface. Elle sert la page d'accueil du kit (`welcome.tsx`, couleurs en dur, police Instrument Sans chargée chez Bunny), sans thème, sans navigation ni mode sombre. Chaque page métier à venir (joueurs, rounds, import, handicaps) a besoin du même cadre : la palette scoreboard claire et sombre de l'application Next.js, ses polices, ses primitives, la navigation au doigt sur téléphone et l'indicateur d'attente. Ce changement correspond à l'entrée 2 de `ROADMAP.md`. Sa seule dépendance, l'entrée 1 (`project-skeleton-and-quality-gates`), est faite et archivée.
+L'application Laravel n'a encore aucune interface. Elle sert la page d'accueil du kit (`welcome.tsx`, couleurs en dur, police Instrument Sans téléchargée chez Bunny au build), sans thème, sans navigation ni mode sombre. Chaque page métier à venir (joueurs, rounds, import, handicaps) a besoin du même cadre : la palette scoreboard claire et sombre de l'application Next.js, ses polices, ses primitives, la navigation au doigt sur téléphone et l'indicateur d'attente. Ce changement correspond à l'entrée 2 de `ROADMAP.md`. Sa seule dépendance, l'entrée 1 (`project-skeleton-and-quality-gates`), est faite et archivée.
 
 Il reprend aussi trois points laissés par l'entrée 1 : la ligne de version dans l'interface (capacité `app-version`), le toast par lequel le rendu Inertia de `DomainException` passera (ADR 0001), et Testing Library avec le `setupFiles` de Vitest, qui arrivent avec les premiers tests de composants.
 
 ## What Changes
 
 - **Thème scoreboard** : tokens clairs et sombres de l'application Next.js (papier bleuté, encre bleu-nuit, rouge « sous le par »), palette fermée de la couche 3 du squelette (`--color-*`, `--text-*`, `--radius-*` et `--shadow-*` vidés), variables shadcn pointées vers les tokens. Le mode sombre suit le système, sans réglage : le reste de `$appearance` disparaît de `app.blade.php`.
-- **Polices auto-hébergées** : Sofia Sans Condensed pour les titres et les chiffres, IBM Plex Sans pour le texte, livrées par les paquets `fontsource` au lieu de Bunny, qui transmet l'adresse IP de chaque visiteur.
+- **Polices auto-hébergées** : Sofia Sans Condensed pour les titres et les chiffres, IBM Plex Sans pour le texte, livrées par les paquets `fontsource` au lieu de `bunny()`. Le plugin de Vite servait déjà les polices de Bunny depuis l'application, mais les téléchargeait au build : le build ne dépend plus d'un service tiers.
 - **Primitives `components/ui`** sur base-ui, restylées aux tokens : les dix qu'une page Next importe (`alert-dialog`, `alert`, `badge`, `button`, `calendar`, `field`, `input`, `native-select`, `popover`, `table`) et les deux que `field` importe (`label`, `separator`), plus `pending` (indicateur d'attente) et le toast. Les composants du thème `BrandMark`, `ScoreMark`, `ScrollFrame` et `PageTitle` viennent aussi.
 - **Shell de l'application** : en-tête collé avec la marque et « Golf », navigation des cinq sections (en haut à partir de 768 px, barre d'onglets en bas en dessous), section courante marquée, zones sûres, ligne de version en bas de page, toast monté une fois.
 - **Pages d'attente** : `/import`, `/rounds`, `/handicaps`, `/strokes` et `/players` servent une page « Section à venir » dans le shell, que le changement de chaque section remplace. L'accueil `/` remplace `welcome.tsx`.
@@ -115,6 +115,6 @@ Choix tranchés par `docs/PORT_TO_LARAVEL.md`, qui prime sur le squelette : prim
 - Dépendances PNPM : `@base-ui/react`, `class-variance-authority`, `lucide-react`, `sonner`, `thinking-orbs`, `tw-animate-css`, `react-day-picker`, `date-fns`, paquets `@fontsource` des deux polices, `@testing-library/react`, `@testing-library/user-event`, `@testing-library/jest-dom`.
 - Routes : `GET /import`, `/rounds`, `/handicaps`, `/strokes`, `/players` et leurs sous-adresses servent la page d'attente. Aucune n'expose de donnée.
 - Domaines : aucun.
-- Vie privée : les polices ne se chargent plus chez un tiers ; la page ne fait plus aucune requête hors du domaine. La ligne de version ne révèle que la version et le commit, déjà publics.
+- Vie privée : la page ne fait aucune requête hors du domaine, polices comprises (déjà le cas avec `bunny()`, que le plugin sert depuis `/build/assets`), et un test le garde. La ligne de version ne révèle que la version et le commit, déjà publics.
 - Accès : toutes les pages restent ouvertes jusqu'à `app-access`, comme aujourd'hui. Le manifest et les icônes devront rester lisibles sans session ; comme fichiers statiques, ils ne passent pas par le middleware.
 - Retour arrière : revenir sur le commit de fusion. Aucune donnée ni migration en jeu.

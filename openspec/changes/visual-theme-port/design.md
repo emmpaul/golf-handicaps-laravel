@@ -36,6 +36,8 @@ Référence de comportement : `src/app/{tokens,base,globals}.css`, `layout.tsx`,
 
 Les variables shadcn pointent vers les tokens : en mode sombre, seul le bloc de `tokens.css` change, sans second bloc `.dark`.
 
+Écart à la copie : `--text-*: initial` retire aussi `--text-base` et les interlignes par défaut de Tailwind, que Next gardait parce que sa palette restait ouverte. Les primitives copiées utilisent `text-xs` à `text-3xl` et `text-base` ; `tokens.css` redéclare donc `--text-base: 1rem` et les `--text-*--line-height` par défaut de Tailwind de `xs` à `3xl`, pour que ces classes calculent les mêmes valeurs que dans Next.
+
 Alternatives écartées : la classe `.dark` posée par un cookie (décision 1 du mainteneur) ; garder la palette Tailwind ouverte, comme Next, qui laisse passer un `text-gray-500` muet.
 
 ### D2. Mode sombre par le système seul
@@ -50,6 +52,8 @@ Alternatives écartées : la classe `.dark` posée par un cookie (décision 1 du
 - `fontsource('IBM Plex Sans', { weights: [400, 500, 600], subsets: ['latin', 'latin-ext'], variable: '--font-ibm-plex-sans' })`.
 
 Paquets `@fontsource/sofia-sans-condensed` et `@fontsource/ibm-plex-sans` en dépendances de développement. `tokens.css` déclare `--font-display: var(--font-sofia-sans-condensed), 'Arial Narrow', ui-sans-serif, sans-serif` et `--font-body: var(--font-ibm-plex-sans), ui-sans-serif, system-ui, sans-serif`, comme Next. `@fonts` reste dans `app.blade.php`. Les graisses suivent l'usage de Next : 800 pour les titres (`font-extrabold`), 500 et 600 pour le texte.
+
+Raison : le build ne dépend plus d'un service de polices tiers. Le visiteur, lui, ne contactait déjà plus Bunny : le plugin 3.2 télécharge les polices de `bunny()` au build et les sert depuis `/build/assets`. Avec `fontsource`, les fichiers viennent des paquets du dépôt verrouillés dans `pnpm-lock.yaml`, et un build hors ligne ou une panne de Bunny ne casse plus rien. `tests/Feature/PageAssetsTest.php` garde la règle « aucune ressource hors de l'application » quel que soit le fournisseur.
 
 Alternative écartée : les paquets variables `@fontsource-variable/*` par l'option `package` du plugin. Les graisses fixes suffisent et restent le cas documenté du plugin ; à revoir si une graisse manque.
 
