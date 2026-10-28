@@ -10,11 +10,12 @@ Dépendances : l'entrée 5 (`players-and-rounds`) doit être fusionnée et archi
 
 - **Calcul WHS** porté de `src/domain/handicap.ts` et `src/domain/strokes.ts` de Next : score ajusté (trou plafonné à par + 4), différentiel `113 / slope × (ajusté − course rating)`, index sur les 20 derniers rounds par la table WHS, index provisoire sous 3 rounds, arrondi au dixième et plafond 54,0, handicap de jeu (handicap de parcours). Les tests du domaine de Next sont portés en Pest avec les mêmes valeurs attendues, en littéraux.
 - **Table dérivée `player_round_stats`** : pour chaque joueur d'un round, brut, ajusté, différentiel, index juste avant et juste après le round, et marque « compte dans l'index actuel ». Mêmes colonnes et mêmes unités (dixièmes entiers) que Next, pour que l'import SQLite (10) compare ligne à ligne.
-- **Recalcul complet** de l'historique des joueurs concernés, dans la transaction de chaque écriture : création, correction, suppression d'un round, saisie ou correction d'une rating. Commande `golf:recompute-stats` pour une base qui a déjà des rounds (staging).
-- **Ratings saisies à la main** : table `course_ratings`, une ligne par parcours et tees (sans casse), course rating à une décimale de 40,0 à 90,0, slope entier de 55 à 155. Page `/courses` : la liste des parcours connus avec leur par, leur rating et leur slope ou « sans rating », et la saisie ou la correction de chacun. Sans rating, le calcul se replie sur le par et le slope 113 et redonne exactement les valeurs du calcul sans rating.
+- **Recalcul complet** de l'historique des joueurs concernés, dans la transaction de chaque écriture : création, correction, suppression d'un round, saisie, correction ou retrait d'une rating. Commande `golf:recompute-stats`, idempotente, lancée par le service `migrate` à chaque déploiement après les joueurs initiaux : une base qui a déjà des rounds (staging) est calculée sans étape à la main.
+- **Ratings saisies à la main** : table `course_ratings`, une ligne par parcours et tees (sans casse), course rating à une décimale de 40,0 à 90,0, slope entier de 55 à 155. Page `/courses` : la liste des parcours connus avec leur par, leur rating et leur slope ou « sans rating », la saisie ou la correction de chacun, et « Retirer la rating » pour revenir à « sans rating » (par et slope 113). Sans rating, le calcul se replie sur le par et le slope 113 et redonne exactement les valeurs du calcul sans rating.
 - **Classement net d'un round** sur sa page, à la place des bruts : brut, handicap de jeu, net, rang (rang de compétition, ex æquo partagés), « pas encore d'index » pour un premier round. Lisible à 320 px. La page du round montre la rating et le slope utilisés ou « Sans rating (par 71, slope 113) », avec un lien vers `/courses`.
 - **Liste des rounds** : colonne « Gagnant net » et lien « Parcours » vers `/courses`.
 - **Page Joueurs** : l'index actuel de chaque joueur (« Index 10,0 », « Index 14,5 (provisoire) », « Index — »).
+- **Explication du calcul** : sur la page Joueurs, la page d'un round et `/courses`, un bloc replié « Comment l’index est calculé » donne en sept lignes le score ajusté, le différentiel, l'index, le nombre de différentiels retenus et l'ajustement selon le nombre de rounds, l'index provisoire et le repli sans rating.
 - **Données de démonstration** : la rating de BETHPAGE BLACK / Red (71,4 / 144) saisie par le seeder ; les statistiques de chaque round de démonstration sont calculées. Fabriques et états des deux modèles nouveaux.
 - **ADR 0010** : calcul WHS en dixièmes entiers, table dérivée recalculée dans la transaction d'écriture, rating appliquée à tout l'historique d'un parcours.
 
@@ -30,7 +31,6 @@ Dépendances : l'entrée 5 (`players-and-rounds`) doit être fusionnée et archi
 
 ### Hors périmètre
 
-- Retrait d'une rating saisie (retour à « sans rating ») : Next ne le permet pas ; voir les Open Questions du design.
 - Règles WHS absentes de Next : allocation à 95 %, net double bogey, PCC, caps, rounds de 9 trous.
 - Rating figée à la date d'un round : une rating s'applique à tous les rounds du parcours, passés et futurs, comme dans Next.
 - Fusion de tees proches (« Blue » et « Blue 6212yd ») : deux parcours distincts.
@@ -66,27 +66,31 @@ Référence : `openspec/specs/{handicap-index,rounds}` de Next et le changement 
 | `match-strokes` | Modes de calcul des coups, Rating du parcours choisi | Reporté (7) | Seul le handicap de parcours est porté ici. |
 | `loading-feedback` | Autres attentes de l'app | Porté | « Enregistrement de la rating… » (composant `manual-rating-form` de Next, sans requirement). |
 | — | Index sur la page Joueurs | Porté | Affiché par la page Joueurs de Next sans requirement ; spécifié ici. |
+| — | Retrait d'une rating | Ajouté | Absent de Next ; demandé par le mainteneur. Aucun changement de schéma. |
+| — | Explication du calcul | Ajouté | Demandé par le mainteneur ; texte seul. La page Handicaps reste en 7. |
+| — | Recalcul au déploiement (`deployment`) | Ajouté | Le service `migrate` lance aussi `golf:recompute-stats`, idempotente. |
 
 ## Capabilities
 
 ### New Capabilities
 
-- `handicap-index` : score ajusté, différentiel, index et index provisoire, historique stocké par round, recalcul complet.
-- `course-ratings` : course rating et slope d'un parcours et de ses tees, saisie à la main et page Parcours. La partie SGT s'y ajoute en 9.
+- `handicap-index` : score ajusté, différentiel, index et index provisoire, historique stocké par round, recalcul complet, explication du calcul.
+- `course-ratings` : course rating et slope d'un parcours et de ses tees, saisie et retrait à la main, page Parcours. La partie SGT s'y ajoute en 9.
 
 ### Modified Capabilities
 
 - `rounds` : classement net et rating sur la page d'un round (à la place des bruts), gagnant net et lien Parcours sur la liste.
 - `players` : index actuel de chaque joueur sur la page Joueurs.
-- `loading-feedback` : attente de la saisie d'une rating.
+- `loading-feedback` : attente de la saisie et du retrait d'une rating.
+- `deployment` : le service `migrate` recalcule l'historique d'index à chaque déploiement.
 - `development-seed-data` : rating de démonstration et statistiques calculées.
 
 `rounds`, `players` et `development-seed-data` naissent avec `players-and-rounds` ; leurs deltas supposent ce changement archivé.
 
 ## Impact
 
-- **Code** : `app/Domain/Handicaps` (calcul pur, recalcul, classement net, requêtes), `app/Domain/Courses` (saisie d'une rating, page Parcours), appel du recalcul dans `CreateRound`, `UpdateRound`, `DeleteRound`, requêtes `RoundList`, `RoundDetail`, `PlayerOverview` étendues, modèles `PlayerRoundStat` et `CourseRating`, `CourseRatingController` et son Form Request, commande `golf:recompute-stats`, routes `courses.index` et `courses.rating.update`, pages `courses/index`, `rounds/index`, `rounds/show`, `players/index`, composants `rounds/net-leaderboard`, `courses/manual-rating-form`, `lib/format.ts`.
+- **Code** : `app/Domain/Handicaps` (calcul pur, recalcul, classement net, requêtes), `app/Domain/Courses` (saisie et retrait d'une rating, page Parcours), appel du recalcul dans `CreateRound`, `UpdateRound`, `DeleteRound`, requêtes `RoundList`, `RoundDetail`, `PlayerOverview` étendues, modèles `PlayerRoundStat` et `CourseRating`, `CourseRatingController` et ses deux Form Requests, commande `golf:recompute-stats` et commande du service `migrate` dans `docker-compose.yml`, routes `courses.index`, `courses.rating.update` et `courses.rating.destroy`, pages `courses/index`, `rounds/index`, `rounds/show`, `players/index`, composants `rounds/net-leaderboard`, `courses/manual-rating-form`, `handicaps/computation-help`, `lib/format.ts`, `docs/deployment.md`.
 - **Base** : deux tables nouvelles en UUID, `player_round_stats` (clé étrangère composite vers `round_players`, en cascade) et `course_ratings` (unicité sur `lower(trim(...))`). Aucune table existante modifiée.
 - **Dépendances** : aucune nouvelle.
 - **Confidentialité** : index et classements derrière le code d'accès, comme toute page. Aucune requête sortante : SGT arrive en 9.
-- **Retour arrière** : annuler la pull request de code et `php artisan migrate:rollback --step=2`. Les tables de `players-and-rounds` ne changent pas ; les statistiques se recalculent par `golf:recompute-stats` après un nouveau déploiement.
+- **Retour arrière** : annuler la pull request de code et `php artisan migrate:rollback --step=2`. Les tables de `players-and-rounds` ne changent pas ; les statistiques se recalculent par `golf:recompute-stats` au prochain démarrage de `migrate`.

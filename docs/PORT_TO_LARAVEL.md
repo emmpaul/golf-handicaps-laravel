@@ -74,17 +74,17 @@ Calcul WHS porté depuis `src/domain` : brut, ajusté, différentiel, index avan
 
 - Capacités : `handicap-index`, `course-ratings` (partie manuelle).
 
-### 7. `home-and-match-strokes`
-
-Tableau de bord d'accueil, page des handicaps (graphiques recharts), coups rendus en match.
-
-- Capacités : `home-dashboard`, `match-strokes`.
-
 ### 8. `scorecard-ai-import`
 
 Envoi de la photo, conversion WebP, job de file, lecture IA de la photo entière via le Laravel AI SDK en sortie structurée (même forme de brouillon que `src/scorecard/draft`), contrôles du brouillon, écran de correction avec autosave, création du round. Budget mensuel et `ai_usage`. Statuts `queued` / `reading` / `ready` / `failed`. Sans clé API, l'import est désactivé et la saisie se fait à la main.
 
 - Capacités : `scorecard-import`, `scorecard-ai-completion` (réécrite : l'IA lit tout au lieu de compléter). La capacité `scorecard-panel-detection` est retirée.
+
+### 7. `home-and-match-strokes`
+
+Après 8 (`ROADMAP.md`). Tableau de bord d'accueil, dont le bloc « Imports à vérifier » sur la table `imports` de 8, page des handicaps (graphiques recharts), coups rendus en match.
+
+- Capacités : `home-dashboard`, `match-strokes`.
 
 ### 9. `course-rating-sgt`
 

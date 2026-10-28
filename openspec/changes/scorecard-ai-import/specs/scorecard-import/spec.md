@@ -87,7 +87,7 @@ Une fois la photo envoyée, le système SHALL mettre sa lecture en file et rendr
 - **THEN** l'import passe à « Prêt à vérifier » sans que l'utilisateur recharge la page
 
 ### Requirement: Liste des imports
-L'écran d'import SHALL lister les 20 imports les plus récents, du plus récent au plus ancien, avec leur état et leur action : « Vérifier » pour un import « Prêt à vérifier » sans round, « Ouvrir l'écran de correction vide » pour un import en « Échec », « Voir le round » pour un import enregistré, et « Supprimer » pour un import « En attente », « Prêt à vérifier » ou « Échec » sans round. Un import en « Échec » MUST afficher la raison de l'échec.
+L'écran d'import SHALL lister les 20 imports les plus récents, du plus récent au plus ancien, avec leur état et leur action : « Vérifier » pour un import « Prêt à vérifier » sans round, « Ouvrir l'écran de correction vide » et « Relancer la lecture » pour un import en « Échec », « Voir le round » pour un import enregistré, et « Supprimer » pour un import « En attente », « Prêt à vérifier » ou « Échec » sans round. Un import en « Échec » MUST afficher la raison de l'échec.
 
 #### Scenario: Import prêt
 - **WHEN** la liste contient un import « Prêt à vérifier » sans round
@@ -99,7 +99,7 @@ L'écran d'import SHALL lister les 20 imports les plus récents, du plus récent
 
 #### Scenario: Import en échec
 - **WHEN** la liste contient un import en « Échec » faute de budget
-- **THEN** sa ligne affiche « Budget IA du mois atteint » et propose « Ouvrir l'écran de correction vide » et « Supprimer »
+- **THEN** sa ligne affiche « Budget IA du mois atteint » et propose « Ouvrir l'écran de correction vide », « Relancer la lecture » et « Supprimer »
 
 #### Scenario: Import en lecture
 - **WHEN** la liste contient un import « Lecture en cours »
@@ -119,6 +119,40 @@ Quand la lecture d'un import ne donne pas de brouillon, le système SHALL passer
 #### Scenario: Réponse inexploitable
 - **WHEN** l'IA répond par un brouillon qui ne respecte pas la forme attendue
 - **THEN** l'import passe à « Échec » après cette seule tentative
+
+### Requirement: Relance de la lecture
+Pour un import en « Échec » sans round, « Relancer la lecture » SHALL remettre l'import « En attente » avec la même photo enregistrée, sans nouvel envoi, et mettre sa lecture en file. La relance suit le parcours d'une première lecture : un seul appel à l'IA par tentative, coût compté et plafond vérifié avant l'appel (spec `scorecard-ai-completion`). La raison de l'échec et la correction enregistrée sur l'écran vide sont effacées, et l'écran affiche « Lecture relancée. ».
+
+#### Scenario: Relance après une erreur de l'IA
+- **GIVEN** un import en « Échec » avec « Lecture IA indisponible »
+- **WHEN** l'utilisateur touche « Relancer la lecture » et que l'IA rend le brouillon de la carte de référence, facturé 3 000 tokens d'entrée et 1 200 de sortie
+- **THEN** l'import passe « En attente » puis « Prêt à vérifier », sa photo est le même fichier qu'avant la relance, et le cumul du mois augmente de 18 000 micro-dollars
+
+#### Scenario: Relance au-delà du plafond
+- **GIVEN** un import en « Échec » et le plafond du mois atteint
+- **WHEN** l'utilisateur touche « Relancer la lecture »
+- **THEN** le système refuse avec « Budget IA du mois atteint », aucun appel n'est fait, et l'import reste en « Échec » avec sa raison
+
+#### Scenario: Relance au mois suivant
+- **GIVEN** un import en « Échec » avec « Budget IA du mois atteint » en octobre
+- **WHEN** l'utilisateur touche « Relancer la lecture » en novembre
+- **THEN** l'import passe « En attente » et sa lecture est faite
+
+### Requirement: Relance refusée
+Le système MUST refuser une relance, sans rien changer, pour un import « En attente » ou « Lecture en cours » avec « Lecture en cours », pour un import enregistré en round avec « Cette carte est déjà enregistrée », pour un import « Prêt à vérifier » avec « Cet import n’est pas en échec », et sans clé d'API avec « Lecture des photos désactivée : aucune clé d’IA n’est configurée. ». Sans clé d'API, la liste des imports MUST NOT proposer « Relancer la lecture ».
+
+#### Scenario: Import prêt
+- **WHEN** une demande de relance arrive pour un import « Prêt à vérifier »
+- **THEN** le système refuse avec « Cet import n’est pas en échec » et l'import ne change pas
+
+#### Scenario: Import en lecture
+- **WHEN** une demande de relance arrive pour un import « Lecture en cours »
+- **THEN** le système refuse avec « Lecture en cours » et l'import ne change pas
+
+#### Scenario: Sans clé d'API
+- **GIVEN** aucune clé d'API n'est configurée et un import en « Échec »
+- **WHEN** l'utilisateur ouvre `/import`
+- **THEN** la ligne de l'import ne propose pas « Relancer la lecture », et une demande de relance est refusée avec « Lecture des photos désactivée : aucune clé d’IA n’est configurée. »
 
 ### Requirement: Contenu lu sur la carte
 Pour une carte GSPro, la lecture SHALL donner : le nom du parcours, les tees, la date, pour chaque trou le par, l'index et la distance, les totaux OUT, IN et TOT du par et de la distance, et pour chaque ligne de joueur non vide le nom lu, les 18 scores et les totaux OUT, IN et TOT imprimés. Une case que l'IA ne lit pas MUST rester vide, jamais devinée par le système.
@@ -158,6 +192,26 @@ L'écran de correction d'un import SHALL être l'éditeur de round, pré-rempli 
 #### Scenario: Import en échec
 - **WHEN** l'utilisateur ouvre l'écran de correction vide d'un import en « Échec »
 - **THEN** l'écran montre la photo de l'import, la raison de l'échec, une ligne de joueur et la date du jour, toutes les autres cases vides
+
+### Requirement: Repère de lecture par l'IA
+En tête de l'écran de correction d'un import dont la lecture a donné un brouillon, le système SHALL afficher « Carte lue par l’IA, vérifie chaque case » dans la couleur du token `--color-ai`, que l'écran parte de la lecture ou d'une correction enregistrée. L'écran vide d'un import en « Échec » et la saisie manuelle MUST NOT l'afficher.
+
+#### Scenario: Import lu par l'IA
+- **WHEN** l'utilisateur ouvre l'écran de correction de l'import de la carte de référence, « Prêt à vérifier »
+- **THEN** l'écran affiche en tête « Carte lue par l’IA, vérifie chaque case », dans la couleur `--color-ai`
+
+#### Scenario: Correction reprise
+- **GIVEN** une correction enregistrée sur l'import de la carte de référence
+- **WHEN** l'utilisateur rouvre son écran de correction
+- **THEN** l'écran affiche toujours « Carte lue par l’IA, vérifie chaque case »
+
+#### Scenario: Import en échec
+- **WHEN** l'utilisateur ouvre l'écran de correction vide d'un import en « Échec »
+- **THEN** « Carte lue par l’IA, vérifie chaque case » n'est pas affiché
+
+#### Scenario: Saisie manuelle
+- **WHEN** l'utilisateur ouvre « Saisie manuelle »
+- **THEN** « Carte lue par l’IA, vérifie chaque case » n'est pas affiché
 
 ### Requirement: Nom lu sur chaque ligne
 Sur l'écran de correction d'un import, chaque ligne de joueur lue SHALL afficher le nom lu sur la carte, « lu « GAB » », sur la rangée de son numéro de ligne. Une ligne ajoutée à la main n'affiche pas de nom lu.
@@ -278,7 +332,7 @@ Le système SHALL accepter une correction enregistrée seulement pour un import 
 - **THEN** le système répond 404 avec « Import introuvable »
 
 ### Requirement: Enregistrement d'un import
-Depuis l'écran de correction, l'utilisateur SHALL enregistrer le round avec les mêmes contrôles de cohérence et la même détection de doublon qu'une saisie manuelle. Le round enregistré MUST garder la photo de l'import, et l'import MUST être relié à ce round. Après l'enregistrement, la liste des rounds s'ouvre avec « Round enregistré. ».
+Depuis l'écran de correction, l'utilisateur SHALL enregistrer le round avec les mêmes contrôles de cohérence et la même détection de doublon qu'une saisie manuelle. Le round enregistré MUST garder la photo de l'import, et l'import MUST être relié à ce round. Après l'enregistrement, la liste des rounds s'ouvre avec « Round enregistré. ». L'enregistrement d'un import qui a déjà un round MUST être refusé avec « Cette carte est déjà enregistrée », sans rien écrire.
 
 #### Scenario: Carte de référence enregistrée
 - **WHEN** l'utilisateur associe les lignes à Gab et Manu sur l'import de la carte de référence et enregistre
@@ -288,6 +342,11 @@ Depuis l'écran de correction, l'utilisateur SHALL enregistrer le round avec les
 - **GIVEN** le round de la carte de référence est enregistré
 - **WHEN** l'utilisateur importe une deuxième fois la carte `IMG_3064`, vérifie et enregistre
 - **THEN** le système affiche « Ce round semble déjà enregistré » avec un lien vers le round existant, et n'enregistre rien
+
+#### Scenario: Import enregistré depuis deux onglets
+- **GIVEN** l'écran de correction d'un import est ouvert dans deux onglets, et le round est enregistré depuis le premier
+- **WHEN** l'utilisateur enregistre le même import depuis le second onglet
+- **THEN** le système refuse avec « Cette carte est déjà enregistrée », sans « Ce round semble déjà enregistré », aucun second round n'est créé, aucun alias n'est appris, et l'import reste relié au premier round
 
 #### Scenario: Import ouvert par l'adresse après l'enregistrement
 - **GIVEN** le round d'un import est enregistré

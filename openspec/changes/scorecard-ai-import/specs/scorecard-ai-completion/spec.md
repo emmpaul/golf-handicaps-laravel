@@ -39,12 +39,12 @@ Pour une lecture, le système SHALL envoyer à Anthropic une seule image : la ph
 - **THEN** l'image envoyée mesure 1200×900 px
 
 ### Requirement: Lecture désactivée sans clé d'API
-Sans clé d'API Anthropic configurée, le système SHALL désactiver l'envoi de photo : l'écran d'import affiche « Lecture des photos désactivée : aucune clé d'IA n'est configurée. » à la place des actions d'envoi, avec le lien « Saisie manuelle », et une demande d'import MUST être refusée sans créer d'import ni appeler l'IA. Les imports existants restent listés et vérifiables.
+Sans clé d'API Anthropic configurée, le système SHALL désactiver l'envoi de photo : l'écran d'import affiche « Lecture des photos désactivée : aucune clé d’IA n’est configurée. » à la place des actions d'envoi, avec le lien « Saisie manuelle », et une demande d'import MUST être refusée sans créer d'import ni appeler l'IA. Les imports existants restent listés et vérifiables.
 
 #### Scenario: Écran d'import sans clé
 - **GIVEN** aucune clé d'API n'est configurée
 - **WHEN** l'utilisateur ouvre `/import`
-- **THEN** l'écran affiche « Lecture des photos désactivée : aucune clé d'IA n'est configurée. » et le lien « Saisie manuelle », sans « Prendre une photo » ni « Choisir une photo »
+- **THEN** l'écran affiche « Lecture des photos désactivée : aucune clé d’IA n’est configurée. » et le lien « Saisie manuelle », sans « Prendre une photo » ni « Choisir une photo »
 
 #### Scenario: Demande d'import sans clé
 - **GIVEN** aucune clé d'API n'est configurée
@@ -54,7 +54,7 @@ Sans clé d'API Anthropic configurée, le système SHALL désactiver l'envoi de 
 #### Scenario: Clé retirée pendant qu'un import attend
 - **GIVEN** un import « En attente » et aucune clé d'API configurée au moment de sa lecture
 - **WHEN** le worker traite l'import
-- **THEN** aucun appel n'est fait et l'import passe à « Échec » avec « Lecture des photos désactivée : aucune clé d'IA n'est configurée. »
+- **THEN** aucun appel n'est fait et l'import passe à « Échec » avec « Lecture des photos désactivée : aucune clé d’IA n’est configurée. »
 
 ### Requirement: Erreur de l'IA
 Si l'appel ne donne pas de brouillon (erreur réseau ou de l'API après la nouvelle tentative, refus, sortie tronquée, réponse hors de la forme attendue), le système SHALL passer l'import en « Échec » avec « Lecture IA indisponible ». Une réponse qui donne un nombre de trous autre que 18 sur une ligne MUST compter comme hors de la forme attendue.
@@ -119,3 +119,18 @@ Le cumul SHALL être compté par mois civil dans le fuseau horaire IANA de `AI_B
 #### Scenario: Fuseau inconnu
 - **WHEN** le web ou le worker démarre avec `AI_BUDGET_TIME_ZONE=Mars/Olympus`
 - **THEN** le démarrage échoue avec un message qui nomme `AI_BUDGET_TIME_ZONE`
+
+### Requirement: Modèle sans tarif connu
+Le modèle de `AI_MODEL` SHALL avoir son tarif d'entrée et de sortie dans la configuration de l'application. Un modèle sans tarif connu MUST faire échouer le démarrage du web, du worker et des migrations avec un message qui nomme `AI_MODEL`, que la clé d'API soit configurée ou non.
+
+#### Scenario: Modèle inconnu
+- **WHEN** le web ou le worker démarre avec `AI_MODEL=claude-unknown-1`
+- **THEN** le démarrage échoue avec un message qui nomme `AI_MODEL`
+
+#### Scenario: Modèle connu
+- **WHEN** le web démarre avec `AI_MODEL=claude-opus-5-5`
+- **THEN** le démarrage réussit
+
+#### Scenario: Modèle par défaut
+- **WHEN** le web démarre sans `AI_MODEL`
+- **THEN** le démarrage réussit avec le modèle par défaut, qui a son tarif

@@ -12,10 +12,11 @@ Dépendances : l'entrée 8 dépend de l'entrée 5 seule. `players-and-rounds` es
 - **Envoi et conversion** : le navigateur décode la photo et la réduit à 3000 px en JPEG (« Format de photo non lisible, exporte-la en JPEG » sinon) ; le serveur la redresse selon son orientation, retire ses métadonnées, la garde en WebP sur le disque `photos` et n'écrit jamais le fichier reçu tel quel.
 - **Lecture en file** : un job de la file `database` lit chaque import ; statuts `queued`, `reading`, `ready`, `failed` (« En attente », « Lecture en cours », « Prêt à vérifier », « Échec »).
 - **Lecture par l'IA** : un seul appel par import, par le Laravel AI SDK, en sortie structurée : la photo entière réduite à 1568 px, sans métadonnées. L'IA rend le brouillon de `src/scorecard/draft` (parcours, tees, date lue au format mois/jour/année, par, index, distance, lignes de joueur avec nom lu, 18 scores et totaux OUT, IN, TOT). Modèle choisi par `AI_MODEL`.
-- **Budget mensuel** : table `ai_usage`, plafond `AI_MONTHLY_BUDGET_USD` (5 $ par défaut) compté par mois civil dans `AI_BUDGET_TIME_ZONE`. Au-delà, aucun appel et l'import passe en « Échec » avec « Budget IA du mois atteint ».
-- **Sans clé d'API** : l'envoi de photo est désactivé, l'écran d'import propose la saisie manuelle seule.
-- **Écran de correction `/imports/{id}`** : l'éditeur de round de l'entrée 5, avec la photo à côté, les noms lus (« lu « GAB » »), les totaux lus et leurs contrôles (« Somme aller 36 ≠ OUT 38 », « OUT + IN 71 ≠ TOT 72 »), les cases vides de la lecture surlignées dès l'ouverture, la sauvegarde automatique et sa reprise sur un autre appareil.
-- **Enregistrement d'un import** : round créé par les mêmes contrôles et la même détection de doublon, avec la photo de l'import ; l'import est relié au round ; chaque nom lu associé à la main devient un alias du joueur (`AssignAlias`).
+- **Budget mensuel** : table `ai_usage`, plafond `AI_MONTHLY_BUDGET_USD` (5 $ par défaut) compté par mois civil dans `AI_BUDGET_TIME_ZONE`. Au-delà, aucun appel et l'import passe en « Échec » avec « Budget IA du mois atteint ». Un `AI_MODEL` sans tarif connu fait échouer le démarrage, comme un fuseau inconnu, avec un message qui nomme `AI_MODEL`.
+- **Sans clé d'API** : l'envoi de photo est désactivé, l'écran d'import affiche « Lecture des photos désactivée : aucune clé d’IA n’est configurée. » et propose la saisie manuelle seule. Une erreur de l'IA mène à « Échec » avec « Lecture IA indisponible ».
+- **Relance de la lecture** : « Relancer la lecture » sur un import en « Échec » le remet en file avec la même photo ; la relance est comptée dans le budget comme toute lecture, et refusée avec « Budget IA du mois atteint » au-delà du plafond.
+- **Écran de correction `/imports/{id}`** : l'éditeur de round de l'entrée 5, avec en tête « Carte lue par l’IA, vérifie chaque case » (token `--color-ai`) pour un import lu, la photo à côté, les noms lus (« lu « GAB » »), les totaux lus et leurs contrôles (« Somme aller 36 ≠ OUT 38 », « OUT + IN 71 ≠ TOT 72 »), les cases vides de la lecture surlignées dès l'ouverture, la sauvegarde automatique et sa reprise sur un autre appareil.
+- **Enregistrement d'un import** : round créé par les mêmes contrôles et la même détection de doublon, avec la photo de l'import ; l'import est relié au round ; un import qui a déjà un round (deux onglets) est refusé avec « Cette carte est déjà enregistrée », sans rien écrire ; chaque nom lu associé à la main devient un alias du joueur (`AssignAlias`).
 - **Reconnaissance des noms lus** : nom ou alias identique sans casse, sinon le seul joueur à un caractère près, sinon aucune association.
 - **Suppression d'un import** non enregistré, confirmée ; refus pendant la lecture et après l'enregistrement. Suppression d'un round importé : son import disparaît avec lui.
 - **Dépendances** : `laravel/ai` et `intervention/image` (driver Imagick), extension `imagick` dans l'image de production, limites d'envoi de PHP relevées. ADR « Lecture des cartes par l'IA et photos en WebP ».
@@ -27,7 +28,7 @@ Dépendances : l'entrée 8 dépend de l'entrée 5 seule. `players-and-rounds` es
 | --- | --- | --- |
 | Recalcul des index après l'enregistrement d'un import ou la suppression d'un round importé | `handicap-index` (6) | L'enregistrement passe par `CreateRound`, la suppression par `DeleteRound` : le recalcul que 6 y ajoute s'applique tel quel. Rien n'est préparé ici si 8 est fusionné avant 6. |
 | Mise en file de la recherche SGT d'un parcours nouveau | `course-rating-sgt` (9) | Même point d'entrée (`CreateRound`). 9 réutilise aussi `ai_usage` et le budget de ce changement. |
-| Bloc « Imports à vérifier » de l'accueil | `home-and-match-strokes` (7) | Il lit la table `imports` de ce changement ; 7 l'ajoute si 8 est fusionné avant lui (Open Questions). |
+| Bloc « Imports à vérifier » de l'accueil | `home-and-match-strokes` (7) | Il lit la table `imports` de ce changement ; 7 vient après 8 dans `ROADMAP.md` et l'ajoute. |
 | Reprise des imports, corrections et `ai_usage` de la base SQLite | `sqlite-import-command` (10) | La forme de la correction enregistrée change (identifiants UUID, plus de `aiCells`) : 10 la traduit. |
 
 ### Hors périmètre
@@ -35,7 +36,6 @@ Dépendances : l'entrée 8 dépend de l'entrée 5 seule. `players-and-rounds` es
 - Cadrage : détection du panneau, coins, `corners_source`, écran `/recadrer`, recadrage manuel (décisions 2 et 3).
 - Fusion d'une lecture locale et d'une complétion, marque « complété par l'IA » sur chaque case, colonne `ai_cells` (décision 3 : l'IA lit tout).
 - Conversion au démarrage des photos déjà stockées dans un autre format : aucune n'existe dans la base Laravel ; l'import SQLite (10) convertit les siennes.
-- Relance de la lecture d'un import en « Échec » (Open Questions).
 
 ## Requirements des specs Next
 
@@ -56,7 +56,7 @@ Dépendances : l'entrée 8 dépend de l'entrée 5 seule. `players-and-rounds` es
 | `scorecard-import` | Reprise de la correction enregistrée | Porté | — |
 | `scorecard-import` | Indicateur d'enregistrement | Porté | — |
 | `scorecard-import` | Correction refusée hors vérification | Porté | — |
-| `scorecard-import` | Nouvelle lecture après recadrage | Retiré | Décision 3. |
+| `scorecard-import` | Nouvelle lecture après recadrage | Remplacé | Décision 3 : plus de recadrage. « Relancer la lecture » remet un import en « Échec » en file avec la même photo. |
 | `scorecard-import` | Prise de photo depuis l'app | Porté | — |
 | `scorecard-import` | Choix de la date au calendrier | Déjà porté (5) | « Ouverture sur la date lue » se vérifie sur l'éditeur commun. |
 | `scorecard-import` | Calendrier utilisable au clavier et au doigt | Déjà porté (5) | — |
@@ -70,7 +70,7 @@ Dépendances : l'entrée 8 dépend de l'entrée 5 seule. `players-and-rounds` es
 | `scorecard-ai-completion` | Déclenchement uniquement en repli | Remplacé | Par « Une lecture par l'IA par import ». |
 | `scorecard-ai-completion` | Données envoyées | Réécrit | La photo entière réduite, plus le panneau redressé. |
 | `scorecard-ai-completion` | Fusion avec la lecture locale | Retiré | Plus de lecture locale. |
-| `scorecard-ai-completion` | Marquage des cases complétées par l'IA | Retiré | Décision 3 (`ai_cells`). |
+| `scorecard-ai-completion` | Marquage des cases complétées par l'IA | Remplacé | Décision 3 (`ai_cells`) : un repère unique en tête de l'écran, « Carte lue par l’IA, vérifie chaque case ». |
 | `scorecard-ai-completion` | Plafond de dépense mensuel | Porté | Plafond par défaut 5 $ ; au-delà, « Échec » au lieu de « Prêt à vérifier ». |
 | `scorecard-ai-completion` | Fonction optionnelle et sans blocage | Réécrit | Sans clé, l'import est désactivé ; une erreur de l'IA fait échouer l'import, faute d'autre lecture. |
 | `scorecard-panel-detection` | Les sept requirements | Retiré | Capacité supprimée (décision 2). Elle n'existe pas dans les specs Laravel : rien à retirer. |
@@ -87,19 +87,19 @@ Dépendances : l'entrée 8 dépend de l'entrée 5 seule. `players-and-rounds` es
 
 ### New Capabilities
 
-- `scorecard-import` : envoi d'une photo, conversion, file de lecture et statuts, contenu lu, écran de correction d'un import, totaux lus, sauvegarde automatique, enregistrement, suppression d'un import.
-- `scorecard-ai-completion` : réécrite, la lecture de la photo entière par l'IA, les données envoyées, le budget mensuel, le comportement sans clé et en cas d'erreur.
+- `scorecard-import` : envoi d'une photo, conversion, file de lecture et statuts, relance d'une lecture en échec, contenu lu, écran de correction d'un import et son repère de lecture par l'IA, totaux lus, sauvegarde automatique, enregistrement, suppression d'un import.
+- `scorecard-ai-completion` : réécrite, la lecture de la photo entière par l'IA, les données envoyées, le budget mensuel, le tarif obligatoire du modèle, le comportement sans clé et en cas d'erreur.
 
 ### Modified Capabilities
 
 - `players` : reconnaissance des noms lus, apprentissage des alias à l'enregistrement d'un import.
-- `loading-feedback` : attentes de l'envoi d'une photo, motif des imports en attente, suppression d'un import.
+- `loading-feedback` : attentes de l'envoi d'une photo, motif des imports en attente, suppression d'un import, relance d'une lecture.
 - `app-shell` : la section Importer a sa page.
 - `deployment` : l'image de production lit et convertit les photos de carte envoyées.
 
 ## Impact
 
-- **Code** : `app/Domain/Imports` (Actions, Queries, exceptions, brouillon), `app/Domain/AiUsage` (budget, coût), `App\Domain\Players\PlayerNameMatcher`, `app/Integrations/Ai` (agent du Laravel AI SDK, préparation de l'image), job `ReadScorecardImport`, modèles `Import` et `AiUsage`, `ImportController`, `ImportCorrectionController`, `ImportPhotoController`, `ImportRoundController`, Form Requests, page `import/index` et `imports/show`, composants `import/*`, `round-editor/autosave.ts`. Changements dans le code de l'entrée 5 : `RoundCard` et `RoundCardChecks` (totaux lus), `round-checks.ts` et sa table de cas, `round-editor/*` (photo, nom lu, totaux lus, autosave).
+- **Code** : `app/Domain/Imports` (Actions, Queries, exceptions, brouillon), `app/Domain/AiUsage` (budget, coût), `App\Domain\Players\PlayerNameMatcher`, `app/Integrations/Ai` (agent du Laravel AI SDK, préparation de l'image), job `ReadScorecardImport`, modèles `Import` et `AiUsage`, `ImportController`, `ImportCorrectionController`, `ImportPhotoController`, `ImportRoundController`, `ImportReadingController`, Form Requests, page `import/index` et `imports/show`, composants `import/*`, `round-editor/autosave.ts`. Changements dans le code de l'entrée 5 : `RoundCard` et `RoundCardChecks` (totaux lus), `round-checks.ts` et sa table de cas, `round-editor/*` (photo, nom lu, totaux lus, autosave).
 - **Base** : tables `imports` et `ai_usage`, en UUID. Aucune table existante modifiée ; `imports.round_id` référence `rounds` en cascade.
 - **Configuration** : `config/ai.php` (publié par le SDK), `config/golf.php` (`ai.model`, `ai.monthly_budget_usd`, `ai.budget_time_zone`, prix par modèle, bornes de tokens). `.env.example` et `docs/deployment.md` : `ANTHROPIC_API_KEY`, `AI_MODEL`, `AI_MONTHLY_BUDGET_USD`, `AI_BUDGET_TIME_ZONE`.
 - **Dépendances** : `laravel/ai`, `intervention/image` ; extension PHP `imagick` dans le `Dockerfile` (déjà dans le runtime Sail 8.5, à confirmer en 1.1 des tâches).

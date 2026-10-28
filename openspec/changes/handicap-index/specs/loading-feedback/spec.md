@@ -12,3 +12,10 @@ Sur la page Parcours, le système SHALL afficher l'indicateur d'attente « Enreg
 #### Scenario: Autre parcours
 - **WHEN** la rating de « BETHPAGE BLACK / Red » est en cours d'enregistrement
 - **THEN** le bouton « Enregistrer » de « PAYNES VALLEY / Blue » reste actif et sa ligne n'affiche aucun indicateur
+
+### Requirement: Attente du retrait d'une rating
+Sur la page Parcours, le système SHALL afficher l'indicateur d'attente « Retrait de la rating… » à côté du parcours dont la rating est retirée, et désactiver ses boutons « Enregistrer » et « Retirer la rating » jusqu'à la réponse. Les autres parcours restent utilisables.
+
+#### Scenario: Retrait en cours
+- **WHEN** l'utilisateur retire la rating de « BETHPAGE BLACK / Red » et que la réponse n'est pas arrivée
+- **THEN** la ligne de ce parcours affiche « Retrait de la rating… », et ses boutons « Enregistrer » et « Retirer la rating » sont désactivés
