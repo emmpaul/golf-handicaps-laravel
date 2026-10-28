@@ -94,7 +94,7 @@ Le système SHALL permettre d'ajouter un alias à un joueur depuis la page Joueu
 
 #### Scenario: Alias vide
 - **WHEN** l'utilisateur ajoute un alias vide à Sean
-- **THEN** le système refuse et affiche « L'alias est obligatoire »
+- **THEN** le système refuse et affiche « L’alias est obligatoire »
 
 ### Requirement: Retrait d'un alias
 Le système SHALL permettre de retirer un alias d'un joueur depuis la page Joueurs, sans confirmation. Un alias retiré MUST NOT servir à associer les lignes des imports suivants. Les rounds déjà enregistrés ne changent pas.
