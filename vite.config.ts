@@ -39,6 +39,13 @@ export default defineConfig({
             ],
         },
     },
+    test: {
+        environment: 'jsdom',
+        include: ['resources/js/**/*.test.{ts,tsx}'],
+        env: {
+            TZ: 'America/Montreal',
+        },
+    },
     lint: {
         ignorePatterns: [
             'vendor/**',
@@ -54,6 +61,7 @@ export default defineConfig({
         options: {
             denyWarnings: true,
             typeAware: true,
+            typeCheck: true,
         },
     },
     fmt: {
@@ -65,7 +73,12 @@ export default defineConfig({
         htmlWhitespaceSensitivity: 'css',
         ignorePatterns: [
             '.github/**',
+            '.mcp.json',
+            'AGENTS.md',
+            'boost.json',
+            'CHANGELOG.md',
             'composer.json',
+            'openspec/**',
             'resources/js/components/ui/*',
             'resources/views/mail/*',
         ],

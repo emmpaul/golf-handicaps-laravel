@@ -6,7 +6,18 @@ export default {
         'scope-enum': [
             2,
             'always',
-            ['openspec', 'deps', 'ci', 'docker', 'make', 'db', 'auth', 'ui', 'adr', 'docs'],
+            [
+                'openspec',
+                'deps',
+                'ci',
+                'docker',
+                'make',
+                'db',
+                'auth',
+                'ui',
+                'adr',
+                'docs',
+            ],
         ],
     },
 };
