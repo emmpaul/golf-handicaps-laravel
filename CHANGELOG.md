@@ -54,6 +54,8 @@ All notable changes to this application, version by version. The format follows 
 - Worker heartbeat: `queue:work` writes `/tmp/worker-heartbeat` on every loop and after every job, and the worker health check fails after 300 seconds without one.
 - `Strict-Transport-Security: max-age=31536000` on every response served over HTTPS.
 - Makefile targets `make image`, `make image-smoke` and `make image-tags`.
+- CI image smoke test on every code change: build the image, start the stack with `docker compose up --wait`, check `/up` and `/login`.
+- CI publication of the tested image to `ghcr.io/emmpaul/golf-handicaps-laravel`, `linux/amd64` only: `main` and `<sha>` from `main`, `vX.Y.Z`, `latest` and `<sha>` from a `vX.Y.Z` tag that matches `version.txt`.
 - Queue worker job timeout of 420 seconds (`--timeout=420`), after the worker health check has turned unhealthy for a stuck job, and a `database` queue `retry_after` of 450 seconds by default, so a job is never handed out twice while it runs.
 - Production image assets built with `VITE_APP_NAME="Handicaps golf"`: browser tabs read `Connexion - Handicaps golf`, not `Connexion - Laravel`.
 - Logged query exceptions keep their SQL with `?` placeholders and drop the bound values, so a session identifier never reaches the logs; the error response is unchanged.
