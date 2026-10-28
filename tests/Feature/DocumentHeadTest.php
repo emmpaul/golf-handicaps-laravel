@@ -6,6 +6,10 @@
  * remove the mobile-web-app-capable meta tag.
  */
 
+beforeEach(function () {
+    $this->withPasscodeSession();
+});
+
 function homeDocument(): DOMXPath
 {
     $html = test()->get('/')->assertOk()->getContent();

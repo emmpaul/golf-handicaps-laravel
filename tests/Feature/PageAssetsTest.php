@@ -6,6 +6,10 @@
  * to resources/views/app.blade.php.
  */
 
+beforeEach(function () {
+    $this->withPasscodeSession();
+});
+
 /**
  * @return list<string>
  */

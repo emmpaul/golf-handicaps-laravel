@@ -15,7 +15,7 @@ PNPM := $(if $(RUN),$(RUN) pnpm,pnpm)
 # Pas d'image laravelsail/php85-composer : l'image 8.4 installe vendor avec --ignore-platform-reqs.
 COMPOSER_BOOTSTRAP_IMAGE := laravelsail/php84-composer:latest
 
-.PHONY: help setup up down dev dev-stop browser build migrate openspec \
+.PHONY: help setup passcode-check up down dev dev-stop browser build migrate openspec \
 	lint format analyse duplicates arch-test test-backend test-frontend test update-shards check \
 	commitlint changed-code wayfinder
 
@@ -39,6 +39,11 @@ setup: ## Installe un clone neuf : .env, dépendances, clé, assets, consignes d
 	$(MAKE) --no-print-directory build
 	$(ARTISAN) boost:update --ansi
 	$(ARTISAN) migrate --force --ansi
+	@$(MAKE) --no-print-directory passcode-check
+
+passcode-check: ## Interne : signale un APP_PASSCODE vide dans .env, sans écrire de valeur
+	@if ! grep -qsE "^APP_PASSCODE=['\"]?[^'\"[:space:]]" .env; then \
+		echo "Attention : APP_PASSCODE est vide dans .env ; toute requête HTTP répondra 500 tant qu'il n'a pas de valeur." >&2; fi
 
 up: ## Démarre les conteneurs et attend qu'ils soient sains
 	$(SAIL) up -d --wait

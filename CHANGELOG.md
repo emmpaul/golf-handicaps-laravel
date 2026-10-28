@@ -35,6 +35,19 @@ All notable changes to this application, version by version. The format follows 
 - Theme guard tests: text and mark contrast in both modes, no hard-coded colour or global transition in `resources/js`, reduced motion rule, no page asset outside the application.
 - Dependencies `@base-ui/react`, `class-variance-authority`, `lucide-react`, `sonner`, `thinking-orbs`, `tw-animate-css`, `react-day-picker` and `date-fns`.
 - ADR 0006 (design system), `DESIGN.md` completed and a Frontend section in `ARCHITECTURE.md`.
+- Shared passcode access: every web route requires a session opened with `APP_PASSCODE`; only `/login`, `GET /api/version`, `/up` and the static files of `public/` stay open.
+- `/login` page outside the app shell, with the brand, the title "Handicaps golf", a masked "Code d'accès" field, an "Entrer" button, "Connexion…" while the passcode is sent, "Code incorrect" for a wrong or empty passcode, and the version line.
+- "Se déconnecter" button at the bottom of the home page; `POST /logout` closes the session of this browser only.
+- The session stores an HMAC fingerprint of the passcode, never the passcode itself: changing `APP_PASSCODE` ends the sessions of every device.
+- Writes without a session are rejected without running: 401 with `{ "error": "Session requise" }`, or a redirect to `/login` for an Inertia visit; the passcode check runs before the CSRF check, so a stale token gets 401, not 419.
+- Unknown addresses answer 404 through a fallback route, and redirect to `/login` without a session.
+- Login limiter: 10 attempts a minute per client IP, then "Trop d'essais. Réessaie dans une minute.".
+- Every HTTP request, `/up` included, fails with an error naming `APP_PASSCODE` when it is empty; artisan commands still run.
+- Security headers on every response, error pages included: `X-Frame-Options: DENY`, `Content-Security-Policy: frame-ancestors 'none'` unless the response sets its own, `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`.
+- Trusted proxies read from `TRUSTED_PROXIES` in `config/trustedproxy.php`; empty trusts none, and the `*` wildcard is dropped.
+- `make setup` warns when `APP_PASSCODE` is empty in `.env`, without writing a value.
+- Test helper `withPasscodeSession()` for tests that open a protected page, and a guard test that keeps test files out of `resources/js/pages`, which the Inertia Vite plugin bundles as pages.
+- ADR 0007 (shared passcode access) and an Access section in `ARCHITECTURE.md`.
 
 ### Changed
 
@@ -45,6 +58,9 @@ All notable changes to this application, version by version. The format follows 
 - Fonts are served by `fontsource()` instead of `bunny()`, so the build no longer downloads them from Bunny.
 - `GET /api/version` validates the commit through `App\Support\AppBuild`.
 - `app.blade.php` drops the `appearance` dark class, sets `lang="fr"` and uses `APP_NAME` as the default title; `.env.example` sets `APP_NAME="Handicaps golf"`.
+- Sessions last 90 days from the last request (`SESSION_LIFETIME=129600`) instead of 120 minutes.
+- Sessions are encrypted by default (`SESSION_ENCRYPT` defaults to `true`).
+- `.env.example` documents `APP_PASSCODE`, `SESSION_LIFETIME` and `TRUSTED_PROXIES`, and `phpunit.xml` sets `APP_PASSCODE`.
 
 ### Removed
 

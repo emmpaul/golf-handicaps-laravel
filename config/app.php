@@ -32,6 +32,19 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Shared Passcode
+    |--------------------------------------------------------------------------
+    |
+    | The passcode the group shares to open a session. Every web route asks
+    | for it; without it, every HTTP request fails with an error naming
+    | APP_PASSCODE. It is never logged, nor stored in a session.
+    |
+    */
+
+    'passcode' => env('APP_PASSCODE'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Application Environment
     |--------------------------------------------------------------------------
     |

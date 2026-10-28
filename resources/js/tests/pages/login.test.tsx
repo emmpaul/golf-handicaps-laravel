@@ -1,0 +1,142 @@
+import { render, screen } from '@testing-library/react';
+import type { ReactNode } from 'react';
+import { beforeEach, describe, expect, it, vi } from 'vite-plus/test';
+
+import Login from '@/pages/login';
+
+// Spec app-access « Page de saisie du code », « Ouverture de session » (code
+// faux) and loading-feedback « Attente de l'ouverture de session ». The real
+// <Form> renders the form element; only its slot state (errors, processing) is
+// forced, since jsdom cannot run a visit. usePage feeds the version line; Head
+// needs the head manager of createInertiaApp and renders nothing here; the orb
+// paints on a canvas jsdom cannot draw.
+// Mutations: `disabled={processing}` removed from « Entrer » → the processing
+// test goes red; label « Connexion » without « … » → the processing test goes
+// red; the page left in AppLayout (no own layout) → the « no section link »
+// test goes red; `aria-describedby` dropped → the error test goes red.
+
+const formState = vi.hoisted(() => ({
+    errors: {} as Record<string, string>,
+    processing: false,
+}));
+
+vi.mock('@inertiajs/react', async (importOriginal) => {
+    const inertia = await importOriginal<typeof import('@inertiajs/react')>();
+    const RealForm = inertia.Form;
+
+    return {
+        ...inertia,
+        Head: () => null,
+        usePage: () => ({
+            url: '/login',
+            props: { app: { version: '0.0.0', commit: null } },
+        }),
+        Form: ({
+            children,
+            ...props
+        }: React.ComponentProps<typeof RealForm>) => (
+            <RealForm {...props}>
+                {(slot) =>
+                    typeof children === 'function'
+                        ? children({
+                              ...slot,
+                              errors: formState.errors,
+                              processing: formState.processing,
+                          })
+                        : children
+                }
+            </RealForm>
+        ),
+    };
+});
+
+vi.mock('thinking-orbs', () => ({
+    ThinkingOrb: () => <canvas data-testid="orb" />,
+}));
+
+/** The page inside the layout it declares, as Inertia mounts it. */
+function renderPage() {
+    const layout = Login.layout as (page: ReactNode) => ReactNode;
+
+    return render(layout(<Login />));
+}
+
+beforeEach(() => {
+    formState.errors = {};
+    formState.processing = false;
+});
+
+describe('Login page', () => {
+    it('shows the title, the masked passcode field and the « Entrer » button', () => {
+        renderPage();
+
+        expect(screen.getByRole('heading', { level: 1 }).textContent).toBe(
+            'Handicaps golf',
+        );
+
+        const field = screen.getByLabelText("Code d'accès");
+
+        expect(field.getAttribute('type')).toBe('password');
+        expect(field.getAttribute('autocomplete')).toBe('current-password');
+        expect(field.getAttribute('name')).toBe('passcode');
+        expect(screen.getByRole('button', { name: 'Entrer' })).toBeEnabled();
+    });
+
+    it('posts the form to /login', () => {
+        renderPage();
+
+        const form = screen
+            .getByRole('button', { name: 'Entrer' })
+            .closest('form');
+
+        expect(form?.getAttribute('action')).toBe('/login');
+        expect(form?.getAttribute('method')).toBe('post');
+    });
+
+    it('shows no section link, only the version line', () => {
+        renderPage();
+
+        expect(screen.queryAllByRole('link')).toEqual([]);
+        expect(screen.queryByRole('navigation')).toBeNull();
+        expect(screen.getByText('v0.0.0')).toBeInTheDocument();
+    });
+
+    it('shows « Code incorrect » in an alert tied to the invalid field', () => {
+        formState.errors = { passcode: 'Code incorrect' };
+
+        renderPage();
+
+        const alert = screen.getByRole('alert');
+        const field = screen.getByLabelText("Code d'accès");
+
+        expect(alert.textContent).toBe('Code incorrect');
+        expect(field.getAttribute('aria-invalid')).toBe('true');
+        expect(field.getAttribute('aria-describedby')).toBe(alert.id);
+        expect(alert.id).not.toBe('');
+    });
+
+    it('shows no alert and a valid field without error', () => {
+        renderPage();
+
+        const field = screen.getByLabelText("Code d'accès");
+
+        expect(screen.queryByRole('alert')).toBeNull();
+        expect(field.getAttribute('aria-invalid')).toBeNull();
+        expect(field.getAttribute('aria-describedby')).toBeNull();
+    });
+
+    it('shows « Connexion… » and disables « Entrer » while sending', () => {
+        formState.processing = true;
+
+        renderPage();
+
+        expect(screen.getByRole('status').textContent).toBe('Connexion…');
+        expect(screen.getByRole('button', { name: 'Entrer' })).toBeDisabled();
+    });
+
+    it('keeps the status region empty at rest', () => {
+        renderPage();
+
+        expect(screen.getByRole('status')).toBeEmptyDOMElement();
+    });
+});
