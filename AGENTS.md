@@ -13,7 +13,7 @@ Ces règles priment sur les consignes génériques de Boost.
 ## OpenSpec
 
 - Chaque changement, correctif ou mise à jour d'outillage compris, passe par un changement OpenSpec.
-- La CLI est épinglée dans `package.json` : `vendor/bin/sail pnpm exec openspec …` (ou `make openspec ARGS="…"` une fois le Makefile en place). Jamais d'installation globale.
+- La CLI est épinglée dans `package.json` : `make openspec ARGS="…"` (par exemple `ARGS="validate --all --strict"`). Jamais d'installation globale.
 - Une règle métier non tranchée, une tâche ambiguë ou un conflit avec `design.md` arrête l'apply jusqu'à la décision du mainteneur.
 
 ## ADR
@@ -29,7 +29,7 @@ Ces règles priment sur les consignes génériques de Boost.
 ## Makefile
 
 - Le Makefile est l'interface unique, en local et en CI. Tests visés : `make test-backend FILES=…` ou `FILTER=…`. Après un `make check` rouge, lire `reports/check/<étape>.log`.
-- Le Makefile arrive avec le changement `project-skeleton-and-quality-gates`. D'ici là, passer par `vendor/bin/sail`.
+- `make` sans argument liste les cibles. `vendor/bin/sail` sert seulement pour une commande qu'aucune cible ne couvre.
 
 ## Données
 
@@ -53,6 +53,12 @@ Ces règles priment sur les consignes génériques de Boost.
 - Conventional Commits : `type(scope): sujet`, sujet sans majuscule initiale ni point final. Scope facultatif, pris dans la liste fermée de `commitlint.config.js`.
 - Corps : 100 caractères au plus par ligne, coupés à la main. C'est la première cause de rejet par le hook.
 - Branches `<type>/<change>`, créées avec `git switch -c <nom> --no-track`. Jamais `--no-verify`.
+
+## Journal des changements
+
+- Chaque pull request de code ajoute, dans le même lot, une ligne par effet visible sous `## [Non publié]` de `CHANGELOG.md`, rangée sous « Ajouté », « Modifié », « Retiré » ou « Corrigé ». Format Keep a Changelog, en français.
+- Une pull request de documentation seule (proposition ou archive OpenSpec) n'y touche pas.
+- Seul le mainteneur publie une version : il renomme la section en `## [X.Y.Z] - AAAA-MM-JJ`, met `X.Y.Z` dans `version.txt`, fusionne, puis pose le tag `vX.Y.Z` sur `main`. `tests/Feature/VersionFileTest.php` exige la section de toute version autre que `0.0.0`.
 
 ## Langue
 
@@ -178,6 +184,16 @@ This project has domain-specific skills available in `**/skills/**`. You MUST ac
     - Install Composer packages: `vendor/bin/sail composer install`
     - Execute PHP scripts: `vendor/bin/sail php [script]`
 - View all available Sail commands by running `vendor/bin/sail` without arguments.
+
+=== tests rules ===
+
+# Test Enforcement
+
+- Add or update tests for behavior and logic changes when a test provides meaningful regression coverage.
+- Pure copy, styling, and layout-only changes do not require new or updated tests.
+- When test coverage applies, run the affected tests and ensure they pass.
+- Test the changed behavior and its important failure modes, but do not add tests beyond them.
+- Read the `testing-best-practices` skill before writing tests.
 
 === inertia-laravel/core rules ===
 

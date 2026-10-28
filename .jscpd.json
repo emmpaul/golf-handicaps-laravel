@@ -1,0 +1,22 @@
+{
+    "path": ["app", "database", "routes", "config", "tests", "resources/js"],
+    "format": ["php", "typescript", "tsx"],
+    "mode": "weak",
+    "ignore": [
+        "**/vendor/**",
+        "**/node_modules/**",
+        "**/public/**",
+        "**/bootstrap/ssr/**",
+        "resources/js/actions/**",
+        "resources/js/routes/**",
+        "resources/js/wayfinder/**",
+        "resources/js/components/ui/**",
+        "config/database.php",
+        "database/migrations/**"
+    ],
+    "ignorePattern": ["(?m)^use [A-Za-z\\\\]+( as \\w+)?;$"],
+    "minTokens": 70,
+    "threshold": 0,
+    "reporters": ["console"],
+    "absolute": false
+}
