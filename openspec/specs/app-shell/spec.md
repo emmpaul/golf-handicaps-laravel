@@ -29,9 +29,14 @@ Les liens de section SHALL viser `/import` (Importer), `/rounds` (Rounds), `/han
 - **THEN** le système répond 200 avec le titre « Handicaps », le texte « Section à venir », la navigation et la ligne de version
 
 #### Scenario: Sous-adresse d'une section sans page
-- **GIVEN** la section Rounds n'a pas encore sa page
-- **WHEN** l'utilisateur ouvre `/rounds/0190a6b2-7c3e-7000-8000-000000000001`
-- **THEN** le système répond 200 avec la page « Section à venir » de Rounds
+- **GIVEN** la section Handicaps n'a pas encore sa page
+- **WHEN** l'utilisateur ouvre `/handicaps/0190a6b2-7c3e-7000-8000-000000000001`
+- **THEN** le système répond 200 avec la page « Section à venir » de Handicaps
+
+#### Scenario: Section qui a sa page
+- **GIVEN** les sections Rounds et Joueurs ont leur page
+- **WHEN** l'utilisateur ouvre `/rounds` puis `/players`
+- **THEN** aucune des deux réponses ne contient « Section à venir »
 
 ### Requirement: Section courante indiquée
 La navigation SHALL marquer la section de la page affichée, sur téléphone comme sur ordinateur, de façon visible et annoncée aux lecteurs d'écran (`aria-current="page"`). Une sous-page MUST marquer sa section parente : une adresse sous `/imports/` relève d'Importer, une adresse sous `/courses/` relève de Rounds.
