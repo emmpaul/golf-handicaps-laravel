@@ -30,7 +30,7 @@ Code d'accès partagé, `/login`, déconnexion, session chiffrée de 90 jours, l
 
 ## 4. `production-deployment`
 
-**Dépend de** : 3. **Statut** : en cours.
+**Dépend de** : 3. **Statut** : en cours. Le changement est archivé ; restent le staging (groupe 8 des tâches) et la première `/release` `v0.1.0`. Il n'est fait qu'une fois les deux passés.
 
 Image unique sur GHCR, stack docker-compose Dokploy (`web`, `worker`, `migrate`, `pgsql`), sauvegardes, staging. Remplit la couche 12 du squelette.
 
