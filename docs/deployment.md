@@ -4,15 +4,15 @@ L'application tourne sur un hôte Docker piloté par [Dokploy](https://dokploy.c
 
 ## La stack
 
-| Service   | Rôle                                                                 | Sain quand                              |
-| --------- | -------------------------------------------------------------------- | --------------------------------------- |
-| `pgsql`   | PostgreSQL 18, données dans le volume `pgdata`                       | `pg_isready` répond                     |
-| `migrate` | `php artisan migrate --force`, puis s'arrête                         | sort en 0 (il reste alors `Exited (0)`) |
-| `web`     | FrankenPHP sur le port 8080, sans port publié                        | `/up` répond 200                        |
-| `worker`  | `php artisan queue:work`, relancé chaque heure par `--max-time=3600` | son battement a moins de 300 s          |
-| `backup`  | `pg_dump` au démarrage puis toutes les 24 h dans le volume `backups` | un dump réussi a moins de 26 h          |
+| Service   | Rôle                                                                      | Sain quand                              |
+| --------- | ------------------------------------------------------------------------- | --------------------------------------- |
+| `pgsql`   | PostgreSQL 18, données dans le volume `pgdata`                            | `pg_isready` répond                     |
+| `migrate` | `php artisan migrate --force`, puis `golf:initial-players`, puis s'arrête | sort en 0 (il reste alors `Exited (0)`) |
+| `web`     | FrankenPHP sur le port 8080, sans port publié                             | `/up` répond 200                        |
+| `worker`  | `php artisan queue:work`, relancé chaque heure par `--max-time=3600`      | son battement a moins de 300 s          |
+| `backup`  | `pg_dump` au démarrage puis toutes les 24 h dans le volume `backups`      | un dump réussi a moins de 26 h          |
 
-`web` et `worker` démarrent seulement après la sortie en 0 de `migrate`. Si une migration échoue, ils ne démarrent pas sur la nouvelle image et restent sur `Created`. Lire alors `docker logs "$P-migrate-1"`, corriger, redéployer. Ce que deviennent les conteneurs de l'ancienne version pendant ce temps reste à observer sur le staging. Ils partagent le volume `storage`, monté sur `storage/app`. Les journaux partent sur la sortie d'erreur des conteneurs (`docker logs`, onglet Logs de Dokploy). Aucun fichier de journal ne grossit dans un conteneur.
+`web` et `worker` démarrent seulement après la sortie en 0 de `migrate`. Si une migration ou la création des joueurs initiaux échoue, ils ne démarrent pas sur la nouvelle image et restent sur `Created`. Lire alors `docker logs "$P-migrate-1"`, corriger, redéployer. Ce que deviennent les conteneurs de l'ancienne version pendant ce temps reste à observer sur le staging. Ils partagent le volume `storage`, monté sur `storage/app`. Les journaux partent sur la sortie d'erreur des conteneurs (`docker logs`, onglet Logs de Dokploy). Aucun fichier de journal ne grossit dans un conteneur.
 
 ## Lancer les commandes de cette page
 
@@ -86,19 +86,20 @@ Dans Dokploy, créer un projet, puis un service de type Compose :
 
 Onglet Environment. Dokploy écrit ces lignes dans un `.env` à côté de `docker-compose.yml`, et compose les passe aux conteneurs.
 
-| Variable               | Exemple                    | Rôle                                                                                    |
-| ---------------------- | -------------------------- | --------------------------------------------------------------------------------------- |
-| `IMAGE_TAG`            | `main`, `v0.1.0`           | Tag de l'image. `main` par défaut.                                                      |
-| `APP_KEY`              | `base64:…`                 | Obligatoire, compose refuse de démarrer sans. Chiffre les sessions.                     |
-| `APP_PASSCODE`         | `birdie-2026`              | Code d'accès partagé. Sans lui, `/up` répond 500 et `web` n'est jamais sain (ADR 0007). |
-| `APP_URL`              | `https://golf.example.org` | Adresse publique, en `https`.                                                           |
-| `DB_PASSWORD`          | une chaîne aléatoire       | Obligatoire. Lu une seule fois, à la création du volume `pgdata` (voir plus bas).       |
-| `TRUSTED_PROXIES`      | `10.0.1.0/24`              | Sous-réseau du proxy de Dokploy (étape 6). Jamais `*`.                                  |
-| `APP_NAME`             | `Handicaps golf`           | Facultatif, c'est le défaut.                                                            |
-| `DB_DATABASE`          | `golf`                     | Facultatif, c'est le défaut. Les commandes de cette page supposent `golf`.              |
-| `DB_USERNAME`          | `golf`                     | Facultatif, c'est le défaut.                                                            |
-| `LOG_LEVEL`            | `info`                     | Facultatif, c'est le défaut.                                                            |
-| `APP_DISPLAY_TIMEZONE` | `America/Montreal`         | Facultatif, c'est le défaut.                                                            |
+| Variable               | Exemple                    | Rôle                                                                                                                                                                                                                                                              |
+| ---------------------- | -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `IMAGE_TAG`            | `main`, `v0.1.0`           | Tag de l'image. `main` par défaut.                                                                                                                                                                                                                                |
+| `APP_KEY`              | `base64:…`                 | Obligatoire, compose refuse de démarrer sans. Chiffre les sessions.                                                                                                                                                                                               |
+| `APP_PASSCODE`         | `birdie-2026`              | Code d'accès partagé. Sans lui, `/up` répond 500 et `web` n'est jamais sain (ADR 0007).                                                                                                                                                                           |
+| `APP_URL`              | `https://golf.example.org` | Adresse publique, en `https`.                                                                                                                                                                                                                                     |
+| `DB_PASSWORD`          | une chaîne aléatoire       | Obligatoire. Lu une seule fois, à la création du volume `pgdata` (voir plus bas).                                                                                                                                                                                 |
+| `TRUSTED_PROXIES`      | `10.0.1.0/24`              | Sous-réseau du proxy de Dokploy (étape 6). Jamais `*`.                                                                                                                                                                                                            |
+| `INITIAL_PLAYERS`      | `Gab,Manu,Sean`            | Facultatif. Joueurs créés par `migrate` sur une base sans joueur, chacun avec son nom en majuscules pour alias. Sans effet dès qu'un joueur existe. Un nom en double, sans tenir compte de la casse, fait échouer `migrate` : `web` et `worker` ne démarrent pas. |
+| `APP_NAME`             | `Handicaps golf`           | Facultatif, c'est le défaut.                                                                                                                                                                                                                                      |
+| `DB_DATABASE`          | `golf`                     | Facultatif, c'est le défaut. Les commandes de cette page supposent `golf`.                                                                                                                                                                                        |
+| `DB_USERNAME`          | `golf`                     | Facultatif, c'est le défaut.                                                                                                                                                                                                                                      |
+| `LOG_LEVEL`            | `info`                     | Facultatif, c'est le défaut.                                                                                                                                                                                                                                      |
+| `APP_DISPLAY_TIMEZONE` | `America/Montreal`         | Facultatif, c'est le défaut.                                                                                                                                                                                                                                      |
 
 `APP_ENV=production`, `APP_DEBUG=false` et `LOG_CHANNEL=stderr` viennent de l'image. Sessions, cache et file sont en base. Le témoin de session est `Secure` dès que `APP_ENV=production`, sans variable de plus.
 

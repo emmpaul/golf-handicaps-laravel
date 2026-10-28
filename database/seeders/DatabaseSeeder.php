@@ -3,17 +3,16 @@
 namespace Database\Seeders;
 
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
-use Illuminate\Database\Seeder;
 
-class DatabaseSeeder extends Seeder
+class DatabaseSeeder extends DemoSeeder
 {
     use WithoutModelEvents;
 
     /**
-     * Seed the application's database.
+     * The minimal development base of make fresh: the players, no round.
      */
     public function run(): void
     {
-        //
+        $this->call(DevelopmentPlayersSeeder::class);
     }
 }

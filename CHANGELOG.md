@@ -63,6 +63,18 @@ All notable changes to this application, version by version. The format follows 
 - `docs/deployment.md`: Dokploy setup, variables, `TRUSTED_PROXIES`, deploying a version, `/api/version` check, worker health, backup and restore, rollback, closing every session.
 - ADR 0008 (single image and Dokploy stack) and a Deployment section in `ARCHITECTURE.md`.
 - `/release` skill, launched by the maintainer only: release PR, `vX.Y.Z` tag, published image and `/api/version` checks, GitHub Release, guided Dokploy deployment; commit scope `release`.
+- Players and rounds data model: `players`, `player_aliases`, `rounds`, `round_holes`, `round_players` and `scores` tables in UUID v7, with case-insensitive unique names and aliases, composite foreign keys and `CHECK` constraints; models and factories for each.
+- `/players` page: list of players with their aliases, add, rename, add and remove an alias; a name is unique regardless of case ("Ce joueur existe déjà") and an alias added to a player is taken from any other.
+- `golf:initial-players` artisan command: creates the players of `INITIAL_PLAYERS` on a base without players, and exits with 1 on a duplicate name.
+- `/rounds` list from the latest round, round page with header, gross scores, scorecard and photo, manual entry at `/rounds/new`, correction at `/rounds/{id}/edit` and confirmed deletion.
+- Round editor ported from the Next.js correction screen, without photo or autosave: course, tees, calendar date, par, stroke index, distance, 1 to 4 player lines, computed OUT, IN and TOT, coherence checks on every keystroke, known-course prefill, player creation from a line, duplicate round warning with "Enregistrer quand même".
+- Coherence checks replayed by the server before any write (`RoundCardChecks`), kept aligned with the editor's by the shared case table `tests/fixtures/round-checks.json`.
+- Round photos on a `photos` disk that `storage/{path}` never serves, read through `GET /rounds/{round}/photo` behind the session and deleted with the round.
+- `App\Domain\DomainException` and its single rendering: an error toast on Inertia visits, `422 { "error": message }` on JSON requests.
+- `formatPlayedOn` in `resources/js/lib/format.ts`: a date of play read as a civil day, without going through UTC.
+- Development data: `DatabaseSeeder` writes Gab, Manu and Sean; `DemoDatabaseSeeder` adds the reference round `IMG_3064` with its photo (`database/data/img3064.webp`) and 24 generated rounds on three courses, the same at every run, on an empty base only. Every seeder extends `DemoSeeder`, which refuses production, enforced by an architecture rule.
+- `make fresh` and `make demo` targets.
+- ADR 0009 (rounds data model and coherence checks) and a Players and rounds section in `ARCHITECTURE.md`.
 
 ### Changed
 
@@ -78,6 +90,8 @@ All notable changes to this application, version by version. The format follows 
 - `.env.example` documents `APP_PASSCODE`, `SESSION_LIFETIME` and `TRUSTED_PROXIES`, and `phpunit.xml` sets `APP_PASSCODE`.
 - The session cookie is `Secure` by default when `APP_ENV=production`; `SESSION_SECURE_COOKIE` still forces either value, and `.env.example` explains it.
 - ADR 0005 points layer 12 to ADR 0008.
+- The `migrate` service of `docker-compose.yml` runs `golf:initial-players` after the migrations; `.env.example` and `docs/deployment.md` document `INITIAL_PLAYERS`.
+- `/rounds` and `/players` serve their own pages instead of "Section à venir"; an unknown sub-address under them answers 404.
 
 ### Removed
 
