@@ -17,6 +17,21 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Application Version
+    |--------------------------------------------------------------------------
+    |
+    | The released version is kept by hand in version.txt at the repository
+    | root. The commit is the full sha of the build, passed in by the image;
+    | GET /api/version reports both. "config:cache" freezes them at build.
+    |
+    */
+
+    'version' => trim((string) @file_get_contents(base_path('version.txt'))),
+
+    'commit' => env('APP_COMMIT'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Application Environment
     |--------------------------------------------------------------------------
     |
