@@ -1,6 +1,6 @@
 # Feuille de route
 
-Ordre des changements OpenSpec du port. Le détail de chacun et les décisions qui le cadrent sont dans `docs/PORT_TO_LARAVEL.md`. Chaque changement donne deux pull requests : le code, puis l'archivage.
+Ordre des changements OpenSpec du port, de haut en bas. Le numéro d'une entrée l'identifie dans les autres documents et ne donne pas son rang : 8 passe avant 7. Le détail de chacun et les décisions qui le cadrent sont dans `docs/PORT_TO_LARAVEL.md`. Chaque changement donne deux pull requests : le code, puis l'archivage.
 
 ## 0. Bootstrap (hors OpenSpec)
 
@@ -46,17 +46,17 @@ Joueurs, alias, rounds, saisie manuelle, données de démonstration et cibles `m
 
 Calcul WHS, table `player_round_stats`, ratings et slopes saisis à la main.
 
-## 7. `home-and-match-strokes`
-
-**Dépend de** : 6. **Statut** : à proposer.
-
-Tableau de bord, page des handicaps, coups rendus en match.
-
 ## 8. `scorecard-ai-import`
 
 **Dépend de** : 5. **Statut** : à proposer.
 
 Photo, job de file, lecture par l'IA, écran de correction, budget mensuel.
+
+## 7. `home-and-match-strokes`
+
+**Dépend de** : 6, 8. **Statut** : à proposer.
+
+Tableau de bord, dont le bloc « Imports à vérifier » qui lit les imports de 8, page des handicaps, coups rendus en match.
 
 ## 9. `course-rating-sgt`
 

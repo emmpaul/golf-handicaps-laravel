@@ -106,7 +106,7 @@ Pour chaque joueur de chaque round, le système SHALL conserver le brut, le scor
 - **THEN** les deux rounds sont marqués comme comptant
 
 ### Requirement: Recalcul complet
-Après tout ajout, correction ou suppression de round, et après toute saisie ou correction de la rating d'un parcours, le système SHALL recalculer les différentiels et tout l'historique d'index des joueurs concernés, y compris pour les rounds postérieurs à la date modifiée, avant de répondre. Un joueur retiré d'un round corrigé MUST être recalculé lui aussi. Une écriture refusée MUST NOT changer aucun historique.
+Après tout ajout, correction ou suppression de round, et après toute saisie, correction ou retrait de la rating d'un parcours, le système SHALL recalculer les différentiels et tout l'historique d'index des joueurs concernés, y compris pour les rounds postérieurs à la date modifiée, avant de répondre. Un joueur retiré d'un round corrigé MUST être recalculé lui aussi. Une écriture refusée MUST NOT changer aucun historique.
 
 #### Scenario: Round ajouté dans le passé
 - **GIVEN** Gab avec un round le 2026-10-10 (différentiel 17,0) et un le 2026-10-17 (12,0)
@@ -133,13 +133,18 @@ Après tout ajout, correction ou suppression de round, et après toute saisie ou
 - **WHEN** l'utilisateur saisit 71,4 et 144 pour « BETHPAGE BLACK / Red »
 - **THEN** le différentiel de Manu sur ce round vaut 13,0, et ses index après ce round et après les suivants sont recalculés
 
+#### Scenario: Rating retirée
+- **GIVEN** « BETHPAGE BLACK / Red » à 71,4 / 144 et la carte `IMG_3064` enregistrée, différentiels de Gab 0,5 et de Manu 13,0
+- **WHEN** l'utilisateur retire la rating de « BETHPAGE BLACK / Red »
+- **THEN** le différentiel de Gab sur ce round vaut 1,0 et celui de Manu 17,0, et leurs index après ce round et après les suivants sont recalculés
+
 #### Scenario: Correction refusée
 - **GIVEN** la carte `IMG_3064` enregistrée
 - **WHEN** l'utilisateur la corrige avec un par 6 et l'enregistrement est refusé
 - **THEN** l'historique de Gab et de Manu reste inchangé
 
 ### Requirement: Recalcul d'une base existante
-Le système SHALL offrir une commande d'administration qui recalcule l'historique de tous les joueurs à partir des rounds et des ratings enregistrés. Lancée deux fois de suite, elle MUST donner le même historique.
+Le système SHALL offrir une commande d'administration qui recalcule l'historique de tous les joueurs à partir des rounds et des ratings enregistrés. Lancée deux fois de suite, elle MUST donner le même historique. Sur une base sans round, elle MUST s'arrêter avec le code 0 sans rien écrire. Le service `migrate` la lance à chaque déploiement (spec `deployment`).
 
 #### Scenario: Base sans historique
 - **GIVEN** une base qui contient la carte `IMG_3064` et aucun historique d'index
@@ -149,3 +154,38 @@ Le système SHALL offrir une commande d'administration qui recalcule l'historiqu
 #### Scenario: Deux lancements
 - **WHEN** l'administrateur lance la commande de recalcul deux fois
 - **THEN** l'historique est le même après chaque lancement
+
+#### Scenario: Base vide
+- **GIVEN** une base sans round
+- **WHEN** l'administrateur lance la commande de recalcul
+- **THEN** elle affiche « 0 joueur recalculé. », n'écrit aucune ligne d'historique et s'arrête avec le code 0
+
+### Requirement: Explication du calcul
+La page Joueurs, la page d'un round et la page Parcours SHALL proposer une explication repliée, titrée « Comment l’index est calculé », fermée à l'ouverture de la page. Le titre MUST s'ouvrir au clavier, et l'explication dépliée MUST NOT faire défiler la page horizontalement à 320 px. La page Handicaps complète (courbe, différentiels retenus) reste à l'entrée 7 de `ROADMAP.md`.
+
+#### Scenario: Fermée à l'ouverture
+- **WHEN** l'utilisateur ouvre `/players`
+- **THEN** la page affiche « Comment l’index est calculé » et aucune des sept lignes n'est visible
+
+#### Scenario: Ouverte au clavier
+- **WHEN** l'utilisateur place le focus sur « Comment l’index est calculé » et appuie sur Entrée
+- **THEN** l'explication se déplie
+
+### Requirement: Texte de l'explication du calcul
+Dépliée, l'explication du calcul SHALL afficher sept lignes, dans cet ordre : le score ajusté, le différentiel d'un round, l'index, le nombre de différentiels retenus, l'ajustement, l'index provisoire et le repli sans rating. Leur texte MUST être exactement celui du scénario « Texte exact », le même sur les trois pages.
+
+#### Scenario: Texte exact
+- **WHEN** l'utilisateur déplie « Comment l’index est calculé »
+- **THEN** les sept lignes sont, dans l'ordre : « Score ajusté : chaque trou compte au plus par + 4. », « Différentiel d’un round : 113 / slope × (score ajusté − course rating), arrondi au dixième. », « Index : moyenne des meilleurs différentiels parmi les 20 derniers rounds, arrondie au dixième et plafonnée à 54,0. », « Différentiels retenus : 1 de 3 à 5 rounds, 2 de 6 à 8, 3 de 9 à 11, 4 de 12 à 14, 5 à 15 ou 16, 6 à 17 ou 18, 7 à 19, 8 à 20. », « Ajustement : −2,0 à 3 rounds, −1,0 à 4 rounds et à 6 rounds, aucun sinon. », « Index provisoire à 1 ou 2 rounds : moyenne de leurs différentiels, sans ajustement. » et « Parcours sans rating : la course rating vaut le par du round et le slope 113. »
+
+#### Scenario: Dépliée sur la page Joueurs
+- **WHEN** l'utilisateur ouvre `/players` puis active « Comment l’index est calculé »
+- **THEN** la page affiche « Différentiel d’un round : 113 / slope × (score ajusté − course rating), arrondi au dixième. » et les six autres lignes, dans l'ordre
+
+#### Scenario: Page d'un round et page Parcours
+- **WHEN** l'utilisateur ouvre la carte `IMG_3064`, puis `/courses`, et déplie l'explication sur chacune
+- **THEN** chacune affiche « Parcours sans rating : la course rating vaut le par du round et le slope 113. » et les six autres lignes
+
+#### Scenario: Téléphone
+- **WHEN** l'utilisateur déplie l'explication sur `/players` sur un écran de 320 px
+- **THEN** les lignes passent à la ligne et la page ne défile pas horizontalement

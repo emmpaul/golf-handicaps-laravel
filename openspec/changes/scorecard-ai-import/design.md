@@ -73,7 +73,7 @@
 
 - `App\Jobs\ReadScorecardImport` (`ShouldQueue`, `$tries = 2`, `$backoff = 30`, `$timeout = 120`), mis en file par `CreateImport` après le commit (`afterCommit`). `handle()` :
     1. `StartReading::handle($importId)` : verrouille la ligne (`lockForUpdate`), ne fait rien si l'import n'existe plus ou n'est ni `queued` ni `reading` (suppression, ou job déjà traité), sinon passe à `reading`. Un import supprimé avant ce point n'est jamais envoyé à l'IA.
-    2. Sans clé : `FailImport` avec « Lecture des photos désactivée : aucune clé d'IA n'est configurée. ».
+    2. Sans clé : `FailImport` avec « Lecture des photos désactivée : aucune clé d’IA n’est configurée. ».
     3. `AiBudget::canSpend(now)` faux : `FailImport` avec « Budget IA du mois atteint », sans appel.
     4. Appel de D3. Usage présent : `AiBudget::record()` aussitôt, dans sa propre écriture, avant toute autre décision.
     5. `Read` et `ScorecardDraft::fromArray()` non nul : `MarkImportReady` (brouillon). Sinon : `FailImport` « Lecture IA indisponible », sans relancer.
@@ -81,13 +81,14 @@
 - `App\Domain\AiUsage\AiBudget` : `canSpend(CarbonImmutable $now): bool` = cumul du mois + `maxCallCost()` ≤ plafond ; `record(model, inputTokens, outputTokens, now)`. Mois : `$now->setTimezone(config('golf.ai.budget_time_zone'))->format('Y-m')`. Coût : `AiPricing::cost(model, in, out)` = `in × prix d'entrée + out × prix de sortie`, prix en micro-dollars par token dans `config('golf.ai.prices')`. `maxCallCost()` = coût de `max_input_tokens` (4 000) et `max_output_tokens` (4 000) au modèle configuré.
 - Valeurs par défaut de `config/golf.php` : `AI_MODEL` = `claude-sonnet-5-5` (le Sonnet le plus récent, défaut du port) ; prix relevés le 2026-10-28 dans la grille d'Anthropic (en cache au 2026-10-06), à revérifier à l'apply : `claude-sonnet-5-5` 2 / 10, `claude-opus-5-5` 4 / 20 micro-dollars par token. Coût maximal d'un appel au modèle par défaut : 4 000 × 2 + 4 000 × 10 = 48 000 micro-dollars ; le plafond de 5 $ permet donc au moins 104 lectures par mois.
 - Fuseau : `AppServiceProvider::boot()` vérifie `AI_BUDGET_TIME_ZONE` par `in_array(…, DateTimeZone::listIdentifiers())` et lève une exception qui nomme la variable. Tout processus échoue donc, `migrate` compris : la stack garde `web` et `worker` arrêtés, comme pour une migration en échec.
+- Tarif du modèle : le même `boot()` vérifie que `config('golf.ai.model')` est une clé de `config('golf.ai.prices')`, avec ou sans clé d'API, et lève sinon une exception dont le message nomme `AI_MODEL` (« AI_MODEL claude-unknown-1 n’a pas de tarif dans config/golf.php »). Sans tarif, le budget ne peut ni compter un appel ni borner le suivant : mieux vaut une stack arrêtée qu'une lecture qui dépense sans compter. Passer à un modèle nouveau demande donc d'ajouter son tarif à `config/golf.php` dans la même pull request.
 
 **Alternative écartée** : `->queue()` du SDK (agent mis en file par le SDK). Le statut de l'import, le budget avant l'appel et le compte de l'usage facturé demandent un job à nous ; le SDK n'y gagnerait qu'une indirection.
 
 ### D5. Reconnaissance des noms et apprentissage des alias
 
 - `App\Domain\Players\PlayerNameMatcher::match(string $read, Collection $players): ?PlayerMatch` : port de `matchPlayerName` (`exact` ou `close`, distance d'édition ≤ 1, joueur unique). La distance se calcule sur des tableaux de caractères (`mb_str_split`), pas avec `levenshtein()` de PHP qui compte des octets (« ÉMILE » / « EMILE » vaudrait 2).
-- `App\Domain\Imports\Actions\SaveImportedRound::handle(Import, RoundCard): Round`, en une transaction : verrouille l'import (le cas d'un import qui a déjà un round attend la question 3 des Open Questions), appelle `CreateRound` (contrôles, totaux lus compris, transaction imbriquée), copie `photo_path` sur le round, relie l'import, puis pour chaque ligne qui a un `readName` et un joueur : si `PlayerNameMatcher` ne donne pas `exact` vers ce joueur, `AssignAlias`. Un refus (`IncoherentRoundCard`) ou un doublon (détecté avant, D6) n'apprend donc rien.
+- `App\Domain\Imports\Actions\SaveImportedRound::handle(Import, RoundCard): Round`, en une transaction : verrouille l'import (`lockForUpdate`) ; s'il a déjà un round, `ImportAlreadySaved` (« Cette carte est déjà enregistrée ») et rien n'est écrit ; sinon appelle `CreateRound` (contrôles, totaux lus compris, transaction imbriquée), copie `photo_path` sur le round, relie l'import, puis pour chaque ligne qui a un `readName` et un joueur : si `PlayerNameMatcher` ne donne pas `exact` vers ce joueur, `AssignAlias`. Un refus (`IncoherentRoundCard`) ou un doublon (détecté avant, D6) n'apprend donc rien.
 
 ### D6. Routes et contrôleurs
 
@@ -100,21 +101,23 @@
 | GET | `/imports/{import}/photo` | `imports.photo` | `ImportPhotoController` |
 | PUT | `/imports/{import}/correction` | `imports.correction.update` | `ImportCorrectionController` |
 | POST | `/imports/{import}/round` | `imports.round.store` | `ImportRoundController` |
+| POST | `/imports/{import}/reading` | `imports.reading.store` | `ImportReadingController` |
 
 - `{import}` passe par `whereUuid()`. La route `section-placeholder` d'Importer disparaît ; `/import/xyz` tombe dans la route de repli (404).
-- `index` : props `imports` (Query `ImportList`, 20 derniers, `label`, `failure`, `roundId`, actions permises), `readingEnabled` (clé configurée). La page relance `router.reload({ only: ['imports'] })` toutes les 2 s tant qu'un import est `queued` ou `reading` (`usePoll` d'Inertia, démarré et arrêté selon les props).
+- `index` : props `imports` (Query `ImportList`, 20 derniers, `label`, `failure`, `roundId`, actions permises, dont `retry` pour un import `failed` sans round quand la clé est configurée), `readingEnabled` (clé configurée). La page relance `router.reload({ only: ['imports'] })` toutes les 2 s tant qu'un import est `queued` ou `reading` (`usePoll` d'Inertia, démarré et arrêté selon les props).
 - `store` : `StoreImportRequest` (`photo` : `required|file|max:20480`, message « La photo dépasse 20 Mo ») ; sans clé, `ImportReadingDisabled` (`DomainException`) ; `CreateImport` (D8) ; retour avec le flash `toast` succès « Lecture en file d'attente. Tu peux envoyer la photo suivante. ».
 - `show` : import avec round → redirection vers `rounds.show` ; sinon la page `imports/show` (éditeur, photo, `failure`, joueurs, parcours connus, état de D2).
 - `destroy` : `DeleteImport` (verrou, refus `ImportBeingRead` « Lecture en cours » et `ImportAlreadySaved` « Cette carte est déjà enregistrée », photo effacée après le commit) ; retour vers `import.index`.
 - `correction` : JSON seulement (`fetch` avec `keepalive`, en-tête `X-XSRF-TOKEN`), 204 si accepté ; `SaveImportCorrection` fait un seul `UPDATE … WHERE id = ? AND round_id IS NULL AND status IN ('ready','failed')`, puis, sans ligne touchée, dit pourquoi : 409 `{ error: "Cette carte est déjà enregistrée" }` ou `{ error: "Lecture en cours" }`. 404 « Import introuvable » par la liaison de route (`missing()`). Corps invalide : 422.
-- `round` : même Form Request que `rounds.store` (classe de base de l'entrée 5) étendue des totaux et noms lus ; `FindDuplicateRound` sans `force` comme `RoundController@store` (flash `duplicate`) ; puis `SaveImportedRound` ; redirection vers `rounds.index` avec « Round enregistré. ».
+- `round` : même Form Request que `rounds.store` (classe de base de l'entrée 5) étendue des totaux et noms lus ; d'abord, un import qui a déjà un round est refusé par `ImportAlreadySaved` (toast « Cette carte est déjà enregistrée »), avant `FindDuplicateRound` qui trouverait sinon le round de cet import et répondrait « Ce round semble déjà enregistré » ; puis `FindDuplicateRound` sans `force` comme `RoundController@store` (flash `duplicate`) ; puis `SaveImportedRound`, qui refait le contrôle sous verrou pour deux envois simultanés ; redirection vers `rounds.index` avec « Round enregistré. ».
+- `reading` (relance) : sans clé, `ImportReadingDisabled` ; sinon `App\Domain\Imports\Actions\RetryImportReading::handle(Import, CarbonImmutable $now)`, en une transaction : verrouille l'import ; `queued` ou `reading` → `ImportBeingRead` (« Lecture en cours ») ; round présent → `ImportAlreadySaved` ; `ready` → `ImportNotFailed` (« Cet import n’est pas en échec ») ; `AiBudget::canSpend($now)` faux → `AiBudgetReached` (« Budget IA du mois atteint »), l'import garde son statut et sa raison ; sinon `status = queued`, `failure`, `draft` et `correction` à `null`, `photo_path` inchangé, et `ReadScorecardImport` mis en file après le commit comme dans `CreateImport`. Retour vers `import.index` avec le toast « Lecture relancée. ». Le job ne change pas : `StartReading` accepte un import `queued`, et le budget est vérifié de nouveau avant l'appel (D4), qui peut encore mener à « Budget IA du mois atteint » si d'autres lectures ont consommé le reste entre-temps.
 - `ProtectedRoutesTest` : liste ouverte inchangée.
 
 ### D7. Correction enregistrée et autosave
 
 - Forme : `{ version: 1, card: RoundCard }`, où `card` est l'état de l'éditeur sans les `key` (totaux et noms lus compris). Validée à l'écriture (Form Request, `playerId` UUID ou `null`, 4 lignes au plus) et à la lecture (`ImportCorrection::fromArray(): ?RoundCard`, illisible : on repart du brouillon). Un `playerId` qui n'existe plus devient `null` à l'ouverture.
 - `resources/js/components/round-editor/autosave.ts` : port de `createCorrectionAutosave` (1 s après la dernière modification, un envoi à la fois, envoi immédiat avec `keepalive` sur `visibilitychange` caché et `pagehide`, nouvel essai 5 s après une erreur réseau ou une 5xx, arrêt sur 409 avec le message du serveur, sur 401, 404 et 422). L'URL vient de l'action Wayfinder `ImportCorrectionController`.
-- L'éditeur de l'entrée 5 gagne : la photo (`photoUrl`), la note d'échec, l'indicateur d'enregistrement (`role="status"`), « lu « … » » dans `line-players`, les cases de totaux modifiables quand ils sont lus, `fromReading` pour le surlignage d'ouverture. `rounds/create` et `rounds/edit` ne passent aucun de ces props et ne changent pas.
+- L'éditeur de l'entrée 5 gagne : le repère « Carte lue par l’IA, vérifie chaque case » en tête, en `text-ai` (token `--color-ai`, aujourd'hui inutilisé depuis le retrait de `ai_cells`), affiché quand `imports.draft` n'est pas nul (prop `readByAi` de `ImportEditorState`, vrai aussi quand l'écran part d'une correction enregistrée) ; la photo (`photoUrl`), la note d'échec, l'indicateur d'enregistrement (`role="status"`), « lu « … » » dans `line-players`, les cases de totaux modifiables quand ils sont lus, `fromReading` pour le surlignage d'ouverture. `rounds/create` et `rounds/edit` ne passent aucun de ces props et ne changent pas.
 
 ### D8. Envoi et conversion des photos
 
@@ -141,7 +144,7 @@
 
 ### D11. ADR
 
-« Lecture des cartes par l'IA et photos en WebP » : D3 (Laravel AI SDK, sortie structurée, intégration hors du domaine), D4 (job, budget avant l'appel, usage compté même inexploitable), D8 (Intervention et Imagick, WebP sans métadonnées), D9 (faux obligatoires dans les tests). Numéro : le suivant libre à l'apply (0009 est pris par l'entrée 5, 0010 l'est probablement par `handicap-index`). `docs/adr/README.md`, `ARCHITECTURE.md` (section « Import des cartes ») et `docs/deployment.md` (variables de l'IA) sont mis à jour.
+« Lecture des cartes par l'IA et photos en WebP » : D3 (Laravel AI SDK, sortie structurée, intégration hors du domaine), D4 (job, budget avant l'appel, usage compté même inexploitable, démarrage refusé sans tarif du modèle, relance par la même file), D8 (Intervention et Imagick, WebP sans métadonnées), D9 (faux obligatoires dans les tests). Numéro : le suivant libre à l'apply (0009 est pris par l'entrée 5, 0010 l'est probablement par `handicap-index`). `docs/adr/README.md`, `ARCHITECTURE.md` (section « Import des cartes ») et `docs/deployment.md` (variables de l'IA) sont mis à jour.
 
 ## Risks / Trade-offs
 
@@ -161,11 +164,4 @@
 
 ## Open Questions
 
-1. **Libellé sans clé d'API** : « Lecture des photos désactivée : aucune clé d'IA n'est configurée. » est proposé ; aucune source ne le donne.
-2. **Libellé d'une erreur de l'IA** : « Lecture IA indisponible » est proposé, sur le modèle de « Complétion IA indisponible » de Next.
-3. **Enregistrer un import qui a déjà un round** (deux onglets) : Next créait un second round et reliait l'import au dernier. Proposé : refuser avec « Cette carte est déjà enregistrée », comme la correction. Non spécifié tant que la règle n'est pas confirmée.
-4. **Relance d'un import en « Échec »** (après une panne ou au mois suivant) : Next relançait par le recadrage, retiré. Faut-il une action « Relancer la lecture » ? Hors périmètre en attendant.
-5. **Repère global de lecture par l'IA** : la marque par case disparaît avec `ai_cells`. Faut-il un texte en tête de l'écran (« Carte lue par l'IA, vérifie chaque case ») ? Le token `--color-ai` reste inutilisé sinon.
-6. **Modèle sans prix connu** : un `AI_MODEL` absent de `golf.ai.prices` doit-il faire échouer le démarrage (comme un fuseau inconnu) ou désactiver la lecture ? Rien n'est spécifié ; le budget ne peut pas compter sans prix.
-7. **Limite d'envoi de 20 Mo et son message** « La photo dépasse 20 Mo » : choix technique proposé (le navigateur envoie un JPEG de 3000 px, en général sous 5 Mo).
-8. **Bloc « Imports à vérifier » de l'accueil** : il revient à `home-and-match-strokes` (7) si 8 est fusionné avant ; sinon à un petit changement après 8. Ordre à confirmer dans `ROADMAP.md`.
+Aucune.

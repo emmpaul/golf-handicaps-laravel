@@ -34,3 +34,10 @@ Le système SHALL afficher l'indicateur d'attente « Suppression de l’import�
 #### Scenario: Suppression en cours
 - **WHEN** l'utilisateur confirme la suppression d'un import et que la réponse n'est pas arrivée
 - **THEN** la boîte de confirmation affiche « Suppression de l’import… »
+
+### Requirement: Attente de la relance d'une lecture
+Dans la liste des imports, le système SHALL afficher l'indicateur d'attente « Relance de la lecture… » sur la ligne de l'import dont la relance est envoyée, et désactiver ses actions jusqu'à la réponse. Les autres imports restent utilisables.
+
+#### Scenario: Relance en cours
+- **WHEN** l'utilisateur touche « Relancer la lecture » sur un import en « Échec » et que la réponse n'est pas arrivée
+- **THEN** la ligne de cet import affiche « Relance de la lecture… », et ses actions « Relancer la lecture », « Ouvrir l'écran de correction vide » et « Supprimer » sont désactivées

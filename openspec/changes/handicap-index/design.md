@@ -14,7 +14,7 @@
     - schéma : `src/db/schema.ts` (`playerRoundStats`, `courseRatings`) ;
     - interface : `src/components/rounds/net-leaderboard.tsx`, `src/app/(app)/rounds/page.tsx` (colonne « Gagnant net », lien « Parcours »), `src/app/(app)/rounds/[id]/page.tsx` (ligne de rating), `src/app/(app)/courses/page.tsx` (sans les colonnes SGT), `src/components/courses/manual-rating-form.tsx`, `src/app/(app)/players/page.tsx` (ligne « Index »), `src/lib/format.ts` (`formatTenths`, `formatIndex`, `NO_VALUE`, `NO_INDEX`) ;
     - tests à porter en Pest avec les mêmes valeurs : `tests/domain/handicap.test.ts`, `tests/domain/handicap-index.test.ts`, `tests/domain/strokes.test.ts` (`playingHandicap`, `courseHandicap`), `tests/server/rounds/{stats,history,leaderboard,save,edit}.test.ts`, `tests/server/courses/{ratings,manage}.test.ts` (cas de saisie manuelle).
-- Le changement `add-course-rating` de Next n'est pas archivé (sa tâche 7.2, vérification sur la prod, reste ouverte), mais ses formules sont dans `src/domain` et testées : ce sont elles qui sont portées.
+- Le changement `add-course-rating` de Next n'est pas archivé (sa tâche 7.2, vérification sur la prod, reste ouverte), mais ses formules sont dans `src/domain` et testées : ce sont elles qui sont portées. Le mainteneur les a confirmées comme référence (course rating et slope saisis, repli sur le par et 113), plutôt que la spec principale `handicap-index` de Next au slope fixé à 113.
 
 ## Goals / Non-Goals
 
@@ -67,7 +67,7 @@
     - `CreateRound` : les joueurs de la carte, après l'écriture ;
     - `UpdateRound` : les joueurs lus avant la suppression des lignes, plus ceux de la carte (« Joueur remplacé ») ;
     - `DeleteRound` : les joueurs lus avant la suppression ;
-    - `SaveCourseRating` (D6) : les joueurs qui ont un round sur la paire, sans casse.
+    - `SaveCourseRating` et `RemoveCourseRating` (D6) : les joueurs qui ont un round sur la paire, sans casse.
 - Les contrôles de cohérence de `CreateRound` / `UpdateRound` passent avant toute écriture ; un refus ne touche donc aucune statistique (scénario « Correction refusée »).
 - Le verrou sérialise deux écritures qui touchent le même joueur : sans lui, en `READ COMMITTED`, la seconde pourrait réécrire un historique lu avant le commit de la première.
 
@@ -86,6 +86,8 @@
 - `SaveCourseRatingRequest` : `courseName` et `tees` obligatoires, 100 caractères au plus ; `rating` doit correspondre à `^\d{2}([.,]\d)?$` (après `trim`) et donner 400 à 900 dixièmes, sinon « Rating entre 40,0 et 90,0 » sous `rating` ; `slope` doit correspondre à `^\d+$` et valoir 55 à 155, sinon « Slope entre 55 et 155 » sous `slope`. La conversion « 71,4 » → 714 est `App\Domain\Courses\RatingInput::tenths()`, pure et testée seule (port de `parseRatingT`).
 - `App\Domain\Courses\Actions\SaveCourseRating::handle(string $courseName, string $tees, int $ratingT, int $slope)` : transaction ; si aucun round n'a cette paire (sans casse), `UnknownCourse` (`DomainException`, « Parcours introuvable ») ; sinon `insert … on conflict ((lower(trim(course_name))), (lower(trim(tees)))) do update` (PostgreSQL infère l'index d'expression), puis `RecomputePlayerStats` pour les joueurs de la paire. Deux saisies simultanées du même parcours ne lèvent donc jamais de violation d'unicité.
 - Le contrôleur revient en arrière avec le toast « Rating enregistrée. » (même flash que « Round enregistré. »).
+- Retrait : route `DELETE /courses/rating` (`courses.rating.destroy`, `CourseRatingController@destroy`), corps `{ courseName, tees }`, validé par `RemoveCourseRatingRequest` (les deux obligatoires, 100 caractères au plus). `App\Domain\Courses\Actions\RemoveCourseRating::handle(string $courseName, string $tees)` : transaction ; aucun round sur la paire, `UnknownCourse` (« Parcours introuvable ») ; sinon `delete from course_ratings where lower(trim(course_name)) = lower(trim(?)) and lower(trim(tees)) = lower(trim(?))` ; aucune ligne effacée, `CourseHasNoRating` (`DomainException`, « Parcours déjà sans rating ») ; sinon `RecomputePlayerStats` pour les joueurs de la paire, qui retombent sur le par et 113 (D4). Le contrôleur revient en arrière avec le toast « Rating retirée. ».
+- Aucun changement de schéma : retirer, c'est effacer la ligne de `course_ratings`. Une Action à part plutôt qu'un `SaveCourseRating` aux valeurs nulles : la saisie garde des entiers non nuls, comme les colonnes, et chaque Action a son refus propre.
 - `App\Domain\Courses\Queries\CourseOverview` : `KnownCourses` plus la rating de chaque paire (une requête de plus), le par total des trous du round le plus récent. `GET /courses` (`courses.index`, `CourseController@index`) sert la page `courses/index`.
 
 ### D7. Frontend
@@ -94,11 +96,14 @@
 - `rounds/net-leaderboard` porté de Next, mêmes classes : en-tête sur le bandeau d'encre, « Hcp de jeu » abrégé « Hcp » sous 768 px, mention « pas encore d'index » qui passe à la ligne, gagnant net en `text-signal`. Il remplace `rounds/round-gross`, supprimé avec son test.
 - `rounds/show` : ligne de rating (lien Wayfinder `courses.index`) ; `rounds/index` : colonne « Gagnant net » et lien « Parcours » à côté de « Saisie manuelle » ; `players/index` : « Index … » sous le nom.
 - `courses/index` porté de la page Next sans la colonne SGT (variante `plain` des colonnes) ; `courses/manual-rating-form` : un `useForm` par ligne, envoi `put` sur l'action Wayfinder avec `preserveScroll`, `processing` qui affiche « Enregistrement de la rating… » et désactive le seul bouton de la ligne. Les erreurs d'une ligne restent sur sa propre instance de formulaire.
+- Sur une ligne qui a une rating, `manual-rating-form` ajoute le bouton secondaire « Retirer la rating » (`aria-label` « Retirer la rating de <parcours> / <tees> »), qui envoie `delete` sur l'action Wayfinder `courses.rating.destroy` par la même instance de formulaire, avec `preserveScroll`. Pendant ce retrait, la ligne affiche « Retrait de la rating… » et ses deux boutons sont désactivés. Pas de boîte de confirmation : le retrait se défait en saisissant de nouveau les valeurs.
+- `handicaps/computation-help` : un `<details>` fermé par défaut, `<summary>` « Comment l’index est calculé », puis les sept lignes de la spec `handicap-index` (« Texte de l'explication du calcul ») en constantes du composant, en texte qui passe à la ligne. Placé sous la ligne de rating de `rounds/show`, sous la liste de `players/index` et sous la liste de `courses/index`. Il n'affiche aucune valeur calculée : la page Handicaps (7) montrera les différentiels retenus.
 
 ### D8. Commande `golf:recompute-stats`
 
-- Appelle `RecomputePlayerStats` pour tous les joueurs qui ont au moins un round, dans une transaction, et affiche « N joueurs recalculés. ». Idempotente.
-- Elle sert une fois sur le staging (rounds écrits avant ce déploiement) et resservira à l'import (10). Elle n'est pas dans la commande du service `migrate` : en production, aucune donnée n'existe avant l'import.
+- Appelle `RecomputePlayerStats` pour tous les joueurs qui ont au moins un round, dans une transaction, et affiche « N joueurs recalculés. » (« 0 joueur recalculé. » sur une base sans round, code 0). Idempotente.
+- Le service `migrate` la lance à chaque démarrage, après les joueurs initiaux : `sh -c 'php artisan migrate --force && php artisan golf:initial-players && php artisan golf:recompute-stats'` dans `docker-compose.yml`. Un échec arrête `migrate` en code non nul et garde `web` et `worker` arrêtés, comme une migration en échec (delta `deployment`). Le staging, dont les rounds précèdent ce déploiement, est donc calculé sans étape à la main ; une restauration de dump suivie de `docker start -a "$P-migrate-1"` aussi. L'import (10) s'en sert de même.
+- Coût : quelques requêtes par joueur, quelques secondes pour quelques centaines de rounds, à chaque déploiement. Le recalcul réécrit les mêmes valeurs : l'historique ne change pas d'un démarrage à l'autre.
 
 ### D9. Données de démonstration et fabriques
 
@@ -107,24 +112,23 @@
 
 ### D10. ADR 0010
 
-« Calcul de l'index en dixièmes entiers et table dérivée » : D1 (calcul pur), D2 (unités et arrondi de Next), D4 (recalcul synchrone sous verrou), D3 pour la rating appliquée à tout l'historique d'une paire. Ajoutée à `docs/adr/README.md` ; `ARCHITECTURE.md` gagne une section « Index et ratings ».
+« Calcul de l'index en dixièmes entiers et table dérivée » : D1 (calcul pur), D2 (unités et arrondi de Next), D4 (recalcul synchrone sous verrou), D8 (recalcul complet par `migrate` à chaque déploiement), D3 pour la rating appliquée à tout l'historique d'une paire. Ajoutée à `docs/adr/README.md` ; `ARCHITECTURE.md` gagne une section « Index et ratings ».
 
 ## Risks / Trade-offs
 
 - [Écart d'arrondi PHP / JavaScript sur un demi-dixième] → même formule `floor(x + 0.5)` ; les cas de Next sont portés en littéraux, dont l'arrondi 13,25 → 13,3, l'index négatif et la rating 70,0 / 130 (17,38 → 1,7 ; 156,46 → 15,6).
 - [`lower()` de PostgreSQL et `mb_strtolower` de PHP divergent sur un caractère accentué] → toute comparaison de paire se fait en SQL avec la même expression, jamais en PHP.
 - [Recalcul oublié dans une écriture future] → la FK composite efface les lignes orphelines ; les tests des trois Actions et de `SaveCourseRating` lisent `player_round_stats` après l'écriture. L'import (10) et la commande D8 recalculent tout.
-- [Changement de rating qui modifie l'historique d'un coup] → voulu (comme Next) ; la saisie est un acte explicite, parcours par parcours.
+- [Changement ou retrait de rating qui modifie l'historique d'un coup] → voulu (comme Next pour la saisie) ; la saisie et le retrait sont des actes explicites, parcours par parcours.
+- [Recalcul complet à chaque déploiement, sous les verrous de joueurs] → `migrate` tourne avant `web` et `worker` : aucune écriture concurrente ; la durée croît avec le nombre de rounds, à surveiller dans `docker logs "$P-migrate-1"` si la base dépasse quelques milliers de rounds.
 - [Verrou de joueurs dans une transaction longue] → au plus 4 joueurs par round ; une saisie de rating verrouille les joueurs d'un parcours, quelques-uns.
 
 ## Migration Plan
 
-1. Pull request de code : deux migrations, aucune table existante modifiée. `migrate` les applique au déploiement.
-2. Sur le staging, si des rounds existent déjà : `php artisan golf:recompute-stats` dans le conteneur `web`, puis vérifier `/players` et un round. Ajouter cette étape à `docs/deployment.md`.
-3. Retour arrière : redéployer l'image précédente puis `php artisan migrate:rollback --step=2`. Les tables de `players-and-rounds` sont intactes ; les ratings saisies sur le staging sont perdues.
+1. Pull request de code : deux migrations, aucune table existante modifiée, et la commande du service `migrate` qui finit par `golf:recompute-stats`. `migrate` applique les migrations puis calcule l'historique au déploiement.
+2. Sur le staging : lire `docker logs "$P-migrate-1"` (« N joueurs recalculés. »), puis vérifier `/players` et un round. `docs/deployment.md` décrit la nouvelle commande de `migrate`.
+3. Retour arrière : redéployer la version précédente (son `docker-compose.yml` n'appelle pas `golf:recompute-stats`) puis `php artisan migrate:rollback --step=2`. Les tables de `players-and-rounds` sont intactes ; les ratings saisies sur le staging sont perdues.
 
 ## Open Questions
 
-- Faut-il pouvoir retirer une rating saisie (retour à « sans rating ») ? Next ne le permet pas et ce changement non plus ; un retrait s'ajouterait à `SaveCourseRating` sans changer le schéma.
-- Le mainteneur confirme-t-il que les formules de `add-course-rating` (non archivé dans Next) sont bien la référence, plutôt que la spec principale `handicap-index` de Next (slope fixé à 113) ? Sans rating saisie, les deux donnent les mêmes nombres.
-- `golf:recompute-stats` doit-elle tourner à chaque lancement du service `migrate` (idempotente, quelques secondes) plutôt qu'à la main sur le staging ? Le choix ne change que la commande de `migrate` et `docs/deployment.md`.
+Aucune.

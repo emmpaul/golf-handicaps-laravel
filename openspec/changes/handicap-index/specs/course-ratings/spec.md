@@ -55,6 +55,36 @@ Sur la page Parcours, le système SHALL permettre de saisir ou de corriger la ra
 - **WHEN** une saisie vise un parcours et des tees sur lesquels aucun round n'est enregistré
 - **THEN** elle est refusée avec « Parcours introuvable » et rien n'est enregistré
 
+### Requirement: Retrait d'une rating
+Sur la page Parcours, le système SHALL proposer « Retirer la rating » sur chaque parcours qui a une rating, et sur lui seul. Le retrait efface la rating et le slope du parcours et de ses tees, sans tenir compte de la casse ni des espaces autour : le parcours redevient « sans rating », ses rounds se calculent de nouveau sur le par total du round et le slope 113, et le message « Rating retirée. » s'affiche.
+
+#### Scenario: Rating retirée
+- **GIVEN** « BETHPAGE BLACK / Red » à 71,4 / 144 et la carte `IMG_3064` enregistrée
+- **WHEN** l'utilisateur touche « Retirer la rating » sur la ligne de « BETHPAGE BLACK / Red »
+- **THEN** la ligne affiche « sans rating » et les champs « Rating » et « Slope » vides, le message « Rating retirée. » s'affiche, et les différentiels de Gab et de Manu valent 1,0 et 17,0
+
+#### Scenario: Retrait sans tenir compte de la casse
+- **GIVEN** « BETHPAGE BLACK / Red » à 71,4 / 144
+- **WHEN** une demande de retrait vise « bethpage black / RED »
+- **THEN** « BETHPAGE BLACK / Red » redevient « sans rating »
+
+#### Scenario: Parcours sans rating
+- **GIVEN** « PAYNES VALLEY / Blue » sans rating
+- **WHEN** l'utilisateur ouvre `/courses`
+- **THEN** la ligne de « PAYNES VALLEY / Blue » ne propose pas « Retirer la rating »
+
+### Requirement: Retrait refusé
+Une demande de retrait qui vise un parcours sans round MUST être refusée avec « Parcours introuvable », et une demande qui vise un parcours sans rating avec « Parcours déjà sans rating », sans rien changer.
+
+#### Scenario: Retrait d'une rating déjà retirée
+- **GIVEN** « PAYNES VALLEY / Blue » sans rating, avec un round enregistré
+- **WHEN** une demande de retrait vise « PAYNES VALLEY / Blue »
+- **THEN** elle est refusée avec « Parcours déjà sans rating » et rien ne change
+
+#### Scenario: Retrait d'un parcours sans round
+- **WHEN** une demande de retrait vise un parcours et des tees sur lesquels aucun round n'est enregistré
+- **THEN** elle est refusée avec « Parcours introuvable » et rien ne change
+
 ### Requirement: Page Parcours
 Le système SHALL afficher une page Parcours qui liste chaque parcours connu, par nom puis par tees sans tenir compte de la casse, avec ses tees, le par du round le plus récent joué dessus, et sa rating et son slope (« 71,4 / 144 ») ou « sans rating ». Sans round, la page affiche « Aucun parcours : enregistrez d'abord un round. ». La page MUST être atteignable depuis la liste des rounds et la page d'un round, sans nouvelle section dans la navigation principale.
 
@@ -79,15 +109,20 @@ Le système SHALL afficher une page Parcours qui liste chaque parcours connu, pa
 
 #### Scenario: Sans session
 - **GIVEN** un navigateur sans session
-- **WHEN** il ouvre `/courses` ou envoie une saisie de rating
-- **THEN** la lecture est redirigée vers `/login` et la saisie n'enregistre rien
+- **WHEN** il ouvre `/courses`, envoie une saisie de rating ou une demande de retrait
+- **THEN** la lecture est redirigée vers `/login`, et la saisie comme le retrait ne changent rien
 
 ### Requirement: Champs nommés par parcours
-Sur la page Parcours, chaque champ de saisie SHALL porter un nom accessible qui nomme son parcours et ses tees, et la page MUST NOT défiler horizontalement à 320 px.
+Sur la page Parcours, chaque champ de saisie et chaque bouton « Retirer la rating » SHALL porter un nom accessible qui nomme son parcours et ses tees, et la page MUST NOT défiler horizontalement à 320 px.
 
 #### Scenario: Noms accessibles
 - **WHEN** l'utilisateur ouvre `/courses` avec « BETHPAGE BLACK / Red » et « PAYNES VALLEY / Blue »
 - **THEN** les champs s'appellent « Rating de BETHPAGE BLACK / Red », « Slope de BETHPAGE BLACK / Red », « Rating de PAYNES VALLEY / Blue » et « Slope de PAYNES VALLEY / Blue »
+
+#### Scenario: Bouton de retrait nommé
+- **GIVEN** « BETHPAGE BLACK / Red » à 71,4 / 144
+- **WHEN** l'utilisateur ouvre `/courses`
+- **THEN** le bouton « Retirer la rating » de cette ligne s'appelle « Retirer la rating de BETHPAGE BLACK / Red »
 
 #### Scenario: Téléphone
 - **WHEN** l'utilisateur ouvre `/courses` sur un écran de 320 px
