@@ -1,0 +1,73 @@
+schema: spec-driven
+
+context: |
+  Project: Golf Handicaps, une application auto-hébergée qui lit les photos de cartes de score
+  GSPro, garde l'historique des rounds d'un groupe d'amis et calcule l'index de handicap de chacun
+  et les coups rendus avant un match. C'est le port Laravel de l'application Next.js golf-handicaps.
+  Read PRD.md, ARCHITECTURE.md, DESIGN.md, ROADMAP.md and docs/PORT_TO_LARAVEL.md before planning
+  changes. The OpenSpec specs of the Next.js repository are the functional reference; each change
+  ports their requirements as deltas, except what docs/PORT_TO_LARAVEL.md removes.
+
+  Stack: Laravel, Inertia, React, TypeScript (strict), PostgreSQL, UUID primary and foreign keys,
+  Tailwind, PNPM, Laravel Sail, Laravel AI SDK, database queue with a worker.
+  Laravel Boost MCP supports the agents.
+  Keep the frontend visually distinctive; port the existing scoreboard theme rather than the
+  stock shadcn/ui appearance.
+
+  Access: one shared passcode (APP_PASSCODE) and a Laravel session. No user accounts, no roles,
+  no Fortify, no audit trail, no outgoing mail.
+
+  Architecture: pragmatic modular monolith organized by business domain. Use Actions for writes,
+  focused Query classes for complex reads, and explicit domain exceptions where warranted.
+  Keep controllers thin and domain code independent of HTTP and the frontend.
+  Prefer straightforward Eloquent and PostgreSQL; avoid generic repositories, event sourcing,
+  microservices, premature caching, and speculative abstractions.
+
+  Workflow: every change, including small fixes and tooling updates, requires an OpenSpec change.
+  Record meaningful architecture decisions as numbered ADRs under docs/adr/.
+  Use behavior-first TDD: RED, GREEN, REFACTOR. No browser/E2E tests, no tautological tests,
+  no artificial coverage target. Use Pest architecture tests for enforceable dependency boundaries.
+  Makefile is the canonical command interface in development and CI. Use PNPM, not npm.
+  Every new model ships with its factory, states and demo seeder.
+  Never weaken checks simply to make CI green.
+  Language: all user-facing UI, OpenSpec prose and ADRs are written in French; identifiers and
+  code in English. Keep OpenSpec structural headings and SHALL/MUST keywords in English.
+
+rules:
+  proposal:
+    - Identify the matching ROADMAP.md entry and confirm its dependencies are complete.
+    - Describe the user problem, intended outcome, in-scope work, and explicit non-goals.
+    - State dependencies, affected domains, privacy implications, and rollback.
+    - Keep the change small enough to implement and review independently.
+  specs:
+    - Specify observable behavior using concrete Given/When/Then scenarios and meaningful edge cases.
+    - Include access rules (passcode session), failure behavior, and privacy behavior.
+    - Specify business outcomes, not controller names or implementation details.
+    - Mark unresolved business rules explicitly rather than inventing them.
+  design:
+    - Follow ARCHITECTURE.md and the existing conventions; use the simplest maintainable design.
+    - Document important tradeoffs and create or update a numbered ADR for architectural decisions.
+    - Consider UUID relationships, PostgreSQL constraints, transactions, and idempotency.
+    - Avoid unnecessary packages, layers, services, and abstractions.
+  tasks:
+    - Order tasks by prerequisites, in small verifiable increments.
+    - Plan a failing behavior-focused test before implementing each substantive rule.
+    - Use Makefile targets for checks; do not bypass make with ad hoc commands.
+    - End with focused tests, make check, a browser pass with browser-use (make up, make dev,
+      make browser, then make dev-stop), and a review of the acceptance criteria.
+    - Plan the factory, its states and the demo seeder of every new model.
+
+operations:
+  apply:
+    guidance:
+      - Verify ROADMAP.md prerequisites and review the current OpenSpec artifacts before coding.
+      - Implement in RED-GREEN-REFACTOR order; test meaningful behavior.
+      - Run make check at the end; address failures instead of suppressing rules.
+      - Update ADRs and documentation when an architectural decision changes.
+      - Do not declare completion until acceptance criteria pass; disclose any check that could not run.
+      - After make check, run the browser pass against the running local app and report what was verified.
+  archive:
+    guidance:
+      - Archive only after acceptance criteria and quality checks pass or are documented as exceptions.
+      - Summarize delivered behavior, tests, ADRs, and deferred work.
+      - Keep ROADMAP.md progress and dependencies accurate.
