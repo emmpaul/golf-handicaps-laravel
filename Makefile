@@ -1,6 +1,9 @@
 .DEFAULT_GOAL := help
 SHELL := /bin/bash
 SAIL := ./vendor/bin/sail
+# Sail et docker compose ne lisent que la stack de développement : sans cela, docker-compose.yml
+# à côté fait avertir chaque commande. Les cibles image* nomment leurs fichiers par -f (design D10).
+export COMPOSE_FILE := compose.yaml
 
 ifeq ($(CI),true)
 RUN :=
@@ -17,7 +20,7 @@ COMPOSER_BOOTSTRAP_IMAGE := laravelsail/php84-composer:latest
 
 .PHONY: help setup passcode-check up down dev dev-stop browser build migrate openspec \
 	lint format analyse duplicates arch-test test-backend test-frontend test update-shards check \
-	commitlint changed-code wayfinder
+	commitlint changed-code wayfinder image image-smoke image-tags
 
 help: ## Affiche cette aide
 	@echo "Usage : make <cible>"
@@ -154,6 +157,54 @@ arch-test: ## Lance seulement les tests d'architecture
 
 update-shards: ## Recalcule la répartition des partitions (tests/.pest/shards.json)
 	$(PHP) vendor/bin/pest --parallel --update-shards
+
+##@ Image de production
+
+# Lancées sur l'hôte, sans Sail : elles pilotent Docker lui-même (design D10).
+IMAGE ?= golf-handicaps-laravel:local
+GIT_COMMIT ?=
+SMOKE_PORT ?= 8080
+SMOKE_COMPOSE = SMOKE_IMAGE=$(IMAGE) SMOKE_PORT=$(SMOKE_PORT) docker compose \
+	-f docker-compose.yml -f docker-compose.smoke.yml --env-file docker/smoke.env
+
+image: ## Construit l'image de production locale (IMAGE=golf-handicaps-laravel:local, GIT_COMMIT=sha)
+	docker build --build-arg GIT_COMMIT=$(GIT_COMMIT) -t $(IMAGE) .
+
+image-smoke: ## Lance la stack de production sur l'image locale, attend l'état sain, vérifie /up et /login, puis la retire
+	@status=0; \
+	$(SMOKE_COMPOSE) up --wait --wait-timeout 300 || status=1; \
+	if [ $$status -eq 0 ]; then \
+		for path in /up /login; do \
+			code="$$(curl -sS -o /dev/null -w '%{http_code}' "http://127.0.0.1:$(SMOKE_PORT)$$path")"; \
+			echo "GET $$path : $$code"; \
+			[ "$$code" = 200 ] || status=1; \
+		done; \
+	fi; \
+	if [ $$status -ne 0 ]; then $(SMOKE_COMPOSE) ps -a; $(SMOKE_COMPOSE) logs --no-color; fi; \
+	$(SMOKE_COMPOSE) down -v; \
+	exit $$status
+
+# Règle de publication de la CI (design D9) ; VERSION_FILE ne sert qu'aux tests.
+# Exportées : la recette les lit en variables du shell, jamais collées dans le script.
+REF ?=
+SHA ?=
+VERSION_FILE ?= version.txt
+export REF SHA VERSION_FILE
+
+image-tags: ## Affiche les tags d'image à publier pour REF et SHA (main, ou vX.Y.Z conforme à version.txt)
+	@if ! printf '%s' "$$SHA" | grep -qxE '[0-9a-f]{40}'; then \
+		echo "SHA doit être le sha complet du commit (40 caractères hexadécimaux), reçu : $$SHA" >&2; exit 1; fi; \
+	case "$$REF" in \
+		refs/heads/main) echo "main $$SHA" ;; \
+		refs/tags/v*) \
+			tag="$${REF#refs/tags/}"; \
+			version="$$(tr -d '[:space:]' < "$$VERSION_FILE")" || exit 1; \
+			if [ "$${tag#v}" != "$$version" ]; then \
+				echo "Le tag $$tag annonce la version $${tag#v}, mais version.txt contient $$version : rien n'est publié." >&2; \
+				exit 1; fi; \
+			echo "$$tag latest $$SHA" ;; \
+		*) echo "La ref $$REF ne publie pas d'image : seuls refs/heads/main et refs/tags/vX.Y.Z publient." >&2; exit 1 ;; \
+	esac
 
 ##@ Git et CI
 

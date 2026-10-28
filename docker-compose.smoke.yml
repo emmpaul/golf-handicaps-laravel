@@ -1,0 +1,20 @@
+# Test de fumée de l'image (make image-smoke, design D10) : la stack de docker-compose.yml sur
+# l'image locale de make image, publiée sur 127.0.0.1. Un nom de projet à part laisse
+# la stack Sail de développement (compose.yaml) intacte.
+name: golf-handicaps-smoke
+
+x-local-image: &local-image
+    image: ${SMOKE_IMAGE:-golf-handicaps-laravel:local}
+    pull_policy: never
+
+services:
+    migrate:
+        <<: *local-image
+
+    web:
+        <<: *local-image
+        ports:
+            - '127.0.0.1:${SMOKE_PORT:-8080}:8080'
+
+    worker:
+        <<: *local-image

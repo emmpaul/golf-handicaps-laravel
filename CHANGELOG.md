@@ -48,8 +48,16 @@ All notable changes to this application, version by version. The format follows 
 - `make setup` warns when `APP_PASSCODE` is empty in `.env`, without writing a value.
 - Test helper `withPasscodeSession()` for tests that open a protected page, and a guard test that keeps test files out of `resources/js/pages`, which the Inertia Vite plugin bundles as pages.
 - ADR 0007 (shared passcode access) and an Access section in `ARCHITECTURE.md`.
+- Production image built by a multi-stage `Dockerfile`: FrankenPHP with PHP 8.5, compiled Vite assets, no development dependencies, non-root user, the commit sha in `APP_COMMIT`, logs on stderr; the same image runs the web, the queue worker and the migrations.
+- Production `docker-compose.yml` stack for Dokploy: `pgsql`, a one-shot `migrate` service, `web` and `worker` started only after the migrations succeed, health checks, and the named volumes `pgdata`, `storage` and `backups`.
+- `backup` service: a PostgreSQL dump at startup then every 24 hours, kept 14 days, unhealthy when the latest successful dump is older than 26 hours.
+- Worker heartbeat: `queue:work` writes `/tmp/worker-heartbeat` on every loop and after every job, and the worker health check fails after 300 seconds without one.
 - `Strict-Transport-Security: max-age=31536000` on every response served over HTTPS.
+- Makefile targets `make image`, `make image-smoke` and `make image-tags`.
+- Queue worker job timeout of 420 seconds (`--timeout=420`), after the worker health check has turned unhealthy for a stuck job, and a `database` queue `retry_after` of 450 seconds by default, so a job is never handed out twice while it runs.
+- Production image assets built with `VITE_APP_NAME="Handicaps golf"`: browser tabs read `Connexion - Handicaps golf`, not `Connexion - Laravel`.
 - Logged query exceptions keep their SQL with `?` placeholders and drop the bound values, so a session identifier never reaches the logs; the error response is unchanged.
+- `COMPOSE_FILE=compose.yaml` exported by the Makefile and set in `.env.example`: Sail reads only the development stack and no longer warns about two compose files (an existing clone adds the line to its `.env`).
 
 ### Changed
 

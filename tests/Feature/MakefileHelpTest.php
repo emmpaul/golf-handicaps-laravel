@@ -29,7 +29,7 @@ test('make help lists every documented target', function () {
     $required = [
         'setup', 'up', 'down', 'dev', 'dev-stop', 'browser', 'build', 'migrate', 'openspec',
         'lint', 'format', 'analyse', 'duplicates', 'arch-test', 'test-backend', 'test-frontend',
-        'test', 'update-shards', 'check', 'commitlint', 'changed-code',
+        'test', 'update-shards', 'check', 'commitlint', 'changed-code', 'image', 'image-smoke', 'image-tags',
     ];
 
     $missing = array_values(array_diff($required, array_keys(makefileTargets())));

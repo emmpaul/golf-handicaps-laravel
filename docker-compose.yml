@@ -1,0 +1,169 @@
+# Stack de production pour Dokploy (design D4) : une image, cinq services, trois volumes.
+# Les variables viennent du .env que Dokploy écrit à côté de ce fichier ; docs/deployment.md
+# les décrit. Aucun port publié : Dokploy relie son domaine au port 8080 du service web.
+# Test de fumée en local : make image image-smoke (ajoute docker-compose.smoke.yml).
+
+x-app: &app
+    image: ghcr.io/emmpaul/golf-handicaps-laravel:${IMAGE_TAG:-main}
+    restart: unless-stopped
+    environment:
+        APP_NAME: ${APP_NAME:-Handicaps golf}
+        APP_URL: ${APP_URL:-http://localhost}
+        APP_KEY: ${APP_KEY:?APP_KEY est obligatoire}
+        # Pas de :? ici : sans code, /up répond 500 et web n'est jamais sain (ADR 0007).
+        APP_PASSCODE: ${APP_PASSCODE:-}
+        APP_LOCALE: ${APP_LOCALE:-fr}
+        APP_FALLBACK_LOCALE: ${APP_FALLBACK_LOCALE:-en}
+        APP_DISPLAY_TIMEZONE: ${APP_DISPLAY_TIMEZONE:-America/Montreal}
+        LOG_LEVEL: ${LOG_LEVEL:-info}
+        TRUSTED_PROXIES: ${TRUSTED_PROXIES:-}
+        DB_CONNECTION: pgsql
+        DB_HOST: pgsql
+        DB_PORT: 5432
+        DB_DATABASE: ${DB_DATABASE:-golf}
+        DB_USERNAME: ${DB_USERNAME:-golf}
+        DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD est obligatoire}
+        SESSION_DRIVER: database
+        QUEUE_CONNECTION: database
+        CACHE_STORE: database
+
+services:
+    pgsql:
+        image: postgres:18.4-alpine@sha256:9a8afca54e7861fd90fab5fdf4c42477a6b1cb7d293595148e674e0a3181de15
+        restart: unless-stopped
+        environment:
+            POSTGRES_DB: ${DB_DATABASE:-golf}
+            POSTGRES_USER: ${DB_USERNAME:-golf}
+            POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD est obligatoire}
+        volumes:
+            - pgdata:/var/lib/postgresql
+        healthcheck:
+            # Par TCP : le serveur temporaire de l'initialisation n'écoute que sur le socket local.
+            test:
+                [
+                    'CMD-SHELL',
+                    'pg_isready -q -h 127.0.0.1 -d "$$POSTGRES_DB" -U "$$POSTGRES_USER"',
+                ]
+            interval: 5s
+            timeout: 5s
+            retries: 10
+
+    migrate:
+        <<: *app
+        command: ['php', 'artisan', 'migrate', '--force']
+        restart: 'no'
+        depends_on:
+            pgsql:
+                condition: service_healthy
+
+    web:
+        <<: *app
+        command: ['frankenphp', 'run', '--config', '/etc/caddy/Caddyfile']
+        depends_on:
+            migrate:
+                condition: service_completed_successfully
+        volumes:
+            - storage:/app/storage/app
+        healthcheck:
+            test:
+                [
+                    'CMD',
+                    'curl',
+                    '-fsS',
+                    '-o',
+                    '/dev/null',
+                    'http://127.0.0.1:8080/up',
+                ]
+            interval: 10s
+            timeout: 5s
+            retries: 3
+            start_period: 30s
+            start_interval: 2s
+
+    worker:
+        <<: *app
+        # Job figé : le worker passe unhealthy vers 360-390 s (seuil de 300 s du battement, puis
+        # trois échecs du healthcheck à 30 s d'écart), avant que --timeout=420 tue le job. 420 reste
+        # au-dessous du retry_after de 450 s de la file database (config/queue.php) : un job n'est
+        # jamais repris pendant qu'il tourne encore.
+        command:
+            [
+                'php',
+                'artisan',
+                'queue:work',
+                '--tries=2',
+                '--sleep=3',
+                '--timeout=420',
+                '--max-time=3600',
+            ]
+        depends_on:
+            migrate:
+                condition: service_completed_successfully
+        volumes:
+            - storage:/app/storage/app
+        # Sain tant que le battement (App\Support\WorkerHeartbeat, /tmp/worker-heartbeat) a moins
+        # de 300 s. Ce seuil est aussi celui de docs/deployment.md (santé du worker) : les deux
+        # valeurs changent ensemble.
+        healthcheck:
+            test:
+                [
+                    'CMD',
+                    'php',
+                    '-r',
+                    'exit(time() - (int) @file_get_contents("/tmp/worker-heartbeat") < 300 ? 0 : 1);',
+                ]
+            interval: 30s
+            timeout: 5s
+            retries: 3
+            start_period: 30s
+            start_interval: 2s
+
+    backup:
+        # Même image que pgsql : pg_dump de la même version majeure (design D6).
+        image: postgres:18.4-alpine@sha256:9a8afca54e7861fd90fab5fdf4c42477a6b1cb7d293595148e674e0a3181de15
+        restart: unless-stopped
+        depends_on:
+            pgsql:
+                condition: service_healthy
+        environment:
+            PGHOST: pgsql
+            PGPORT: 5432
+            PGDATABASE: ${DB_DATABASE:-golf}
+            PGUSER: ${DB_USERNAME:-golf}
+            PGPASSWORD: ${DB_PASSWORD:?DB_PASSWORD est obligatoire}
+        volumes:
+            - backups:/backups
+        # Un dump au démarrage puis toutes les 24 h ; un dump interrompu ne garde jamais le nom
+        # golf-*.dump ; ceux de plus de 14 jours partent.
+        entrypoint: ['/bin/sh', '-c']
+        command:
+            - |
+                while true; do
+                  stamp="$$(date -u +%Y%m%dT%H%M%SZ)"
+                  if pg_dump -Fc -f "/backups/golf-$$stamp.dump.partial"; then
+                    mv "/backups/golf-$$stamp.dump.partial" "/backups/golf-$$stamp.dump"
+                    echo "Sauvegarde écrite : golf-$$stamp.dump"
+                  else
+                    rm -f "/backups/golf-$$stamp.dump.partial"
+                    echo "Sauvegarde en échec : pg_dump est sorti en erreur" >&2
+                  fi
+                  find /backups -name 'golf-*.dump' -mtime +14 -delete
+                  sleep 86400
+                done
+        healthcheck:
+            # Malade sans dump réussi de moins de 26 h (1560 min).
+            test:
+                [
+                    'CMD-SHELL',
+                    "find /backups -name 'golf-*.dump' -mmin -1560 | grep -q .",
+                ]
+            interval: 60s
+            timeout: 10s
+            retries: 3
+            start_period: 5m
+            start_interval: 5s
+
+volumes:
+    pgdata:
+    storage:
+    backups:

@@ -40,7 +40,7 @@ return [
             'connection' => env('DB_QUEUE_CONNECTION'),
             'table' => env('DB_QUEUE_TABLE', 'jobs'),
             'queue' => env('DB_QUEUE', 'default'),
-            'retry_after' => (int) env('DB_QUEUE_RETRY_AFTER', 90),
+            'retry_after' => (int) env('DB_QUEUE_RETRY_AFTER', 450),
             'after_commit' => false,
         ],
 
@@ -125,5 +125,20 @@ return [
         'database' => env('DB_CONNECTION', 'sqlite'),
         'table' => 'failed_jobs',
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Worker Heartbeat
+    |--------------------------------------------------------------------------
+    |
+    | The queue worker writes the Unix time of its last loop or job to this
+    | file (App\Support\WorkerHeartbeat). Fixed on purpose, without an
+    | environment variable: the worker healthcheck of docker-compose.yml
+    | reads /tmp/worker-heartbeat, and a moved file would turn the worker
+    | unhealthy without any error. Tests change it through config().
+    |
+    */
+
+    'heartbeat_path' => '/tmp/worker-heartbeat',
 
 ];
