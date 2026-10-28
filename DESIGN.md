@@ -54,6 +54,15 @@ Composants du thème sous `resources/js/components/` :
 - `AppNav` et `NavLink` : en-tête collé avec la marque et « Golf », liens des cinq sections en haut à partir de 768 px, barre d'onglets fixée en bas en dessous. La section courante porte `aria-current="page"` ; sur la barre d'onglets, une pastille d'encre (`data-slot="tab-pill"`) passe derrière son icône.
 - `AppVersion` : ligne de version en bas de page, liée à la release GitHub sauf en `0.0.0`.
 
+Composants des joueurs et des rounds, portés de Next avec les mêmes classes (design D9 de `players-and-rounds`) :
+
+- `players/inline-form` : un champ et un bouton, le refus du serveur sous le champ (« Ce joueur existe déjà »), relié par `aria-describedby` ; un sac d'erreurs par formulaire.
+- `rounds/round-scorecard` : carte de score d'un round enregistré, 18 trous sur une rangée à partir de 768 px, deux blocs (aller, retour) en dessous, scores marqués par `ScoreMark`.
+- `rounds/round-gross` : bruts des joueurs dans l'ordre de la carte, deux colonnes qui tiennent à 320 px ; il sera remplacé par le classement net (`handicap-index`).
+- `rounds/delete-round` : suppression confirmée par `AlertDialog`, « Suppression du round… » jusqu'à la page suivante.
+- `round-editor/*` : l'éditeur partagé par la saisie et la correction. `round-editor` tient l'état local et compte les problèmes sur son bouton ; `score-grid` est la grille (une colonne par trou à partir de 768 px, une ligne par trou en dessous, mêmes noms accessibles « Ligne 1 trou 9 ») avec OUT, IN et TOT calculés en lecture seule ; `line-players` choisit ou crée le joueur de chaque ligne ; `date-field` ouvre le calendrier (lundi en premier, clavier et doigt) ; `problem-list` liste les messages, les identiques regroupés ; `form-state` porte l'état et le pré-remplissage d'un parcours connu. Une case en erreur prend `aria-invalid`, donc le contour rouille.
+- `resources/js/lib/format.ts` : `formatPlayedOn('2026-10-17')` donne « 17 octobre 2026 », lu comme jour civil, sans passer par UTC.
+
 Indicateur d'attente : `Pending` monte toujours sa région `role="status"`, vide et `sr-only` au repos. Pendant l'attente, elle montre l'orbe de `thinking-orbs` (`aria-hidden`, `theme="auto"`, figée sous mouvement réduit) et un texte court qui finit par « … ».
 
 Message éphémère : sonner, aux couleurs des tokens, coins droits, bouton de fermeture « Fermer le message ». Une erreur s'affiche en couleur destructive dans un `role="alert"`, une confirmation dans un `role="status"`.
