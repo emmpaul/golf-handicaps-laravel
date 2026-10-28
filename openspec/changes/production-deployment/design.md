@@ -2,7 +2,7 @@
 
 ## Context
 
-- Aucun artefact de déploiement dans le dépôt : ni `Dockerfile`, ni `.dockerignore`, ni stack de production. `compose.yaml` est la stack Sail de développement (`laravel.test` + `pgsql`) et le reste.
+- Aucun artefact de déploiement dans le dépôt : ni `Dockerfile`, ni `.dockerignore`, ni stack de production. `compose.yaml` est la stack Sail de développement (`laravel.test` + `pgsql`) et le reste. Dès qu'un `docker-compose.yml` est posé à côté, Docker Compose trouve deux fichiers à la racine et Sail affiche un avertissement à chaque commande (D10).
 - `config/app.php` lit la version dans `version.txt` et le commit dans `APP_COMMIT` ; `App\Support\AppBuild` valide le sha. L'image doit donc contenir `version.txt` et recevoir `APP_COMMIT`.
 - `/up` est déclaré par `withRouting(health: '/up')`. Sans `APP_PASSCODE`, `EnsurePasscodeConfigured` le fait répondre 500, ce qui fait tomber un healthcheck (ADR 0007). Les commandes artisan, `config:cache` compris, tournent sans le code (`MissingPasscodeTest`).
 - `AddSecurityHeaders` est en tête de la pile globale. `TrustProxies` lit `config('trustedproxy.proxies')`. `config/session.php` a `'secure' => env('SESSION_SECURE_COOKIE')`, donc `null` par défaut.
@@ -45,7 +45,7 @@ L'image de base est `dunglas/frankenphp:<version>-php8.5-trixie`, épinglée par
 
 1. `base` : extensions par `install-php-extensions` (`pdo_pgsql`, `pcntl` pour les signaux de `queue:work`, `intl`, `opcache`), `php.ini-production`, OPcache sans `validate_timestamps`, utilisateur `app` (uid 1000).
 2. `vendor` : `composer install --no-dev --no-scripts --prefer-dist --optimize-autoloader --classmap-authoritative`, depuis `composer.json` et `composer.lock` seuls, pour garder la couche en cache.
-3. `assets` : part de `base` et ajoute Node 22 et PNPM (Corepack, version de `packageManager`). Elle reçoit `vendor` puis le code, lance `pnpm install --frozen-lockfile` et `pnpm run build`. Wayfinder y trouve `php artisan`. Rien de cette étape ne passe dans l'image finale, sauf `public/build`.
+3. `assets` : part de `base` et ajoute Node 22 et PNPM (Corepack, version de `packageManager`). Elle reçoit `vendor` puis le code, lance `pnpm install --frozen-lockfile` et `pnpm run build`. Wayfinder y trouve `php artisan`. Le build tourne avec `VITE_APP_NAME="Handicaps golf"`, la valeur d'`APP_NAME` dans `.env.example` : `.dockerignore` écarte `.env`, et Vite inscrit la variable dans le JavaScript compilé. Sans elle, `resources/js/app.tsx` retombe sur `Laravel` et l'onglet de `/login` affiche « Connexion - Laravel ». Rien de cette étape ne passe dans l'image finale, sauf `public/build`.
 4. `runtime` : part de `base`. Elle reçoit le code, `vendor` et `public/build`. `storage/` et `bootstrap/cache/` appartiennent à `app`. `ARG GIT_COMMIT` devient `ENV APP_COMMIT`. `APP_ENV=production`, `APP_DEBUG=false` et `LOG_CHANNEL=stderr` sont posés par défaut. La commande par défaut est le web, et `USER app`.
 
 `.dockerignore` écarte `.env*`, `node_modules`, `vendor`, `public/build`, `public/hot`, `storage/logs/*`, `reports`, `tests`, `.git`, `openspec`, `docs` et les dossiers d'agents. Il garde `version.txt`.
@@ -69,7 +69,7 @@ Une ancre `x-app` partage l'image `ghcr.io/emmpaul/golf-handicaps-laravel:${IMAG
 | `pgsql` | image `postgres:18-alpine` (digest) | — | `pg_isready`, toutes les 5 s |
 | `migrate` | `php artisan migrate --force`, `restart: "no"` | `pgsql` sain | — |
 | `web` | `frankenphp run --config /etc/caddy/Caddyfile` | `migrate` terminé avec succès | `curl -fsS http://127.0.0.1:8080/up` toutes les 10 s, 30 s de démarrage |
-| `worker` | `php artisan queue:work --tries=2 --sleep=3 --max-time=3600` | `migrate` terminé avec succès | battement (D5), toutes les 30 s, 3 essais, 30 s de démarrage |
+| `worker` | `php artisan queue:work --tries=2 --sleep=3 --timeout=420 --max-time=3600` | `migrate` terminé avec succès | battement (D5), toutes les 30 s, 3 essais, 30 s de démarrage |
 | `backup` | boucle `pg_dump` (D6) | `pgsql` sain | âge du dernier dump (D6) |
 
 - Volumes nommés : `pgdata` (monté sur `/var/lib/postgresql`, comme Sail, pour la disposition de PostgreSQL 18), `storage` (monté sur `/app/storage/app` pour `web` et `worker`) et `backups`.
@@ -83,8 +83,10 @@ Une ancre `x-app` partage l'image `ghcr.io/emmpaul/golf-handicaps-laravel:${IMAG
 
 `App\Support\WorkerHeartbeat` a deux méthodes :
 
-- `beat()` écrit l'heure Unix en secondes dans `config('queue.heartbeat_path')`, `/tmp/worker-heartbeat` par défaut ;
+- `beat()` écrit l'heure Unix en secondes dans `config('queue.heartbeat_path')` ;
 - `isFresh(int $maxAgeSeconds)` lit ce fichier pour le test.
+
+`queue.heartbeat_path` vaut `'/tmp/worker-heartbeat'` en dur, sans variable d'environnement : le healthcheck ci-dessous code ce chemin en dur, et une variable qui le déplacerait rendrait le worker malade sans erreur. Les tests le changent par `config()`.
 
 `AppServiceProvider` l'abonne à `Queue::looping` (chaque tour de boucle, file vide ou non) et aux événements `JobProcessed` et `JobFailed`. Seul `queue:work` émet ces événements, donc le web n'écrit jamais de battement. `/tmp` n'est pas un volume : un nouveau conteneur part sans fichier.
 
@@ -96,7 +98,7 @@ php -r 'exit(time() - (int) @file_get_contents("/tmp/worker-heartbeat") < 300 ? 
 
 Un fichier absent donne `(int) false = 0`, donc une différence énorme et un échec.
 
-Le seuil de 5 minutes vit à deux endroits : ce healthcheck et la doc. Un commentaire dans `docker-compose.yml` les lie. Le `retry_after` de la file `database` (90 s) reste au-dessous ; `scorecard-ai-import` le relèvera pour ses jobs longs.
+Le seuil de 5 minutes vit à deux endroits : ce healthcheck et la doc. Un commentaire dans `docker-compose.yml` les lie. Un job figé fait passer le worker `unhealthy` vers 360 à 390 s : le battement atteint 300 s, puis le healthcheck échoue trois fois de suite, à 30 s d'écart. Le worker tourne ensuite avec `--timeout=420` : le job est tué à 420 s, le processus du worker sort, et `restart` relance le conteneur. Le `retry_after` de la file `database` vaut 450 s par défaut (`DB_QUEUE_RETRY_AFTER`), au-dessus de ce délai : un job n'est jamais repris pendant qu'il tourne encore. Le job repasse une fois (`--tries=2`), puis part dans `failed_jobs`. Un job de 2 minutes se termine sans que le battement atteigne le seuil (décision du mainteneur du 2026-10-28).
 
 **Alternative écartée** : une commande artisan `worker:health` pour le healthcheck. Elle démarre tout Laravel toutes les 30 s pour lire un fichier.
 
@@ -134,9 +136,12 @@ Sans `includeSubDomains` ni `preload` : le domaine de l'application peut partage
 - Job `publish` (15 min), seulement sur `push` vers `main` ou un tag `v*`. Il exige que `static`, `test-backend`, `test-frontend` et `image` aient réussi, et `code == 'true'`. Il charge `image.tar`, calcule ses tags par `make image-tags REF=… SHA=…`, se connecte à `ghcr.io` avec `GITHUB_TOKEN` (`docker login --password-stdin`), puis tague et pousse. C'est le seul job avec `packages: write`.
 - `make image-tags` affiche `main <sha>` pour `refs/heads/main`. Pour `refs/tags/vX.Y.Z`, il affiche `vX.Y.Z latest <sha>`, et seulement si `version.txt` vaut `X.Y.Z`. Sinon il échoue en nommant les deux valeurs. Toute autre ref échoue. La règle vit dans le Makefile, et un test Pest la lance.
 - Le job `publish` ne passe ni par `actions/cache` ni par le cache GHA de buildx : zizmor signale la restauration d'un cache dans un job qui publie (empoisonnement de cache). L'image arrive par l'artefact du même run.
-- Le label `org.opencontainers.image.source=https://github.com/emmpaul/golf-handicaps-laravel` relie le paquet GHCR au dépôt.
+- Le label `org.opencontainers.image.source=https://github.com/emmpaul/golf-handicaps-laravel` relie le paquet GHCR au dépôt. Le `Dockerfile` le pose par `LABEL` dans l'étape `runtime`. L'image du test de fumée le porte donc déjà, et le digest publié reste celui de l'image testée. Le job `publish` n'ajoute pas le label : il lit celui de l'image chargée (`docker image inspect`) et échoue avant tout push s'il manque ou diffère.
 
-**Alternative écartée** : reconstruire l'image dans `publish` avec `docker/build-push-action`. L'image publiée ne serait plus celle du test de fumée, et le job ajouterait deux actions tierces.
+**Alternatives écartées** :
+
+- Reconstruire l'image dans `publish` avec `docker/build-push-action`. L'image publiée ne serait plus celle du test de fumée, et le job ajouterait deux actions tierces.
+- Ajouter le label dans `publish`. Une couche de plus change le digest : l'image poussée ne serait plus celle du test de fumée.
 
 ### D10. Makefile
 
@@ -146,9 +151,13 @@ Nouvelles cibles, avec leur aide en français (`MakefileHelpTest`) et lancées s
 - `image-smoke` : `docker compose -f docker-compose.yml -f docker-compose.smoke.yml --env-file docker/smoke.env up --wait --wait-timeout 300`, puis `curl -fsS` sur `/up` et `/login`. À la fin, réussite ou non, `down -v`, et les journaux s'affichent en cas d'échec. `docker/smoke.env` contient des valeurs de test (`APP_KEY` de test, `APP_PASSCODE=smoke-passcode`), sans aucun secret réel.
 - `image-tags` : D9.
 
+Le Makefile exporte `COMPOSE_FILE=compose.yaml`, et `.env.example` porte la même ligne. Sail et les cibles qui passent par lui ne lisent alors que la stack de développement, et l'avertissement des deux fichiers disparaît. Les cibles `image*` nomment leurs fichiers par `-f`, qui l'emporte sur `COMPOSE_FILE` : la stack de production n'est pas touchée.
+
 ### D11. Journaux
 
 `LOG_CHANNEL=stderr` est posé dans l'image. Docker garde et fait tourner les journaux, et Dokploy les affiche. Le canal `daily` du squelette écrirait dans le conteneur, perdu à chaque redéploiement. Aucun journal ajouté par ce changement ne contient de valeur de requête.
+
+Une `QueryException` porte dans son message la requête SQL avec ses valeurs liées. Base arrêtée, la lecture de session journalise donc `select * from "sessions" where "id" = <identifiant>`, et qui lit les journaux peut reprendre la session (décision du mainteneur du 2026-10-28). La connexion `pgsql` de `config/database.php` pose `mask_bindings_in_exception_messages => true`, option de Laravel lue par `Illuminate\Database\Connection` (présente en 13.39, absente de la documentation) : le message de la `QueryException` garde la requête avec ses `?`, sans les valeurs. La règle vaut dans tous les environnements, sans condition, et la réponse rendue ne change pas. L'option tient en une ligne de configuration, sans code dans `bootstrap/app.php` (décision du mainteneur du 2026-10-28, qui remplace une copie de l'exception construite au rapport). Les traces ne montrent pas les arguments des fonctions : `zend.exception_ignore_args` est actif dans `php.ini-production`.
 
 ### D12. Mandataires et domaine
 
@@ -162,6 +171,27 @@ Dokploy route le trafic par Traefik sur le réseau `dokploy-network`. `docs/depl
 - `ARCHITECTURE.md` : section « Déploiement » ; la ligne « Hors périmètre jusqu'à `production-deployment` » de la section Accès est retirée.
 - `ROADMAP.md` : entrée 4 en cours, puis faite à l'archivage.
 - `CHANGELOG.md` : lignes sous `## [Unreleased]`.
+- ADR 0005 : la puce « Versionnement manuel » renvoie au skill `/release` (D14).
+
+### D14. Publication d'une version par le skill `/release`
+
+Décisions du mainteneur du 2026-10-28. Publier une version se fait par le skill `/release`, que seul le mainteneur lance. Aucun requirement de spec ne change : le skill enchaîne des étapes que l'ADR 0005 et D9 décrivent déjà, dans un ordre fixe, avec des arrêts où le mainteneur décide.
+
+- **Source et invocation.** Le skill vit dans `.ai/skills/release/SKILL.md`. `vendor/bin/sail artisan boost:update` le copie dans `.claude/skills/release/`. Son frontmatter porte `disable-model-invocation: true` : un agent ne le lance jamais de lui-même.
+- **Version.** `/release X.Y.Z` prend la version en argument facultatif. Sans argument, le skill propose un saut semver d'après les sous-sections de `## [Unreleased]` : `Removed` ou rupture donne un majeur, `Added` ou `Changed` un mineur, `Fixed` seul un correctif. Sous `1.0.0`, une rupture donne un mineur. Le mainteneur confirme la version par `AskUserQuestion`.
+- **Préconditions.** Être sur `main`, à jour avec `origin`, sans modification locale. `## [Unreleased]` n'est pas vide. La dernière exécution de la CI sur `main` est verte. Le tag `vX.Y.Z` n'existe ni en local ni sur `origin`. Une précondition fausse arrête le skill, qui la nomme.
+- **PR de version.** Branche `chore/release-vX.Y.Z` (`git switch -c … --no-track`), commit `chore(release): vX.Y.Z`. Le scope `release` entre dans la liste fermée de `commitlint.config.js`. `## [Unreleased]` devient `## [X.Y.Z] - YYYY-MM-DD`, date prise dans le fuseau `America/Montreal`, et une section `## [Unreleased]` vide s'ouvre au-dessus. `version.txt` vaut `X.Y.Z`. Le skill pousse la branche et ouvre la PR par `gh`.
+- **Fusion.** Le skill attend que les contrôles requis soient verts, puis demande au mainteneur (`AskUserQuestion`) avant de fusionner. La fusion se fait par rebase, la seule que le dépôt accepte, et GitHub supprime la branche.
+- **Tag.** Après la fusion, le skill récupère `main` et redemande. Il pose alors le tag annoté `git tag -a vX.Y.Z -m "vX.Y.Z"` sur la tête de `main`, c'est-à-dire le commit rebasé, et le pousse.
+- **Après le tag.** Le skill suit l'exécution de la CI du tag jusqu'à `publish` vert. Il vérifie que `:vX.Y.Z`, `:latest` et `:<sha>` de `ghcr.io/emmpaul/golf-handicaps-laravel` ont le même digest. Il lance l'image par `docker run`, et `GET /api/version` doit répondre `X.Y.Z` et le sha. Il crée la GitHub Release `vX.Y.Z` avec la section du `CHANGELOG.md` en notes, en anglais. Il demande enfin la cible : la production si sa stack existe, le staging épinglé sur `vX.Y.Z`, ou aucune. Les étapes Dokploy de `docs/deployment.md` suivent, une à la fois, et le skill attend le retour du mainteneur entre deux.
+- **Échec après le tag.** Un tag poussé ne se déplace ni ne se supprime jamais. Un échec passager se relance, après accord du mainteneur. Un vrai échec arrête le skill, qui propose une version corrective `vX.Y.(Z+1)` une fois le correctif fusionné.
+- **Règles.** Dans `.ai/guidelines/golf-handicaps.md`, la puce de publication devient : une version ne se publie que par `/release`, lancé par le mainteneur. `AGENTS.md` se régénère par `boost:update`, jamais à la main. La puce « Versionnement manuel » de l'ADR 0005 renvoie au skill. Pas de nouvel ADR.
+
+**Alternatives écartées** :
+
+- Garder la publication à la main, comme l'ADR 0005 la décrit. Huit étapes dans un ordre précis, dont un tag qu'on ne peut plus reprendre une fois poussé : un oubli (date, section vide, `version.txt`) se voit trop tard.
+- release-please, déjà écarté par l'ADR 0005. Il tire le `CHANGELOG.md` des messages de commit, alors que chaque PR de ce dépôt y écrit ses lignes à la main.
+- Un skill qu'un agent peut lancer de lui-même. Publier une version pousse un tag définitif et peut toucher la production : la décision revient au mainteneur.
 
 ## Risks / Trade-offs
 
