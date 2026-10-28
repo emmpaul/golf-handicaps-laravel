@@ -8,6 +8,10 @@
 
 use Inertia\Testing\AssertableInertia as Assert;
 
+beforeEach(function () {
+    $this->withPasscodeSession();
+});
+
 test('each section without a page serves the placeholder', function (string $uri, string $section) {
     $this->get($uri)
         ->assertOk()

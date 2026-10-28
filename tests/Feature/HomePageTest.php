@@ -7,6 +7,10 @@
 
 use Inertia\Testing\AssertableInertia as Assert;
 
+beforeEach(function () {
+    $this->withPasscodeSession();
+});
+
 test('the home page responds', function () {
     $this->get('/')->assertOk();
 });

@@ -1,4 +1,5 @@
 import { Head } from '@inertiajs/react';
+import { LogoutButton } from '@/components/logout-button';
 import { PageTitle } from '@/components/page-title';
 
 /** Accueil : le tableau du groupe arrive avec `home-and-match-strokes`. */
@@ -10,6 +11,7 @@ export default function Home() {
             <p className="text-muted-foreground">
                 Le tableau du groupe arrive bientôt.
             </p>
+            <LogoutButton />
         </>
     );
 }
