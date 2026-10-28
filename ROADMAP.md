@@ -1,6 +1,6 @@
 # Feuille de route
 
-Ordre des changements OpenSpec du port, de haut en bas. Le numéro d'une entrée l'identifie dans les autres documents et ne donne pas son rang : 8 passe avant 7. Le détail de chacun et les décisions qui le cadrent sont dans `docs/PORT_TO_LARAVEL.md`. Chaque changement donne deux pull requests : le code, puis l'archivage.
+Ordre des changements OpenSpec du port, de haut en bas. Le numéro d'une entrée l'identifie dans les autres documents et ne donne pas son rang : 8 passe avant 7, et 11 avant 10. Le détail de chacun et les décisions qui le cadrent sont dans `docs/PORT_TO_LARAVEL.md`. Chaque changement donne deux pull requests : le code, puis l'archivage.
 
 ## 0. Bootstrap (hors OpenSpec)
 
@@ -64,9 +64,15 @@ Tableau de bord, dont le bloc « Imports à vérifier » qui lit les imports de 
 
 Recherche des ratings sur Simulator Golf Tour par le worker, confirmation, recalcul.
 
+## 11. `visual-redesign`
+
+**Dépend de** : 6, 7, 8, 9. **Statut** : proposé.
+
+Refonte visuelle selon le design « Golf handicap app redesign » du mainteneur : thème sombre, Geist et Geist Mono, barre d'onglets flottante et bouton Importer, toutes les pages recomposées, animations du design. Remplace la décision 7 de `docs/PORT_TO_LARAVEL.md` pour le thème, les tokens et recharts, et une partie de l'ADR 0006.
+
 ## 10. `sqlite-import-command`
 
-**Dépend de** : 9. **Statut** : à proposer.
+**Dépend de** : 9, 11. **Statut** : à proposer.
 
 Commande `golf:import-sqlite`, puis cutover.
 
