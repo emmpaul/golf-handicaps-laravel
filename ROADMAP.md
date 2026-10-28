@@ -8,7 +8,7 @@ Ordre des changements OpenSpec du port. Le détail de chacun et les décisions q
 
 ## 1. `project-skeleton-and-quality-gates`
 
-**Dépend de** : 0. **Statut** : à proposer.
+**Dépend de** : 0. **Statut** : fait.
 
 Makefile, Pint, Larastan 8, Pest sur PostgreSQL, Vitest, jscpd, tests d'architecture, UUID, fuseau d'affichage `America/Montreal`, CI GitHub Actions, route de version. Version tenue à la main dans `version.txt` et `CHANGELOG.md`, tags `vX.Y.Z` posés par le mainteneur : pas de release-please (ADR 0005).
 
