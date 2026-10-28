@@ -1,0 +1,209 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  CI: true
+  SKIP_INSTALL_SIMPLE_GIT_HOOKS: 1
+
+jobs:
+  changes:
+    name: changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      from: ${{ steps.range.outputs.from }}
+      to: ${{ steps.range.outputs.to }}
+      code: ${{ steps.range.outputs.code }}
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Classify the commit range
+        id: range
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PUSH_BEFORE: ${{ github.event.before }}
+          PUSH_SHA: ${{ github.sha }}
+        run: |
+          fallback=false
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            from="$PR_BASE_SHA"
+            to="$PR_HEAD_SHA"
+          else
+            to="$PUSH_SHA"
+            if [ -n "$PUSH_BEFORE" ] \
+              && [ "$PUSH_BEFORE" != "0000000000000000000000000000000000000000" ] \
+              && git cat-file -e "${PUSH_BEFORE}^{commit}" 2>/dev/null \
+              && git merge-base --is-ancestor "$PUSH_BEFORE" "$PUSH_SHA"; then
+              from="$PUSH_BEFORE"
+            else
+              fallback=true
+              if git rev-parse --verify --quiet "${PUSH_SHA}^" > /dev/null; then
+                from="$(git rev-parse "${PUSH_SHA}^")"
+              else
+                from="$PUSH_SHA"
+              fi
+              echo "::notice::Commit précédent inconnu ou hors de l'historique : repli sur le dernier commit, tous les tests tournent"
+            fi
+          fi
+          if [ "$fallback" = "true" ]; then
+            code=true
+          else
+            code="$(make --no-print-directory changed-code FROM="$from" TO="$to")"
+          fi
+          echo "Plage $from...$to, repli=$fallback, code=$code"
+          {
+            echo "from=$from"
+            echo "to=$to"
+            echo "fallback=$fallback"
+            echo "code=$code"
+          } >> "$GITHUB_OUTPUT"
+
+  static:
+    name: static
+    needs: changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up the toolchain
+        uses: ./.github/actions/setup
+
+      - name: Check commit messages
+        env:
+          RANGE_FROM: ${{ needs.changes.outputs.from }}
+          RANGE_TO: ${{ needs.changes.outputs.to }}
+        run: make commitlint FROM="$RANGE_FROM" TO="$RANGE_TO"
+
+      - name: Lint
+        run: make lint
+
+      - name: Static analysis
+        run: make analyse
+
+      - name: Duplicated code
+        run: make duplicates
+
+      - name: Validate OpenSpec changes and specs
+        run: make openspec ARGS="validate --all --strict"
+
+  test-frontend:
+    name: test-frontend
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up the toolchain
+        uses: ./.github/actions/setup
+
+      - name: Run Vitest
+        run: make test-frontend JUNIT=reports/frontend.xml
+
+      - name: Upload the JUnit report
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: junit-frontend
+          path: reports/frontend.xml
+          if-no-files-found: error
+
+  test-backend:
+    name: test-backend
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      DB_CONNECTION: pgsql
+      DB_HOST: 127.0.0.1
+      DB_PORT: 5432
+      DB_USERNAME: sail
+      DB_PASSWORD: password
+    services:
+      pgsql:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_DB: testing
+          POSTGRES_USER: sail
+          POSTGRES_PASSWORD: password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U sail -d testing"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up the toolchain
+        uses: ./.github/actions/setup
+
+      - name: Build the assets
+        run: make build
+
+      - name: Run Pest
+        run: make test-backend JUNIT=reports/backend.xml
+
+      - name: Upload the JUnit report
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: junit-backend
+          path: reports/backend.xml
+          if-no-files-found: error
+
+  report:
+    name: report
+    needs: [changes, test-frontend, test-backend]
+    if: always() && needs.changes.outputs.code == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      checks: write # publie le rapport « Tests »
+    steps:
+      - name: Download the JUnit reports
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: junit-*
+          merge-multiple: true
+          path: reports
+
+      - name: Publish the Tests report
+        uses: mikepenz/action-junit-report@6ef3fdcfcd5f0b5d14df3e659ef19b8c6820f93d # v6.6.1
+        with:
+          check_name: Tests
+          report_paths: reports/*.xml
+          require_tests: true
+          fail_on_failure: false
