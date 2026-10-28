@@ -12,3 +12,4 @@ Une ADR par décision d'architecture, numérotée, écrite dans le même lot que
 | [0006](0006-systeme-de-design.md)                | Système de design                             | Acceptée |
 | [0007](0007-acces-par-code-partage.md)           | Accès par code partagé                        | Acceptée |
 | [0008](0008-deploiement-image-unique-dokploy.md) | Déploiement par image unique et stack Dokploy | Acceptée |
+| [0009](0009-modele-des-rounds-et-controles.md)   | Modèle des rounds et contrôles de cohérence   | Acceptée |
