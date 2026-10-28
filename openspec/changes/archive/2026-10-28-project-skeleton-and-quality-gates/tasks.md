@@ -52,7 +52,7 @@ Avant de commencer : `ROADMAP.md` entrée 0 (bootstrap) est faite ; relire `prop
 
 - [x] 7.1 Créer `.github/actions/setup/action.yml` et `.github/workflows/ci.yml` (D8), actions épinglées par sha avec version en commentaire, `persist-credentials: false`, `timeout-minutes` de `ci-pipeline`, `CI` et `SKIP_INSTALL_SIMPLE_GIT_HOOKS`, validation OpenSpec dans `static`, artefacts JUnit et job `report` de D8 ; vérifier localement avec `make lint` (fichiers YAML exclus du formateur)
 - [x] 7.2 Créer `.github/workflows/zizmor.yml`, `.github/zizmor.yml` et `.github/dependabot.yml` (préfixe `ci`, `include: scope`, délai de 7 jours, groupe unique)
-- [ ] 7.3 Pousser la branche et vérifier sur la PR : `changes` sort `code=true`, `static`, `test-frontend`, `test-backend` et `report` passent, zizmor passe ; surveiller par `gh run list --commit <sha> --json status,conclusion` jusqu'à `completed`
+- [x] 7.3 Pousser la branche et vérifier sur la PR : `changes` sort `code=true`, `static`, `test-frontend`, `test-backend` et `report` passent, zizmor passe ; surveiller par `gh run list --commit <sha> --json status,conclusion` jusqu'à `completed`
 
 ## 8. Vérification finale
 
