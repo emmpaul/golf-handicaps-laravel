@@ -94,12 +94,23 @@ Le texte courant et le texte secondaire MUST garder au moins 4,5:1 avec chacun d
 - **WHEN** le test de contraste parcourt les paires de texte et de marque du thème
 - **THEN** seules les trois paires exemptées passent sous leur seuil, et une quatrième paire sous le seuil le fait échouer en la nommant
 
+### Requirement: Couleurs hors des paires de contraste
+Quatre gris du thème SHALL rester hors des paires de contraste et MUST NOT servir de texte lisible : `oklch(0.5 0.01 260)` sert seulement à un contrôle désactivé (exempté par WCAG 1.4.3) ou au décor ; `oklch(0.4 0.01 260)`, `oklch(0.3 0.008 260)` et `oklch(0.21 0.006 260)` au décor masqué aux lecteurs d'écran et aux traits non porteurs d'information. Un texte indicatif lisible prend au moins `oklch(0.68 0.01 260)`.
+
+#### Scenario: Indication d'un champ
+- **WHEN** le champ « RATING » de la page Parcours affiche son indication « ex. 71,4 » sur la surface `oklch(0.17 0.006 260)`
+- **THEN** l'indication est en `oklch(0.68 0.01 260)`, à au moins 4,5:1, et jamais en `oklch(0.5 0.01 260)` ni `oklch(0.4 0.01 260)`
+
+#### Scenario: Couleurs hors des paires
+- **WHEN** un composant écrit un texte actif, une indication de champ ou une méta en `oklch(0.5 0.01 260)` ou `oklch(0.4 0.01 260)`
+- **THEN** `make test-frontend` échoue en nommant le fichier ; seul un contrôle désactivé peut prendre `oklch(0.5 0.01 260)`
+
 ### Requirement: Palette du design
 L'application SHALL utiliser la palette du design, commune à toutes les pages. Chaque couleur, chaque police, chaque rayon et chaque ombre MUST venir d'un token déclaré une seule fois. La couleur destructive reste distincte de la couleur principale et de l'accent ambre.
 
 #### Scenario: Fonds et encres
 - **WHEN** une page s'affiche
-- **THEN** le fond vaut `oklch(0.13 0.005 260)`, les surfaces `oklch(0.17 0.006 260)`, `oklch(0.2 0.006 260)` et `oklch(0.22 0.006 260)`, le texte et le fond du bouton principal `oklch(0.97 0.003 260)`, le texte secondaire `oklch(0.68 0.01 260)`, le texte indicatif `oklch(0.5 0.01 260)`
+- **THEN** le fond vaut `oklch(0.13 0.005 260)`, les surfaces `oklch(0.17 0.006 260)`, `oklch(0.2 0.006 260)` et `oklch(0.22 0.006 260)`, le texte et le fond du bouton principal `oklch(0.97 0.003 260)`, le texte secondaire et les indications de champ `oklch(0.68 0.01 260)`, le texte d'un bouton bloqué `oklch(0.5 0.01 260)`
 
 #### Scenario: Couleurs porteuses de sens
 - **WHEN** une page affiche l'accent, le rouge, l'information et la confirmation
