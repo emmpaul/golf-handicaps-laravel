@@ -244,6 +244,30 @@ describe('Sending a photo', () => {
         expect(photoInput()).not.toBeDisabled();
     });
 
+    // Mutation: the validation error of `photo` ignored (no `onError`) → no
+    // alert, the test goes red.
+    it('shows the refusal of the server under the buttons: « La photo dépasse 20 Mo »', async () => {
+        render(<ImportIndex imports={[]} readingEnabled />);
+
+        await userEvent.upload(
+            photoInput(),
+            new File(['photo'], 'IMG_3064.JPG', { type: 'image/jpeg' }),
+        );
+        await act(async () => {
+            decoding.resolve(new Blob(['jpeg'], { type: 'image/jpeg' }));
+        });
+        const options = post.mock.calls[0][2];
+        act(() => {
+            options?.onError?.({ photo: 'La photo dépasse 20 Mo' });
+            options?.onFinish?.({} as never);
+        });
+
+        expect(screen.getByRole('alert').textContent).toBe(
+            'La photo dépasse 20 Mo',
+        );
+        expect(photoInput()).not.toBeDisabled();
+    });
+
     it('without key, shows the reading disabled and « Saisie manuelle », without any sending action', () => {
         coarse = true;
 

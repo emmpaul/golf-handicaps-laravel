@@ -63,6 +63,8 @@ function PickButton({
 export function ImportUpload() {
     const touch = useMediaQuery('(pointer: coarse)');
     const [step, setStep] = useState<Step>('pick');
+    // Refus de validation du serveur (« La photo dépasse 20 Mo »).
+    const [refusal, setRefusal] = useState<string | null>(null);
     const busy = step === 'preparing' || step === 'sending';
 
     async function choose(file: File | undefined) {
@@ -71,6 +73,7 @@ export function ImportUpload() {
         }
 
         // Décodage et réduction à 3000 px : une à deux secondes sur téléphone.
+        setRefusal(null);
         setStep('preparing');
         let photo: Blob;
 
@@ -91,6 +94,7 @@ export function ImportUpload() {
                 forceFormData: true,
                 preserveScroll: true,
                 onStart: () => setStep('sending'),
+                onError: (errors) => setRefusal(errors.photo ?? null),
                 onFinish: () => setStep('pick'),
             },
         );
@@ -131,6 +135,11 @@ export function ImportUpload() {
                 label={PENDING_LABEL[step] ?? null}
                 orb={step === 'sending' ? 'send' : 'prepare'}
             />
+            {refusal ? (
+                <p role="alert" className="text-sm text-destructive">
+                    {refusal}
+                </p>
+            ) : null}
             {step === 'unreadable' ? <UnreadablePhoto /> : null}
         </div>
     );
