@@ -45,4 +45,20 @@ return [
         ],
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Lookup of the course ratings on Simulator Golf Tour
+    |--------------------------------------------------------------------------
+    |
+    | on (default): the worker looks up the rating of each new course on
+    | Simulator Golf Tour. off: no request to SGT nor call to the AI, the
+    | course ends « Saisie manuelle ». AppServiceProvider refuses to boot on
+    | any other value.
+    |
+    */
+
+    'sgt' => [
+        'lookup' => env('SGT_LOOKUP', 'on'),
+    ],
+
 ];
