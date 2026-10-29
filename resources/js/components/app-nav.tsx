@@ -23,7 +23,10 @@ export const TABS = [
  * la zone sûre du bas. Seul l'onglet courant montre son libellé ; les autres
  * le gardent dans le DOM, refermé à une largeur maximale nulle. La pastille du
  * bouton Importer compte les imports prêts à vérifier (`pendingImports`,
- * prop partagée différée, D7).
+ * prop partagée, D7). Sous 375 px de large, gouttières, marges intérieures
+ * et largeur minimale des onglets se resserrent pour que la barre tienne dans
+ * 320 − 2 × 16 px avec le libellé le plus long ouvert (DO34) ; la hauteur de
+ * 44 px ne change pas.
  */
 export function AppNav() {
     const { pendingImports } = usePage().props;
@@ -33,9 +36,9 @@ export function AppNav() {
     return (
         <nav
             aria-label="Sections"
-            className="fixed inset-x-0 bottom-[calc(28px+var(--safe-bottom))] z-(--z-sticky-nav) mx-auto flex max-w-(--column) items-center gap-2.5 px-(--gutter-nav)"
+            className="fixed inset-x-0 bottom-[calc(28px+var(--safe-bottom))] z-(--z-sticky-nav) mx-auto flex max-w-(--column) items-center gap-2.5 px-(--gutter-nav) max-[375px]:gap-2"
         >
-            <ul className="flex h-15 flex-1 items-center justify-between rounded-pill border border-rule bg-surface-2 px-[7px] text-ink-2 shadow-float">
+            <ul className="flex h-15 flex-1 items-center justify-between rounded-pill border border-rule bg-surface-2 px-[7px] text-ink-2 shadow-float max-[375px]:px-1">
                 {TABS.map(({ href, label, icon: Icon }) => (
                     <li key={href} className="flex">
                         <NavLink
@@ -43,10 +46,10 @@ export function AppNav() {
                             label={label}
                             className={(current) =>
                                 cn(
-                                    'flex h-11 min-w-11 items-center justify-center rounded-pill [transition:background-color_var(--dur-nav)_var(--ease-design),color_var(--dur-nav)_var(--ease-design),padding_var(--dur-nav)_var(--ease-design),scale_var(--dur-press)] active:scale-94',
+                                    'flex h-11 min-w-11 items-center justify-center rounded-pill [transition:background-color_var(--dur-nav)_var(--ease-design),color_var(--dur-nav)_var(--ease-design),padding_var(--dur-nav)_var(--ease-design),scale_var(--dur-press)] active:scale-94 max-[375px]:min-w-8',
                                     current
-                                        ? 'bg-ink px-3.5 text-bg'
-                                        : 'bg-ink/0 px-3 text-ink-2',
+                                        ? 'bg-ink px-3.5 text-bg max-[375px]:px-2.5'
+                                        : 'bg-ink/0 px-3 text-ink-2 max-[375px]:px-1.5',
                                 )
                             }
                         >
@@ -62,7 +65,7 @@ export function AppNav() {
                                         className={cn(
                                             'block overflow-hidden text-label-13 whitespace-nowrap [transition:max-width_var(--dur-nav)_var(--ease-design),opacity_var(--dur-fade)_ease,margin-left_var(--dur-nav)_var(--ease-design)]',
                                             current
-                                                ? 'ml-2 max-w-[90px] opacity-100'
+                                                ? 'ml-2 max-w-[90px] opacity-100 max-[375px]:ml-1'
                                                 : 'ml-0 max-w-0 opacity-0',
                                         )}
                                     >
