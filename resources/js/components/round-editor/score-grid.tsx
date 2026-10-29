@@ -3,6 +3,7 @@ import { ScrollFrame } from '@/components/scroll-frame';
 import type { CellValue } from '@/lib/round-checks';
 import { cn } from '@/lib/utils';
 import { parseCell } from './form-state';
+import type { TotalColumn } from './form-state';
 
 export type GridColumn = number | 'out' | 'in' | 'total';
 
@@ -11,7 +12,8 @@ export type GridColumn = number | 'out' | 'in' | 'total';
  * `cellLabel` préfixe le nom accessible des cases (`label` par défaut) : il
  * reste stable quand le libellé affiché change, par exemple « Ligne 1 » pour
  * la ligne affichée « Gab ». `totals` : OUT, IN et TOT calculés, en lecture
- * seule (spec `rounds`, « Totaux calculés »).
+ * seule (spec `rounds`, « Totaux calculés ») ; lus sur la carte d'un import,
+ * modifiables (`readTotals`, spec « Contrôle des totaux lus »).
  */
 export type GridRow = {
     key: string;
@@ -19,6 +21,7 @@ export type GridRow = {
     cellLabel?: string;
     holes: CellValue[];
     totals?: { out: CellValue; in: CellValue; total: CellValue };
+    readTotals?: boolean;
 };
 
 const TOTAL_LABELS = { out: 'OUT', in: 'IN', total: 'TOT' } as const;
@@ -78,19 +81,22 @@ type GridProps = {
     rows: GridRow[];
     invalid: ReadonlySet<string>;
     onCell: (row: string, hole: number, value: CellValue) => void;
+    /** Total lu modifié (lignes à `readTotals`). */
+    onTotal?: (row: string, column: TotalColumn, value: CellValue) => void;
     onLeave?: (cell: string) => void;
 };
 
 /**
  * Case de la grille, ou rien quand la ligne n'a pas de valeur dans cette
  * colonne (index des totaux). Même nom accessible et même clé dans les deux
- * dispositions. Un total est en lecture seule.
+ * dispositions. Un total calculé est en lecture seule ; un total lu se modifie.
  */
 function GridCell({
     row,
     column,
     invalid,
     onCell,
+    onTotal,
     onLeave,
     className,
 }: Omit<GridProps, 'rows'> & {
@@ -111,10 +117,12 @@ function GridCell({
             label={cellName(row, column)}
             value={value}
             invalid={invalid.has(key)}
-            readOnly={typeof column !== 'number'}
+            readOnly={typeof column !== 'number' && !row.readTotals}
             onChange={(next) => {
                 if (typeof column === 'number') {
                     onCell(row.key, column, next);
+                } else {
+                    onTotal?.(row.key, column, next);
                 }
             }}
             onBlur={() => onLeave?.(key)}

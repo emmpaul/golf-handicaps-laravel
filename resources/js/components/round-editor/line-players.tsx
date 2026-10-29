@@ -131,6 +131,12 @@ function LinePlayer({
                 <span id={titleId} className="w-16 text-sm font-medium">
                     Ligne {number}
                 </span>
+                {/* Nom lu sur la carte d'un import ; rien pour une ligne ajoutée à la main. */}
+                {line.readName ? (
+                    <span className="text-sm text-muted-foreground">
+                        lu « {line.readName} »
+                    </span>
+                ) : null}
             </div>
             <NativeSelect
                 className="w-full min-w-0"

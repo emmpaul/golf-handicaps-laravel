@@ -2,6 +2,7 @@ import { EMPTY, MAX_PLAYERS, UNASSIGNED } from '@/lib/round-checks';
 import type {
     CellValue,
     Problem,
+    ReadTotals,
     RoundCard,
     RoundCardHole,
     RoundCardLine,
@@ -32,10 +33,14 @@ export type EditorState = Omit<RoundCard, 'lines'> & { lines: EditorLine[] };
 
 export type TextField = 'courseName' | 'tees' | 'playedOn';
 
+/** Total imprimé sur la carte : OUT, IN ou TOT. */
+export type TotalColumn = keyof ReadTotals;
+
 /** Ligne de la grille : `par`, `strokeIndex`, `distance` ou `player<n>`. */
 export type EditorAction =
     | { type: 'field'; field: TextField; value: string | null }
     | { type: 'cell'; row: string; hole: number; value: CellValue }
+    | { type: 'total'; row: string; column: TotalColumn; value: CellValue }
     | { type: 'associate'; key: string; playerId: string | null }
     | { type: 'addLine' }
     | { type: 'removeLine'; key: string }
@@ -152,6 +157,34 @@ function setCell(
     };
 }
 
+/**
+ * Total lu `column` de la ligne `row` (`par` ou `player<n>`) remplacé par
+ * `value` ; sans effet sur une ligne sans totaux lus, dont les totaux sont
+ * calculés.
+ */
+function setTotal(
+    state: EditorState,
+    row: string,
+    column: TotalColumn,
+    value: CellValue,
+): EditorState {
+    const replace = (totals: ReadTotals | null | undefined) =>
+        totals ? { ...totals, [column]: value } : totals;
+
+    if (row === 'par') {
+        return { ...state, parTotals: replace(state.parTotals) };
+    }
+
+    const position = Number(row.replace('player', ''));
+
+    return {
+        ...state,
+        lines: state.lines.map((line, i) =>
+            i === position ? { ...line, totals: replace(line.totals) } : line,
+        ),
+    };
+}
+
 /** Pré-remplit parcours, tees, pars, index et distances ; la date et les lignes restent. */
 function applyCourse(state: EditorState, course: KnownCourse): EditorState {
     return {
@@ -175,6 +208,8 @@ export function editorReducer(
             return { ...state, [action.field]: action.value };
         case 'cell':
             return setCell(state, action.row, action.hole, action.value);
+        case 'total':
+            return setTotal(state, action.row, action.column, action.value);
         case 'associate':
             return {
                 ...state,
