@@ -9,31 +9,13 @@ use Illuminate\Database\Query\Builder;
 /**
  * The imports to check (spec home-dashboard, « Imports à vérifier »): read, ready to check and
  * not saved as a round yet, all of them and not only the latest of the import screen; their
- * number and the latest by date of sending. One query.
+ * number, shared with every page (design D7) and read by the home page. One query.
  */
 final class PendingImports
 {
     /**
-     * @return array{count: int, latestId: string|null}
-     */
-    public function get(): array
-    {
-        // The window counts every matching row before the limit keeps the latest.
-        $latest = $this->query()
-            ->select('id')
-            ->selectRaw('count(*) over () as pending')
-            ->orderByDesc('created_at')
-            ->orderByDesc('id')
-            ->first();
-
-        return [
-            'count' => $latest === null ? 0 : (int) $latest->pending,
-            'latestId' => $latest === null ? null : (string) $latest->id,
-        ];
-    }
-
-    /**
-     * Their number alone, for the badge of the Importer button (spec app-shell, design D7).
+     * Their number, for the badge of the Importer button and the row of the home page (spec
+     * app-shell, design D7).
      */
     public function count(): int
     {

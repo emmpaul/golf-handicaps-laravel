@@ -10,6 +10,11 @@ const playedOnFormat = new Intl.DateTimeFormat('fr-FR', {
     year: 'numeric',
 });
 
+const dayMonthFormat = new Intl.DateTimeFormat('fr-FR', {
+    day: 'numeric',
+    month: 'short',
+});
+
 const shortPlayedOnFormat = new Intl.DateTimeFormat('fr-FR', {
     day: 'numeric',
     month: 'short',
@@ -75,6 +80,11 @@ export function formatDottedPlayedOn(playedOn: string): string {
 /** Date of play `2026-10-17` to « 17 oct. 2026 », a civil day as `formatPlayedOn`. */
 export function formatShortPlayedOn(playedOn: string): string {
     return shortPlayedOnFormat.format(isoToLocalDate(playedOn));
+}
+
+/** Date of play `2026-10-17` to « 17 OCT. » (latest round of the home page, design). */
+export function formatDayMonthShort(playedOn: string): string {
+    return dayMonthFormat.format(isoToLocalDate(playedOn)).toUpperCase();
 }
 
 /** An empty value in a table: a name or a figure that does not exist yet. */

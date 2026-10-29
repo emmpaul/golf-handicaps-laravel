@@ -25,9 +25,33 @@ const ROUND_10 = '0190a6b2-7c3e-7000-8000-0000000000a2';
 const ROUND_01 = '0190a6b2-7c3e-7000-8000-0000000000a1';
 
 const players = [
-    { id: GAB, name: 'Gab', indexT: 100, provisional: false, deltaT: -85 },
-    { id: MANU, name: 'Manu', indexT: 158, provisional: false, deltaT: 3 },
-    { id: SEAN, name: 'Sean', indexT: 145, provisional: true, deltaT: -25 },
+    {
+        id: GAB,
+        name: 'Gab',
+        indexT: 100,
+        provisional: false,
+        deltaT: -85,
+        rounds: 3,
+        colorSlot: 0,
+    },
+    {
+        id: MANU,
+        name: 'Manu',
+        indexT: 158,
+        provisional: false,
+        deltaT: 3,
+        rounds: 8,
+        colorSlot: 1,
+    },
+    {
+        id: SEAN,
+        name: 'Sean',
+        indexT: 145,
+        provisional: true,
+        deltaT: -25,
+        rounds: 2,
+        colorSlot: 2,
+    },
 ];
 
 /** Gab's rounds, newest first, as PlayerHandicapHistory sends them. */
@@ -154,6 +178,8 @@ describe('Handicaps page', () => {
                         indexT: null,
                         provisional: false,
                         deltaT: null,
+                        rounds: 0,
+                        colorSlot: 2,
                     },
                 ]}
                 selectedPlayerId={SEAN}

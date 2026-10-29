@@ -19,7 +19,7 @@ export type LeaderboardEntry = {
  * Lignes par rang net croissant ; à rang égal, l'ordre de la carte (tri
  * stable) ; un joueur sans index, sans rang, après les joueurs classés.
  */
-function ranked(entries: LeaderboardEntry[]): LeaderboardEntry[] {
+export function ranked(entries: LeaderboardEntry[]): LeaderboardEntry[] {
     return [...entries].sort(
         (a, b) =>
             (a.rank ?? Number.POSITIVE_INFINITY) -

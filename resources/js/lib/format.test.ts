@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vite-plus/test';
 
 import {
+    formatDayMonthShort,
     formatIndex,
     formatPlayedOn,
     formatShortPlayedOn,
@@ -109,5 +110,18 @@ describe('formatShortPlayedOn', () => {
 
     it('reads 2026-10-01 as « 1 oct. 2026 »', () => {
         expect(formatShortPlayedOn('2026-10-01')).toBe('1 oct. 2026');
+    });
+});
+
+// Spec home-dashboard « Dernier round »: « 17 OCT. » under TZ=America/Montreal.
+// Mutations: date read through `new Date('2026-10-17')` (midnight UTC) →
+// « 16 OCT. »; the year kept (shortPlayedOnFormat) → « 17 OCT. 2026 ».
+describe('formatDayMonthShort', () => {
+    it('reads 2026-10-17 as « 17 OCT. »', () => {
+        expect(formatDayMonthShort('2026-10-17')).toBe('17 OCT.');
+    });
+
+    it('reads 2026-05-04 as « 4 MAI », a month written whole', () => {
+        expect(formatDayMonthShort('2026-05-04')).toBe('4 MAI');
     });
 });

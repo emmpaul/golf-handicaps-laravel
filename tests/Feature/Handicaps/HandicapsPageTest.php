@@ -54,9 +54,9 @@ describe('with a session', function () {
                 ->assertInertia(fn (Assert $page) => $page
                     ->component('handicaps/index')
                     ->where('players', [
-                        ['id' => $this->gab->id, 'name' => 'Gab', 'indexT' => 10, 'provisional' => true, 'deltaT' => null],
-                        ['id' => $this->manu->id, 'name' => 'Manu', 'indexT' => 170, 'provisional' => true, 'deltaT' => null],
-                        ['id' => $this->sean->id, 'name' => 'Sean', 'indexT' => null, 'provisional' => false, 'deltaT' => null],
+                        ['id' => $this->gab->id, 'name' => 'Gab', 'indexT' => 10, 'provisional' => true, 'deltaT' => null, 'rounds' => 1, 'colorSlot' => 0],
+                        ['id' => $this->manu->id, 'name' => 'Manu', 'indexT' => 170, 'provisional' => true, 'deltaT' => null, 'rounds' => 1, 'colorSlot' => 1],
+                        ['id' => $this->sean->id, 'name' => 'Sean', 'indexT' => null, 'provisional' => false, 'deltaT' => null, 'rounds' => 0, 'colorSlot' => 2],
                     ])
                     ->where('selectedPlayerId', $this->gab->id)
                     ->where('history', [[

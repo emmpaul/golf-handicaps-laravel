@@ -11,7 +11,16 @@
  *   of 2026-10-10, saved after the reference card, comes back instead of BETHPAGE BLACK of
  *   2026-10-17;
  * - the home route served without HomeController (Route::inertia('/', 'home') again): the page
- *   receives no players, latestRound nor pendingImports.
+ *   receives no players nor latestRound.
+ *
+ * Visual-redesign (home-dashboard MODIFIED, DO2, DO6, DO17, DO21):
+ * - the players kept by name (PlayerStandings::get() instead of ranked()): Bob, Gab, Manu…
+ *   instead of Bob, Manu, Gab…;
+ * - the players without index sorted first (null as 0): alice and Sean before Bob;
+ * - the latest round without its net leaderboard (RoundList again): no playingHandicap, net nor
+ *   rank on Gab and Manu;
+ * - the home page that still sends its own pendingImports: the prop is present on the first load
+ *   (the shared one is deferred).
  */
 
 use App\Models\Import;
@@ -72,19 +81,47 @@ describe('with a session', function () {
             [$this->gab->id, strokesOverPar(1)],
             [$this->manu->id, strokesOverPar(17)],
         ]));
-        $import = Import::factory()->ready()->create();
+        Import::factory()->ready()->create();
 
         $this->get('/')
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('home')
                 ->where('players', [
-                    ['id' => $this->gab->id, 'name' => 'Gab', 'indexT' => 10, 'provisional' => true, 'deltaT' => 0],
-                    ['id' => $this->manu->id, 'name' => 'Manu', 'indexT' => 170, 'provisional' => true, 'deltaT' => 0],
-                    ['id' => $this->sean->id, 'name' => 'Sean', 'indexT' => null, 'provisional' => false, 'deltaT' => null],
+                    ['id' => $this->gab->id, 'name' => 'Gab', 'indexT' => 10, 'provisional' => true, 'deltaT' => 0, 'rounds' => 2, 'colorSlot' => 0],
+                    ['id' => $this->manu->id, 'name' => 'Manu', 'indexT' => 170, 'provisional' => true, 'deltaT' => 0, 'rounds' => 2, 'colorSlot' => 1],
+                    ['id' => $this->sean->id, 'name' => 'Sean', 'indexT' => null, 'provisional' => false, 'deltaT' => null, 'rounds' => 0, 'colorSlot' => 2],
                 ])
-                ->where('latestRound', referenceRoundListed($reference->id))
-                ->where('pendingImports', ['count' => 1, 'latestId' => $import->id]));
+                ->where('latestRound', [
+                    'id' => $reference->id,
+                    'playedOn' => '2026-10-17',
+                    'courseName' => 'BETHPAGE BLACK',
+                    'tees' => 'Red',
+                    'leaderboard' => [
+                        ['playerId' => $this->gab->id, 'name' => 'Gab', 'colorSlot' => 0, 'gross' => 72, 'indexBeforeT' => 10, 'playingHandicap' => 1, 'net' => 71, 'rank' => 1],
+                        ['playerId' => $this->manu->id, 'name' => 'Manu', 'colorSlot' => 1, 'gross' => 88, 'indexBeforeT' => 170, 'playingHandicap' => 17, 'net' => 71, 'rank' => 1],
+                    ],
+                ])
+                ->missing('pendingImports'));
+    });
+
+    test('the players come by index, by name whatever the case at an equal index, those without index last', function () {
+        createPlayersOnTest('Gab', 'Manu', 'Sean', 'alice', 'Bob');
+        createRoundCard(referenceCardOn('2026-10-17', [
+            [$this->manu->id, strokesOverPar(1)],
+            [$this->gab->id, strokesOverPar(17)],
+            [$this->bob->id, strokesOverPar(1)],
+        ]));
+
+        $players = $this->get('/')->inertiaProps('players');
+
+        expect(array_map(fn (array $player): array => [$player['name'], $player['indexT'], $player['rounds']], $players))->toBe([
+            ['Bob', 10, 1],
+            ['Manu', 10, 1],
+            ['Gab', 170, 1],
+            ['alice', null, 0],
+            ['Sean', null, 0],
+        ]);
     });
 
     test('without round the latest round is null and nothing is to check', function () {
@@ -93,8 +130,7 @@ describe('with a session', function () {
             ->assertInertia(fn (Assert $page) => $page
                 ->component('home')
                 ->where('players', [])
-                ->where('latestRound', null)
-                ->where('pendingImports', ['count' => 0, 'latestId' => null]));
+                ->where('latestRound', null));
     });
 
     test('the home page makes the same number of queries whatever the number of rounds', function (int $count) {
@@ -105,8 +141,9 @@ describe('with a session', function () {
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page->has('latestRound')));
 
-        // The players and their current statistics (2), the latest round with its lines, their
-        // players, their gross and their statistics (5), the imports to check (1).
-        expect($queries)->toBe(8);
+        // The players with their colour slot and their current statistics (2), the latest round,
+        // its rating, its lines with their gross and index before, and its holes (4). The imports
+        // to check are a deferred shared prop, not read on this first load.
+        expect($queries)->toBe(6);
     })->with([10, 30]);
 });

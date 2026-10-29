@@ -10,8 +10,9 @@ use Illuminate\Support\Collection;
  * The players of the group with their current index (spec home-dashboard, « Index des
  * joueurs »): by name whatever the case, the index just after the latest round by date of play,
  * date of saving then id, provisional below 3 rounds, and the delta with the index before that
- * round, null without round or on a first round. Port of the players of homeSummary of the
- * Next.js application. Two queries.
+ * round, null without round or on a first round, its number of rounds and its colour slot
+ * (design D6 of visual-redesign). Port of the players of homeSummary of the Next.js
+ * application. Two queries.
  */
 final class PlayerStandings
 {
@@ -19,16 +20,18 @@ final class PlayerStandings
     public const int PROVISIONAL_BELOW = 3;
 
     /**
-     * @return list<array{id: string, name: string, indexT: int|null, provisional: bool, deltaT: int|null}>
+     * @return list<array{id: string, name: string, indexT: int|null, provisional: bool, deltaT: int|null, rounds: int, colorSlot: int}>
      */
     public function get(): array
     {
         $stats = $this->currentStats();
 
         return array_values(Player::query()
-            ->orderByRaw('lower(name)')
-            ->orderBy('id')
-            ->get(['id', 'name'])
+            ->select('players.id', 'players.name')
+            ->withColorSlot()
+            ->orderByRaw('lower(players.name)')
+            ->orderBy('players.id')
+            ->get()
             ->map(function (Player $player) use ($stats): array {
                 $stat = $stats->get($player->id);
 
@@ -40,9 +43,26 @@ final class PlayerStandings
                     'deltaT' => $stat === null || $stat->index_before_t === null
                         ? null
                         : (int) $stat->index_after_t - (int) $stat->index_before_t,
+                    'rounds' => $stat === null ? 0 : (int) $stat->rounds,
+                    'colorSlot' => (int) $player->color_slot,
                 ];
             })
             ->all());
+    }
+
+    /**
+     * The board of the home page (spec home-dashboard, « Index des joueurs »): by current index,
+     * by name whatever the case at an equal index (the order of get(), kept by the stable sort),
+     * the players without index last.
+     *
+     * @return list<array{id: string, name: string, indexT: int|null, provisional: bool, deltaT: int|null, rounds: int, colorSlot: int}>
+     */
+    public function ranked(): array
+    {
+        $players = $this->get();
+        usort($players, fn (array $a, array $b): int => [$a['indexT'] === null, $a['indexT']] <=> [$b['indexT'] === null, $b['indexT']]);
+
+        return $players;
     }
 
     /**
