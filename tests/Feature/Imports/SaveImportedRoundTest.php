@@ -11,10 +11,15 @@
  * - the `exact` comparison ignored (every read name assigned): the alias GAB of Gab is deleted
  *   and written again, with another id;
  * - photo_path not copied to the round: the round has no photo;
- * - the import not linked to its round: round_id stays null.
+ * - the import not linked to its round: round_id stays null;
+ * - the round_id check removed from SaveImportedRound: saving the same import again creates a
+ *   second round and links the import to it;
+ * - the check of ImportRoundController placed after FindDuplicateRound: the second save finds
+ *   the round of the import and comes back with the duplicate flash instead of the refusal.
  */
 
 use App\Domain\Imports\Actions\SaveImportedRound;
+use App\Domain\Imports\Exceptions\ImportAlreadySaved;
 use App\Domain\Rounds\Exceptions\IncoherentRoundCard;
 use App\Domain\Rounds\RoundCard;
 use App\Models\Import;
@@ -159,4 +164,35 @@ test('deleting a round typed by hand leaves the imports', function () {
     $this->delete("/rounds/{$round->id}")->assertRedirect('/rounds');
 
     expect(Import::query()->pluck('id')->all())->toBe([$this->import->id]);
+});
+
+describe('an import already saved', function () {
+    beforeEach(function () {
+        $this->round = app(SaveImportedRound::class)->handle(
+            $this->import,
+            RoundCard::fromArray(importedReferenceCard($this->gab->id, $this->sean->id)),
+        );
+        $this->aliases = playersWithAliases();
+    });
+
+    test('is not saved again', function () {
+        // The import as the second tab still has it: without its round.
+        expect(fn () => app(SaveImportedRound::class)->handle(
+            $this->import,
+            RoundCard::fromArray(importedReferenceCard($this->gab->id, $this->sean->id)),
+        ))->toThrow(ImportAlreadySaved::class, 'Cette carte est déjà enregistrée');
+
+        expect(Round::query()->count())->toBe(1)
+            ->and(playersWithAliases())->toBe($this->aliases)
+            ->and($this->import->fresh()->round_id)->toBe($this->round->id);
+    });
+
+    test('sent again from a second tab, is refused without the duplicate flash', function () {
+        $this->withHeader('X-Inertia', 'true')
+            ->post("/imports/{$this->import->id}/round", importedReferenceCard($this->gab->id, $this->sean->id))
+            ->assertInertiaFlash('toast', ['type' => 'error', 'message' => 'Cette carte est déjà enregistrée'])
+            ->assertInertiaFlashMissing('duplicate');
+
+        expect(Round::query()->count())->toBe(1);
+    });
 });
