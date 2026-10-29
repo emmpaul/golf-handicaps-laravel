@@ -16,12 +16,15 @@ FROM ${COMPOSER_IMAGE} AS composer
 FROM ${NODE_IMAGE} AS node
 
 # 1. base : PHP et ses extensions, réglages de production, utilisateur non root.
+# imagick : conversion des photos de carte en WebP et réduction avant la lecture par l'IA (ADR 0011).
 FROM ${FRANKENPHP_IMAGE} AS base
-RUN install-php-extensions pdo_pgsql pcntl intl opcache \
+RUN install-php-extensions pdo_pgsql pcntl intl opcache imagick \
     && cp "$PHP_INI_DIR/php.ini-production" "$PHP_INI_DIR/php.ini" \
     && printf 'opcache.validate_timestamps=0\n' > "$PHP_INI_DIR/conf.d/zz-production.ini" \
     && groupadd --gid 1000 app \
     && useradd --uid 1000 --gid app --no-create-home --shell /usr/sbin/nologin app
+# Envoi des photos de carte jusqu'à 20 Mo (design D8 de scorecard-ai-import).
+COPY docker/php/uploads.ini $PHP_INI_DIR/conf.d/uploads.ini
 WORKDIR /app
 
 # 2. vendor : dépendances de production, depuis composer.json et composer.lock seuls (couche en cache).
