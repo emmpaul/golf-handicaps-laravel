@@ -13,6 +13,13 @@ const TALLEST_PX = 110;
 /** Hauteur d'une barre nulle ou négative. */
 const FLOOR_PX = 4;
 
+/**
+ * Au-delà de 10 barres, valeur et date ne tiennent plus sur chaque barre
+ * (11,8 px par barre à 390 px pour 20 rounds, une date fait 27 px) : elles
+ * s'écrivent une barre sur deux, la plus récente toujours (DO46).
+ */
+const ALL_LABELLED_UP_TO = 10;
+
 /** « 2 », « 5,5 », « 11 » : le dixième nul est omis au-dessus d'une barre. */
 const barLabel = (differentialT: number) =>
     formatTenths(differentialT).replace(',0', '');
@@ -71,39 +78,69 @@ export function DifferentialBars({
                     aria-labelledby="differentials-title"
                     className="flex gap-1.5"
                 >
-                    {bars.map((round) => (
-                        <li
-                            key={round.roundId}
-                            className="flex min-w-0 flex-1 flex-col items-center"
-                        >
-                            <span className="flex h-[150px] w-full flex-col items-center justify-end gap-1.5">
+                    {bars.map((round, index) => {
+                        const fromNewest = bars.length - 1 - index;
+                        // The others keep their value and date for screen readers.
+                        const shown =
+                            bars.length <= ALL_LABELLED_UP_TO ||
+                            fromNewest % 2 === 0;
+                        // Narrow bars: the labels of the edge bars stay inside the chart.
+                        const narrow = bars.length > ALL_LABELLED_UP_TO;
+                        const align =
+                            narrow && fromNewest === 0
+                                ? 'items-end'
+                                : narrow && index === 0
+                                  ? 'items-start'
+                                  : 'items-center';
+
+                        return (
+                            <li
+                                key={round.roundId}
+                                className={cn(
+                                    'flex min-w-0 flex-1 flex-col',
+                                    align,
+                                )}
+                            >
                                 <span
-                                    data-part="value"
-                                    className="font-mono text-caption tracking-normal text-ink-2"
+                                    className={cn(
+                                        'flex h-[150px] w-full flex-col justify-end gap-1.5',
+                                        align,
+                                    )}
                                 >
-                                    {barLabel(round.differentialT)}
+                                    <span
+                                        data-part="value"
+                                        className={cn(
+                                            'font-mono text-caption tracking-normal whitespace-nowrap text-ink-2',
+                                            !shown && 'sr-only',
+                                        )}
+                                    >
+                                        {barLabel(round.differentialT)}
+                                    </span>
+                                    <span
+                                        data-part="bar"
+                                        className={cn(
+                                            'w-full max-w-9 rounded-t-4 transition-[height,background-color] duration-(--dur-bar) ease-(--ease-design)',
+                                            round.countsInCurrent
+                                                ? PLAYER_BG[colorSlot]
+                                                : 'bg-bar',
+                                        )}
+                                        style={{
+                                            height: `${entered ? Math.max(FLOOR_PX, Math.round((Math.max(0, round.differentialT) / largest) * TALLEST_PX)) : FLOOR_PX}px`,
+                                        }}
+                                    />
                                 </span>
                                 <span
-                                    data-part="bar"
+                                    data-part="date"
                                     className={cn(
-                                        'w-full max-w-9 rounded-t-4 transition-[height,background-color] duration-(--dur-bar) ease-(--ease-design)',
-                                        round.countsInCurrent
-                                            ? PLAYER_BG[colorSlot]
-                                            : 'bg-bar',
+                                        'mt-2 font-mono text-caption-9 whitespace-nowrap text-ink-2',
+                                        !shown && 'sr-only',
                                     )}
-                                    style={{
-                                        height: `${entered ? Math.max(FLOOR_PX, Math.round((Math.max(0, round.differentialT) / largest) * TALLEST_PX)) : FLOOR_PX}px`,
-                                    }}
-                                />
-                            </span>
-                            <span
-                                data-part="date"
-                                className="mt-2 font-mono text-caption-9 text-ink-2"
-                            >
-                                {dayMonth(round.playedOn)}
-                            </span>
-                        </li>
-                    ))}
+                                >
+                                    {dayMonth(round.playedOn)}
+                                </span>
+                            </li>
+                        );
+                    })}
                 </ol>
             </div>
         </section>
