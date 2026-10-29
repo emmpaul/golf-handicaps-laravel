@@ -72,7 +72,7 @@ test('an address close to the version route answers 404', function (string $uri)
 ]);
 
 test('a session opened with a former passcode is redirected to the login page', function () {
-    $this->withSession(['access.passcode' => Passcode::fingerprint()]);
+    $this->withSession([Passcode::SESSION_KEY => Passcode::fingerprint()]);
 
     config(['app.passcode' => 'eagle-2027']);
 

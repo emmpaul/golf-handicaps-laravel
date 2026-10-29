@@ -48,14 +48,9 @@ class HandleInertiaRequests extends Middleware
             // The badge of the Importer button (design D7, DO35): read with the page, one count, so
             // the badge and the home page do not shift when it arrives; only behind the passcode,
             // so /login tells nothing about the imports.
-            ...$this->opened($request) ? [
+            ...Passcode::opened($request) ? [
                 'pendingImports' => fn (): int => app(PendingImports::class)->count(),
             ] : [],
         ];
-    }
-
-    private function opened(Request $request): bool
-    {
-        return Passcode::isFingerprint($request->session()->get('access.passcode'));
     }
 }
