@@ -2,20 +2,21 @@
 
 namespace Database\Seeders;
 
-use App\Domain\Courses\Actions\SaveCourseRating;
+use App\Domain\Courses\Actions\ConfirmCourseRatingProposal;
+use App\Models\CourseRating;
 
 /**
- * The confirmed rating of the demonstration base: 71,4 / 144 on BETHPAGE BLACK / Red, written
- * through an Action so that the history of its players is recomputed. Runs after DemoRoundsSeeder:
- * a course without round is refused.
- *
- * Until ConfirmCourseRatingProposal exists (task 7.1 of course-rating-sgt), the rating is typed
- * through SaveCourseRating; task 9.1 confirms the SGT proposal instead.
+ * The confirmed rating of the demonstration base: the SGT proposal of BETHPAGE BLACK / Red (tee
+ * Red, 71,4 / 144, written by DemoCourseRatingsSeeder) confirmed through
+ * ConfirmCourseRatingProposal, so that the history of its players is recomputed (design D12 of
+ * course-rating-sgt). Runs after DemoRoundsSeeder: the recomputation needs the rounds.
  */
 class DemoConfirmedRatingSeeder extends DemoSeeder
 {
-    public function run(SaveCourseRating $saveCourseRating): void
+    public function run(ConfirmCourseRatingProposal $confirmProposal): void
     {
-        $saveCourseRating->handle('BETHPAGE BLACK', 'Red', 714, 144);
+        $confirmProposal->handle(
+            CourseRating::query()->where('course_name', 'BETHPAGE BLACK')->where('tees', 'Red')->sole(),
+        );
     }
 }
