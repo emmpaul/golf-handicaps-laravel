@@ -1,7 +1,7 @@
 import { Head, Link } from '@inertiajs/react';
-import { index as coursesIndex } from '@/actions/App/Http/Controllers/CourseController';
 import { edit } from '@/actions/App/Http/Controllers/RoundController';
 import RoundPhotoController from '@/actions/App/Http/Controllers/RoundPhotoController';
+import { RatingLink } from '@/components/courses/rating-link';
 import { ComputationHelp } from '@/components/handicaps/computation-help';
 import { PageTitle } from '@/components/page-title';
 import { DeleteRound } from '@/components/rounds/delete-round';
@@ -10,8 +10,8 @@ import type { LeaderboardEntry } from '@/components/rounds/net-leaderboard';
 import { RoundScorecard } from '@/components/rounds/round-scorecard';
 import type { SavedCard } from '@/components/rounds/round-scorecard';
 import { buttonVariants } from '@/components/ui/button';
-import { formatPlayedOn, formatTenths } from '@/lib/format';
-import { ACTION_LINK, cn } from '@/lib/utils';
+import { formatPlayedOn } from '@/lib/format';
+import { cn } from '@/lib/utils';
 
 export type RoundDetail = {
     id: string;
@@ -52,25 +52,11 @@ export default function RoundsShow({ round }: { round: RoundDetail }) {
                 </p>
                 {/* Rating des différentiels et du classement net, lien vers la page Parcours (spec `rounds`) ;
                     rating et slope en deux éléments, sans point médian (DESIGN.md, règles d'écran). */}
-                <Link
-                    href={coursesIndex()}
-                    data-testid="round-rating"
-                    className={cn(
-                        ACTION_LINK,
-                        'w-fit gap-x-4 text-sm tabular-nums',
-                    )}
-                >
-                    {round.rating.rated ? (
-                        <>
-                            <span>
-                                Rating {formatTenths(round.rating.ratingT)}
-                            </span>
-                            <span>Slope {round.rating.slope}</span>
-                        </>
-                    ) : (
-                        `Sans rating (par ${round.par}, slope 113)`
-                    )}
-                </Link>
+                <RatingLink
+                    rating={round.rating.rated ? round.rating : null}
+                    par={round.par}
+                    testId="round-rating"
+                />
                 <ComputationHelp />
             </div>
             {/* Une colonne sous 1 024 px : classement, carte de score, photo, actions. À partir de
