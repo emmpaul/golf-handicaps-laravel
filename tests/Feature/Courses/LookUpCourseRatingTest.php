@@ -13,6 +13,8 @@
  * - the usage counted after the check of the bounds (only for a card): the slope of 160 leaves
  *   no ai_usage row;
  * - the budget checked after the call: the lookup at the ceiling prompts the agent;
+ * - canSpend called without the cost of the scorecard (the 52 000 of a photo): 40 000 under the
+ *   ceiling, the lookup ends on « Budget IA du mois atteint » instead of a proposal;
  * - the guard of the pending status removed (StartCourseRatingLookup): the job run twice on the
  *   same row prompts twice;
  * - failed() that writes nothing: after two 503 the row stays pending;
@@ -249,6 +251,20 @@ test('at the ceiling of the month the lookup calls no AI', function () {
         ->and(sgtUrlsAsked())->toBe([SGT_COURSES_URL])
         ->and(AiUsage::query()->count())->toBe(1);
     SgtScorecardReader::assertNeverPrompted();
+});
+
+test('40 000 micro-dollars under the ceiling the lookup still reads the scorecard', function () {
+    // 4 960 000 + 19 000 (the scorecard) fits under 5 $; 4 960 000 + 52 000 (a photo) does not.
+    AiUsage::factory()->inMonth('2026-10')->create(['cost_micro_usd' => 4960000]);
+    fakeSgtLookup();
+    SgtScorecardReader::fake([billedSgtReading(bethpageSgtReading())]);
+    $rating = pendingLookupOn('BETHPAGE BLACK', 'Red');
+
+    runLookup($rating);
+
+    expect($rating->refresh()->status)->toBe(CourseRatingStatus::Proposed)
+        ->and(AiUsage::query()->orderBy('cost_micro_usd')->pluck('cost_micro_usd')->all())->toBe([6000, 4960000]);
+    SgtScorecardReader::assertPromptedTimes(1);
 });
 
 test('with SGT_LOOKUP off the lookup asks nothing to SGT', function () {
