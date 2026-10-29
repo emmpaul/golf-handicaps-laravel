@@ -44,3 +44,18 @@ arch('demo seeders refuse to run in production')
 arch('the handicap computation is pure: no framework, no model')
     ->expect('App\Domain\Handicaps')->not->toUse(['Illuminate', 'App\Models'])
     ->ignoring(['App\Domain\Handicaps\Actions', 'App\Domain\Handicaps\Queries']);
+
+// Design D2: the matching of the SGT list and the links are pure, as Whs.
+// Mutation that turns this test red: `use Illuminate\Support\Str` in SgtCourseMatcher, called in a
+// method.
+arch('the matching on the Simulator Golf Tour list is pure: no framework, no model')
+    ->expect('App\Domain\Courses\Sgt')->not->toUse(['Illuminate', 'App\Models']);
+
+// Design D3: SgtClient reaches Simulator Golf Tour for the lookup job only.
+// Mutation that turns both tests red: `use App\Integrations\Sgt\SgtClient` in an Action of
+// App\Domain, called in a method.
+arch('the domain layer does not reach Simulator Golf Tour')
+    ->expect('App\Domain')->not->toUse('App\Integrations\Sgt');
+
+arch('only the jobs use the Simulator Golf Tour integration')
+    ->expect('App\Integrations\Sgt')->toOnlyBeUsedIn(['App\Jobs', 'App\Integrations\Sgt']);
