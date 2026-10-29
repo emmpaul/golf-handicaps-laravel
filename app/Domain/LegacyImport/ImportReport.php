@@ -36,6 +36,13 @@ final class ImportReport
     /** Rows of course_ratings still looked up, requeued after the commit (design D12). */
     public int $ratingLookups = 0;
 
+    /**
+     * What failed after the commit, the import itself kept (design D3, step 4): « échec de … ».
+     *
+     * @var list<string>
+     */
+    public array $afterCommitFailures = [];
+
     public function __construct(public readonly bool $dryRun = false) {}
 
     /**
@@ -67,7 +74,23 @@ final class ImportReport
             "Corrections abandonnées : {$this->correctionsDropped}",
             ($this->dryRun ? 'Recherches de rating à remettre en file : ' : 'Recherches de rating remises en file : ').$this->ratingLookups,
             "Jobs Next ignorés : {$this->jobsIgnored}",
-            $this->dryRun ? 'Essai à blanc : import annulé, rien n\'a été écrit.' : 'Import terminé.',
+            ...$this->ending(),
         ];
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function ending(): array
+    {
+        if ($this->dryRun) {
+            return ['Essai à blanc : import annulé, rien n\'a été écrit.'];
+        }
+
+        if ($this->afterCommitFailures === []) {
+            return ['Import terminé.'];
+        }
+
+        return array_map(fn (string $failure): string => "Import terminé ; échec {$failure}", $this->afterCommitFailures);
     }
 }

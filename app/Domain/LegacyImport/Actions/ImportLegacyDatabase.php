@@ -19,6 +19,8 @@ use App\Domain\LegacyImport\StatsComparison;
 use App\Domain\LegacyImport\TargetTables;
 use App\Jobs\LookUpCourseRating;
 use Carbon\CarbonImmutable;
+use Closure;
+use Exception;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -100,10 +102,10 @@ final class ImportLegacyDatabase
 
                 // player_round_stats is not copied: the history is replayed by the computation
                 // of the port (design D7, D11).
-                $this->recomputePlayerStats->handle(DB::table('round_players')->distinct()->pluck('player_id')->all());
+                self::step('du recalcul des statistiques', fn () => $this->recomputePlayerStats->handle(DB::table('round_players')->distinct()->pluck('player_id')->all()));
                 $this->report->statsCompared = StatsComparison::compare($this->legacy, $this->ids);
                 $this->report->ratingLookups = count($this->pendingLookups);
-                $this->countRows();
+                self::step('du comptage des lignes', $this->countRows(...));
 
                 if ($dryRun) {
                     throw new DryRunCancelled;
@@ -117,12 +119,55 @@ final class ImportLegacyDatabase
             throw $exception;
         }
 
-        Storage::disk(LegacyPhotos::DISK)->delete(array_values(array_diff($emptiedPhotos, $this->photos->destinations())));
-        foreach ($this->pendingLookups as $courseRatingId) {
-            LookUpCourseRating::dispatch($courseRatingId);
-        }
+        $this->deleteEmptiedPhotos(array_values(array_diff($emptiedPhotos, $this->photos->destinations())));
+        $this->requeueLookups();
 
         return $this->report;
+    }
+
+    /**
+     * Deletes the photos of the rows emptied by --force, once the import is committed: a photo
+     * that stays is told in the report, the import kept, nothing logged (design D3, D13).
+     *
+     * @param  list<string>  $paths
+     */
+    private function deleteEmptiedPhotos(array $paths): void
+    {
+        $disk = Storage::disk(LegacyPhotos::DISK);
+        $kept = array_values(array_filter($paths, function (string $path) use ($disk): bool {
+            try {
+                return ! $disk->delete($path);
+            } catch (Exception) {
+                return true;
+            }
+        }));
+
+        if ($kept !== []) {
+            $this->report->afterCommitFailures[] = 'de l\'effacement de '.count($kept).(count($kept) > 1 ? ' photos' : ' photo').' des lignes vidées : '.implode(', ', $kept);
+        }
+    }
+
+    /**
+     * Queues again the lookups still pending in Next, once the import is committed. A lookup
+     * that cannot be queued is told in the report: golf:queue-rating-lookups only queues the
+     * pairs without a row, so the operator relaunches it from the courses page.
+     */
+    private function requeueLookups(): void
+    {
+        $failed = 0;
+        foreach ($this->pendingLookups as $courseRatingId) {
+            try {
+                LookUpCourseRating::dispatch($courseRatingId);
+            } catch (Exception) {
+                $failed++;
+            }
+        }
+
+        if ($failed > 0) {
+            $this->report->afterCommitFailures[] = $failed > 1
+                ? "de la mise en file de {$failed} recherches de rating : les relancer depuis la page Parcours (« Relancer la recherche »)."
+                : 'de la mise en file de 1 recherche de rating : la relancer depuis la page Parcours (« Relancer la recherche »).';
+        }
     }
 
     /**
@@ -135,6 +180,31 @@ final class ImportLegacyDatabase
             $this->report->tables[$table] = [$this->legacy->connection()->table($table)->count(), DB::table($table)->count()];
         }
         $this->report->jobsIgnored = $this->legacy->connection()->table('jobs')->count();
+    }
+
+    /**
+     * Runs a step of the transaction that is not the insertion of a row: a database error names
+     * the step (« Échec du recalcul des statistiques : … »), without being reported to the log.
+     *
+     * @throws LegacyImportFailed
+     */
+    private static function step(string $name, Closure $step): void
+    {
+        try {
+            $step();
+        } catch (QueryException $exception) {
+            throw new LegacyImportFailed("Échec {$name} : ".self::databaseMessage($exception));
+        }
+    }
+
+    /**
+     * The first line of the message of PostgreSQL, without its context.
+     */
+    private static function databaseMessage(QueryException $exception): string
+    {
+        $message = $exception->errorInfo[2] ?? $exception->getMessage();
+
+        return trim(strtok((string) $message, "\n") ?: '');
     }
 
     /**
