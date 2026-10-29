@@ -2,7 +2,7 @@
 
 ## Statut
 
-Acceptée, 2026-10-29 (changement OpenSpec `sqlite-import-command`).
+Acceptée, 2026-10-29 (changement OpenSpec `sqlite-import-command`). Modifiée le 2026-10-29 par le changement `parallel-run-cutover` : le cutover n'est plus une bascule franche après une répétition sur le staging, mais une mise en route en parallèle sur `golf2.emmanuelpaul.com`, Next restant en production, puis un déménagement sur le domaine principal. La commande et ses décisions ne changent pas.
 
 ## Contexte
 
@@ -34,5 +34,6 @@ Le groupe joue sur l'application Next.js depuis des mois : joueurs, alias, round
 - Un écart de calcul entre le port et Next bloque le cutover jusqu'à sa correction, dans le port ou dans Next ; il n'est jamais toléré.
 - Les dates de Next perdent leurs millisecondes ; l'ordre de création, lui, est gardé par les UUID.
 - La base de production a déjà les joueurs initiaux de `migrate` : le cutover passe par `--force`, en interactif (`docs/deployment.md`, « Bascule depuis Next »).
+- La commande sert plusieurs fois, sur la même stack : pendant la phase parallèle sur `golf2.emmanuelpaul.com`, chaque réimport d'une copie fraîche vide la base Laravel par `--force`, puis une dernière fois au déménagement. Rien n'est saisi sur `golf2` entre deux imports (`parallel-run-cutover`).
 - `pdo_sqlite` doit rester dans l'image de production tant que la commande existe.
 - La commande et son domaine se retirent avec l'archivage du dépôt Next, par un changement OpenSpec.
