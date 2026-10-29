@@ -19,31 +19,18 @@ use App\Domain\AiUsage\AiBudget;
 use App\Models\AiUsage;
 use Carbon\CarbonImmutable;
 
-test('a call is allowed while the month total plus its maximal cost fits the ceiling', function (int $spent, bool $allowed) {
+// Without a maximal cost, a call keeps that of a photo (52 000); a reading of an SGT scorecard
+// gives its own (19 000).
+test('a call is allowed while the month total plus its maximal cost fits the ceiling', function (int $spent, ?int $maxCallCost, bool $allowed) {
     AiUsage::factory()->inMonth('2026-10')->create(['cost_micro_usd' => $spent]);
 
-    expect(app(AiBudget::class)->canSpend(CarbonImmutable::parse('2026-10-20 15:00:00', 'UTC')))->toBe($allowed);
+    expect(app(AiBudget::class)->canSpend(CarbonImmutable::parse('2026-10-20 15:00:00', 'UTC'), $maxCallCost))->toBe($allowed);
 })->with([
-    'ceiling reached' => [4950000, false],
-    'ceiling just held' => [4948000, true],
-]);
-
-test('a reading of an SGT scorecard is allowed while the month total plus its own maximal cost fits the ceiling', function (int $spent, bool $allowed) {
-    AiUsage::factory()->inMonth('2026-10')->create(['cost_micro_usd' => $spent]);
-
-    expect(app(AiBudget::class)->canSpend(CarbonImmutable::parse('2026-10-20 15:00:00', 'UTC'), 19000))->toBe($allowed);
-})->with([
-    'ceiling reached' => [4990000, false],
-    'ceiling just held' => [4981000, true],
-]);
-
-test('without a maximal cost, a call keeps that of a photo', function (int $spent, bool $allowed) {
-    AiUsage::factory()->inMonth('2026-10')->create(['cost_micro_usd' => $spent]);
-
-    expect(app(AiBudget::class)->canSpend(CarbonImmutable::parse('2026-10-20 15:00:00', 'UTC')))->toBe($allowed);
-})->with([
-    'ceiling reached' => [4949000, false],
-    'ceiling just held' => [4948000, true],
+    'photo, ceiling reached' => [4950000, null, false],
+    'photo, ceiling passed by 1 000' => [4949000, null, false],
+    'photo, ceiling just held' => [4948000, null, true],
+    'SGT scorecard, ceiling reached' => [4990000, 19000, false],
+    'SGT scorecard, ceiling just held' => [4981000, 19000, true],
 ]);
 
 test('a new month starts from zero', function () {
