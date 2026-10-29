@@ -1,17 +1,18 @@
 import { Head, Link } from '@inertiajs/react';
-import { edit } from '@/actions/App/Http/Controllers/RoundController';
+import { index as coursesIndex } from '@/actions/App/Http/Controllers/CourseController';
+import {
+    edit,
+    index as roundsIndex,
+} from '@/actions/App/Http/Controllers/RoundController';
 import RoundPhotoController from '@/actions/App/Http/Controllers/RoundPhotoController';
-import { RatingLink } from '@/components/courses/rating-link';
 import { ComputationHelp } from '@/components/handicaps/computation-help';
-import { PageTitle } from '@/components/page-title';
+import { PageTopRow } from '@/components/page-top-row';
 import { DeleteRound } from '@/components/rounds/delete-round';
 import { NetLeaderboard } from '@/components/rounds/net-leaderboard';
 import type { LeaderboardEntry } from '@/components/rounds/net-leaderboard';
 import { RoundScorecard } from '@/components/rounds/round-scorecard';
 import type { SavedCard } from '@/components/rounds/round-scorecard';
-import { buttonVariants } from '@/components/ui/button';
-import { formatPlayedOn } from '@/lib/format';
-import { cn } from '@/lib/utils';
+import { formatDottedPlayedOn, formatTenths } from '@/lib/format';
 
 export type RoundDetail = {
     id: string;
@@ -27,9 +28,11 @@ export type RoundDetail = {
 };
 
 /**
- * Page d'un round (spec `rounds`) : en-tête, rating utilisée, explication du
- * calcul, classement net, photo s'il en a une, carte de score, puis
- * « Modifier » et « Supprimer ».
+ * Page d'un round (spec `rounds`, « Mise en page de la page d'un round ») :
+ * rangée du haut (retour « Rounds », « Modifier », « Supprimer »), nom du
+ * parcours, méta « RED · 17.10.2026 · PAR 71 · 71,4 / 144 » dont la rating
+ * mène à la page Parcours, classement net, carte de score et légende, puis la
+ * photo et « Comment l’index est calculé », que le design ne dessine pas.
  */
 export default function RoundsShow({ round }: { round: RoundDetail }) {
     const photo = RoundPhotoController.url(round.id);
@@ -37,76 +40,62 @@ export default function RoundsShow({ round }: { round: RoundDetail }) {
     return (
         <>
             <Head title="Round" />
-            <div className="flex flex-col gap-2">
-                <PageTitle>{round.courseName}</PageTitle>
-                {/* Tees, date et par en trois éléments, sans points médians (spec `rounds`, « En-tête d'un round »). */}
-                <p
-                    data-testid="round-summary"
-                    className="flex flex-wrap gap-x-4 gap-y-1 text-muted-foreground"
-                >
-                    <span>Tees {round.tees}</span>
-                    <time dateTime={round.playedOn}>
-                        {formatPlayedOn(round.playedOn)}
-                    </time>
-                    <span>Par {round.par}</span>
-                </p>
-                {/* Rating des différentiels et du classement net, lien vers la page Parcours (spec `rounds`) ;
-                    rating et slope en deux éléments, sans point médian (DESIGN.md, règles d'écran). */}
-                <RatingLink
-                    rating={round.rating.rated ? round.rating : null}
-                    par={round.par}
-                    testId="round-rating"
-                />
-                <ComputationHelp />
-            </div>
-            {/* Une colonne sous 1 024 px : classement, carte de score, photo, actions. À partir de
-                1 024 px, la photo se pose à côté du classement et la carte prend toute la largeur. */}
-            <div
-                className={cn(
-                    'grid grid-cols-1 gap-6 lg:items-start',
-                    round.hasPhoto &&
-                        'lg:grid-cols-[minmax(0,42rem)_minmax(0,1fr)]',
-                )}
-            >
-                {/* Largeur bornée : à 1 440 px, cinq colonnes étirées sur 1 248 px se lisent mal. */}
-                <section
-                    aria-labelledby="leaderboard-title"
-                    className="flex max-w-2xl min-w-0 flex-col gap-2"
-                >
-                    <h2
-                        id="leaderboard-title"
-                        className="font-heading text-xl font-extrabold"
-                    >
-                        Classement net
-                    </h2>
-                    <NetLeaderboard entries={round.leaderboard} />
-                </section>
-                {round.hasPhoto ? (
-                    <a
-                        href={photo}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="block max-lg:order-1"
-                    >
-                        <img
-                            src={photo}
-                            alt="Carte du round"
-                            className="w-full border object-contain lg:max-h-96"
+            <PageTopRow
+                back={{ href: roundsIndex.url(), label: 'Rounds' }}
+                actions={
+                    <div className="-mr-2 flex">
+                        <Link
+                            href={edit(round.id)}
+                            className="flex min-h-11 items-center px-2 text-link"
+                        >
+                            Modifier
+                        </Link>
+                        <DeleteRound
+                            roundId={round.id}
+                            courseName={round.courseName}
+                            playedOn={round.playedOn}
                         />
-                    </a>
-                ) : null}
-                <div className="min-w-0 lg:col-span-full">
-                    <RoundScorecard card={round.card} />
-                </div>
-                <div className="flex flex-wrap gap-2 border-t pt-4 max-lg:order-2 lg:col-span-full">
-                    <Link
-                        href={edit(round.id)}
-                        className={buttonVariants({ size: 'lg' })}
-                    >
-                        Modifier
-                    </Link>
-                    <DeleteRound roundId={round.id} />
-                </div>
+                    </div>
+                }
+            />
+            <h1 className="text-title">{round.courseName}</h1>
+            <p
+                data-testid="round-meta"
+                className="mt-2 font-mono text-meta-round text-ink-2"
+            >
+                {round.tees.toLocaleUpperCase('fr')} ·{' '}
+                <time dateTime={round.playedOn}>
+                    {formatDottedPlayedOn(round.playedOn)}
+                </time>{' '}
+                · PAR {round.par} ·{' '}
+                <Link href={coursesIndex()} className="underline">
+                    {round.rating.rated
+                        ? `${formatTenths(round.rating.ratingT)} / ${round.rating.slope}`
+                        : 'SANS RATING'}
+                </Link>
+            </p>
+            <div className="mt-[30px]">
+                <NetLeaderboard entries={round.leaderboard} />
+            </div>
+            <div className="mt-11">
+                <RoundScorecard card={round.card} />
+            </div>
+            {round.hasPhoto ? (
+                <a
+                    href={photo}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="mt-6 block"
+                >
+                    <img
+                        src={photo}
+                        alt="Carte du round"
+                        className="aspect-[16/10] w-full rounded-12 bg-surface-2 object-cover"
+                    />
+                </a>
+            ) : null}
+            <div className="mt-6">
+                <ComputationHelp />
             </div>
         </>
     );

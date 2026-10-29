@@ -166,7 +166,7 @@ describe('with a session', function () {
             ],
             'fromReading' => true,
             'readByAi' => true,
-        ])->and($response->inertiaProps('players'))->toBe([['id' => $gab->id, 'name' => 'Gab']])
+        ])->and($response->inertiaProps('players'))->toBe([['id' => $gab->id, 'name' => 'Gab', 'colorSlot' => 0]])
             ->and($response->inertiaProps('courses'))->toBe([]);
     });
 

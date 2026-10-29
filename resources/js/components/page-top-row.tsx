@@ -8,16 +8,19 @@ import { home } from '@/routes';
  * Rangée du haut de chaque page (spec app-shell, D3, D5), 44 px de haut, qui
  * défile avec la page. Page de section : « Golf » à gauche, lien vers
  * l'accueil sauf sur l'accueil. Sous-page : le lien de retour `back` (chevron
- * de 18 px, libellé gris). Les actions sont à droite. Le haut suit le design
- * au-dessus de la zone sûre : 44 px pour une rangée à lien de retour ou à
- * actions, 54 px pour « Golf » seul.
+ * de 18 px, libellé gris). Les actions sont à droite ; `meta`, une valeur qui
+ * n'est pas une action (« 8 ROUNDS »), s'y place en Geist Mono 11 px gris. Le
+ * haut suit le design au-dessus de la zone sûre : 44 px pour une rangée à lien
+ * de retour ou à actions, 54 px pour « Golf » seul ou suivi de `meta`.
  */
 export function PageTopRow({
     back,
     actions,
+    meta,
 }: {
     back?: { href: string; label: string };
     actions?: ReactNode;
+    meta?: ReactNode;
 }) {
     const { url } = usePage();
     const onHome = url.split(/[?#]/, 1)[0] === home.url();
@@ -53,6 +56,11 @@ export function PageTopRow({
             )}
             {actions && (
                 <div className="flex items-center gap-4">{actions}</div>
+            )}
+            {meta !== undefined && !actions && (
+                <span className="font-mono text-section tracking-normal text-ink-2">
+                    {meta}
+                </span>
             )}
         </div>
     );

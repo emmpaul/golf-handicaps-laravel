@@ -36,6 +36,42 @@ export function formatPlayedOn(playedOn: string): string {
     return playedOnFormat.format(isoToLocalDate(playedOn));
 }
 
+/**
+ * The month abbreviations of the design (« JANV » … « DÉC »), without the point
+ * of `Intl` (« oct. »), January first.
+ */
+const MONTHS = [
+    'JANV',
+    'FÉVR',
+    'MARS',
+    'AVR',
+    'MAI',
+    'JUIN',
+    'JUIL',
+    'AOÛT',
+    'SEPT',
+    'OCT',
+    'NOV',
+    'DÉC',
+] as const;
+
+/** Date of play `2026-10-17` to its day « 17 » and month « OCT » (page Rounds). */
+export function playedOnParts(playedOn: string): {
+    day: string;
+    month: string;
+} {
+    const [, month, day] = playedOn.split('-').map(Number);
+
+    return { day: String(day), month: MONTHS[month - 1] };
+}
+
+/** Date of play `2026-10-17` to « 17.10.2026 » (meta of a round). */
+export function formatDottedPlayedOn(playedOn: string): string {
+    const [year, month, day] = playedOn.split('-');
+
+    return `${day}.${month}.${year}`;
+}
+
 /** Date of play `2026-10-17` to « 17 oct. 2026 », a civil day as `formatPlayedOn`. */
 export function formatShortPlayedOn(playedOn: string): string {
     return shortPlayedOnFormat.format(isoToLocalDate(playedOn));

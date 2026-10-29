@@ -1,139 +1,145 @@
 import { Head, Link } from '@inertiajs/react';
 import { index as coursesIndex } from '@/actions/App/Http/Controllers/CourseController';
 import { create, show } from '@/actions/App/Http/Controllers/RoundController';
-import { PageTitle } from '@/components/page-title';
-import { formatPlayedOn, NO_VALUE } from '@/lib/format';
-import { ACTION_LINK, cn } from '@/lib/utils';
+import { PageTopRow } from '@/components/page-top-row';
+import { PlayerSwatch } from '@/components/player-swatch';
+import { formatPlayedOn, NO_VALUE, playedOnParts } from '@/lib/format';
 
 export type RoundListItem = {
     id: string;
     playedOn: string;
     courseName: string;
     tees: string;
-    players: { name: string; gross: number }[];
+    /** Bruts dans l'ordre de la carte, avec le rang de couleur du joueur (D6). */
+    players: { name: string; gross: number; colorSlot: number }[];
     /** Joueurs classés premiers en net, ex æquo compris ; vide si personne n'avait d'index. */
     netWinners: string[];
 };
 
-/**
- * Colonnes du registre à partir de 768 px : date, parcours, tees, bruts,
- * gagnant net. Sous 768 px, deux lignes par round (parcours, tees et date ;
- * bruts et gagnant), sans colonne masquée.
- */
-const REGISTER_COLUMNS =
-    'md:grid-cols-[9rem_minmax(0,1.3fr)_6rem_minmax(0,1.7fr)_minmax(0,1fr)] md:items-baseline md:gap-x-4';
+/** Lien de la rangée du titre : Geist 500, 14 px, bas aligné sur le titre, 44 px de toucher. */
+const TITLE_LINK = 'flex min-h-11 items-end pb-1 text-link';
 
 /**
- * Rounds du plus récent au plus ancien, avec les bruts dans l'ordre de la
- * carte et le ou les gagnants nets (spec `rounds`, « Liste des rounds »), en
- * registre. L'ordre vient du serveur (RoundList).
+ * Rounds du plus récent au plus ancien (l'ordre vient du serveur, RoundList),
+ * avec les bruts dans l'ordre de la carte et le ou les gagnants nets (spec
+ * `rounds`, « Liste des rounds », « Mise en page de la page Rounds ») : une
+ * ligne par round en trois colonnes, date, parcours et bruts, « 1ER NET ».
  */
 export default function RoundsIndex({ rounds }: { rounds: RoundListItem[] }) {
     return (
         <>
             <Head title="Rounds" />
-            <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-                <PageTitle>Rounds</PageTitle>
-                <div className="flex flex-wrap gap-x-4">
-                    <Link
-                        href={coursesIndex()}
-                        className={cn(ACTION_LINK, 'text-sm')}
-                    >
+            <PageTopRow
+                meta={`${rounds.length} ${rounds.length > 1 ? 'ROUNDS' : 'ROUND'}`}
+            />
+            <div className="flex items-end justify-between gap-3">
+                <h1 className="text-title">Rounds</h1>
+                <div className="flex gap-4">
+                    <Link href={coursesIndex()} className={TITLE_LINK}>
                         Parcours
                     </Link>
-                    <Link
-                        href={create()}
-                        className={cn(ACTION_LINK, 'text-sm')}
-                    >
+                    <Link href={create()} className={TITLE_LINK}>
                         Saisie manuelle
                     </Link>
                 </div>
             </div>
+            <div className="mt-3 border-t border-rule" />
             {rounds.length === 0 ? (
-                <p className="border-t-2 border-foreground pt-3 text-muted-foreground">
-                    Aucun round enregistré.
+                <p className="my-10 text-body text-ink-2">
+                    Aucun round. Importez une carte pour commencer.
                 </p>
             ) : (
-                <div>
-                    <div
-                        aria-hidden
-                        className={cn(
-                            'bg-band text-sm text-band-ink hidden px-2 py-1.5 font-medium md:grid',
-                            REGISTER_COLUMNS,
-                        )}
-                    >
-                        <span>Date</span>
-                        <span>Parcours</span>
-                        <span>Tees</span>
-                        <span>Bruts</span>
-                        <span>Gagnant net</span>
-                    </div>
-                    <ul
-                        aria-label="Rounds"
-                        className="max-md:border-t-2 max-md:border-foreground"
-                    >
-                        {rounds.map((round) => (
-                            <li key={round.id} className="border-b">
+                <ul aria-label="Rounds">
+                    {rounds.map((round) => {
+                        const { day, month } = playedOnParts(round.playedOn);
+
+                        return (
+                            <li
+                                key={round.id}
+                                className="border-b border-rule-soft"
+                            >
                                 <Link
                                     href={show(round.id)}
-                                    className={cn(
-                                        'grid grid-cols-[minmax(0,1fr)_auto] gap-x-3 gap-y-1 px-2 py-2.5 transition-[background-color] duration-(--dur-micro) ease-out hover:bg-muted focus-visible:-outline-offset-2',
-                                        REGISTER_COLUMNS,
-                                    )}
+                                    className="grid grid-cols-[44px_minmax(0,1fr)_auto] items-center gap-3.5 py-4 transition-opacity duration-(--dur-press) active:opacity-60"
                                 >
+                                    {/* « 17 » sur « OCT » à l'œil ; la date complète pour les lecteurs d'écran. */}
                                     <time
                                         dateTime={round.playedOn}
-                                        className="text-sm md:font-heading md:text-base col-start-2 row-start-1 text-right text-muted-foreground tabular-nums md:col-start-1 md:text-left md:font-semibold md:text-foreground"
+                                        className="flex flex-col gap-1 font-mono"
                                     >
-                                        {formatPlayedOn(round.playedOn)}
+                                        <span
+                                            aria-hidden="true"
+                                            className="text-num-l"
+                                        >
+                                            {day}
+                                        </span>
+                                        <span
+                                            aria-hidden="true"
+                                            data-slot="round-month"
+                                            className="text-caption text-ink-2"
+                                        >
+                                            {month}
+                                        </span>
+                                        <span className="sr-only">
+                                            {formatPlayedOn(round.playedOn)}
+                                        </span>
                                     </time>
-                                    <span className="col-start-1 row-start-1 flex min-w-0 flex-wrap items-baseline gap-x-2 md:col-span-2 md:col-start-2 md:grid md:grid-cols-subgrid">
-                                        <span className="font-heading text-lg min-w-0 leading-tight font-bold [overflow-wrap:anywhere]">
-                                            {round.courseName}
-                                        </span>
-                                        <span className="text-sm md:text-base text-muted-foreground md:text-foreground">
-                                            <span className="md:hidden">
-                                                Tees{' '}
+                                    <span className="flex min-w-0 flex-col gap-[7px]">
+                                        <span className="text-label leading-[1.2]">
+                                            {round.courseName}{' '}
+                                            <span className="font-normal text-ink-2">
+                                                · {round.tees}
                                             </span>
-                                            <span>{round.tees}</span>
+                                        </span>
+                                        <span className="flex flex-wrap gap-x-3 gap-y-1 font-mono text-meta-12 text-ink-2">
+                                            {round.players.map(
+                                                ({
+                                                    name,
+                                                    gross,
+                                                    colorSlot,
+                                                }) => (
+                                                    <span
+                                                        key={name}
+                                                        data-testid="round-gross"
+                                                        className="flex items-center gap-[5px]"
+                                                    >
+                                                        <PlayerSwatch
+                                                            colorSlot={
+                                                                colorSlot
+                                                            }
+                                                            size={6}
+                                                        />
+                                                        {name} {gross}
+                                                    </span>
+                                                ),
+                                            )}
                                         </span>
                                     </span>
-                                    <span className="text-sm md:text-base col-start-1 row-start-2 flex flex-wrap gap-x-3 md:col-start-4 md:row-start-1">
-                                        {round.players.map(
-                                            ({ name, gross }) => (
-                                                <span
-                                                    key={name}
-                                                    data-testid="round-gross"
-                                                >
-                                                    {name}{' '}
-                                                    <span className="font-heading font-bold tabular-nums">
-                                                        {gross}
-                                                    </span>
-                                                </span>
-                                            ),
-                                        )}
-                                    </span>
-                                    <span
-                                        data-testid="round-winner"
-                                        className="text-sm col-start-2 row-start-2 text-right text-muted-foreground md:col-start-5 md:row-start-1 md:text-left"
-                                    >
-                                        {/* Sous l'en-tête « Gagnant net » à partir de 768 px : le libellé reste pour les lecteurs d'écran. */}
-                                        <span className="md:sr-only">
-                                            Gagnant net :{' '}
+                                    <span className="flex flex-col items-end gap-[5px]">
+                                        <span className="font-mono text-caption text-ink-2">
+                                            1ER NET
                                         </span>
                                         {round.netWinners.length > 0 ? (
-                                            <span className="font-medium text-signal">
+                                            <span
+                                                data-testid="round-winner"
+                                                className="text-label-14 whitespace-nowrap text-accent"
+                                            >
                                                 {round.netWinners.join(', ')}
                                             </span>
                                         ) : (
-                                            NO_VALUE
+                                            <span
+                                                data-testid="round-winner"
+                                                className="text-label-14 text-ink-2"
+                                            >
+                                                {NO_VALUE}
+                                            </span>
                                         )}
                                     </span>
                                 </Link>
                             </li>
-                        ))}
-                    </ul>
-                </div>
+                        );
+                    })}
+                </ul>
             )}
         </>
     );

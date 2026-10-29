@@ -83,14 +83,7 @@ describe('with a session', function () {
                     ['id' => $this->manu->id, 'name' => 'Manu', 'indexT' => 170, 'provisional' => true, 'deltaT' => 0],
                     ['id' => $this->sean->id, 'name' => 'Sean', 'indexT' => null, 'provisional' => false, 'deltaT' => null],
                 ])
-                ->where('latestRound', [
-                    'id' => $reference->id,
-                    'playedOn' => '2026-10-17',
-                    'courseName' => 'BETHPAGE BLACK',
-                    'tees' => 'Red',
-                    'players' => [['name' => 'Gab', 'gross' => 72], ['name' => 'Manu', 'gross' => 88]],
-                    'netWinners' => ['Gab', 'Manu'],
-                ])
+                ->where('latestRound', referenceRoundListed($reference->id))
                 ->where('pendingImports', ['count' => 1, 'latestId' => $import->id]));
     });
 

@@ -116,6 +116,24 @@ function referenceCardOn(string $playedOn, array $lines): array
 }
 
 /**
+ * The reference round as RoundList lists it, Gab (slot 0) and Manu (slot 1) tied first in net
+ * after a round of each: a hand-written literal of the spec rounds « Liste des rounds ».
+ *
+ * @return array{id: string, playedOn: string, courseName: string, tees: string, players: list<array{name: string, gross: int, colorSlot: int}>, netWinners: list<string>}
+ */
+function referenceRoundListed(string $roundId): array
+{
+    return [
+        'id' => $roundId,
+        'playedOn' => '2026-10-17',
+        'courseName' => 'BETHPAGE BLACK',
+        'tees' => 'Red',
+        'players' => [['name' => 'Gab', 'gross' => 72, 'colorSlot' => 0], ['name' => 'Manu', 'gross' => 88, 'colorSlot' => 1]],
+        'netWinners' => ['Gab', 'Manu'],
+    ];
+}
+
+/**
  * Saves a card through CreateRound, which recomputes the history of its players.
  *
  * @param  array<string, mixed>  $card  keyed as the editor sends it

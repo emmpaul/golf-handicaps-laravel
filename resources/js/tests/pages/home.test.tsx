@@ -34,8 +34,8 @@ const latestRound = {
     courseName: 'BETHPAGE BLACK',
     tees: 'Red',
     players: [
-        { name: 'Gab', gross: 72 },
-        { name: 'Manu', gross: 88 },
+        { name: 'Gab', gross: 72, colorSlot: 0 },
+        { name: 'Manu', gross: 88, colorSlot: 1 },
     ],
     netWinners: ['Gab'],
 };
