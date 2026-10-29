@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Domain\Imports\Actions\CreateImport;
+use App\Domain\Imports\Actions\DeleteImport;
 use App\Domain\Imports\AiReading;
 use App\Domain\Imports\ImportEditorState;
 use App\Domain\Imports\Queries\ImportList;
@@ -64,5 +65,15 @@ class ImportController extends Controller
             'players' => $players->get(),
             'courses' => $courses->get(),
         ]);
+    }
+
+    /**
+     * Delete an import that is neither being read nor saved, and its photo.
+     */
+    public function destroy(Import $import, DeleteImport $deleteImport): RedirectResponse
+    {
+        $deleteImport->handle($import);
+
+        return to_route('import.index');
     }
 }
