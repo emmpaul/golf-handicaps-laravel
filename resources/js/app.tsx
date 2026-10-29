@@ -7,9 +7,9 @@ void createInertiaApp({
     title: (title) => (title ? `${title} - ${appName}` : appName),
     // Every page sits in the shell unless it declares its own layout.
     layout: () => AppLayout,
-    // The progress bar cannot read CSS variables: --color-ink of the light
-    // palette, the single hard-coded colour outside tokens.css (design D6).
+    // The progress bar cannot read CSS variables: --color-ink of the dark
+    // theme, the single hard-coded colour outside tokens.css (DO16).
     progress: {
-        color: '#0F1D3E',
+        color: '#F4F5F7',
     },
 });
