@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\CourseController;
 use App\Http\Controllers\CourseRatingController;
+use App\Http\Controllers\ImportController;
 use App\Http\Controllers\LoginController;
 use App\Http\Controllers\PlayerAliasController;
 use App\Http\Controllers\PlayerController;
@@ -31,6 +32,9 @@ Route::inertia('/handicaps/{path?}', 'section-placeholder', ['section' => 'Handi
 Route::inertia('/strokes/{path?}', 'section-placeholder', ['section' => 'Coups'])
     ->where('path', '.*')
     ->name('strokes.index');
+
+// Imports (scorecard-ai-import, design D6).
+Route::post('/imports', [ImportController::class, 'store'])->name('imports.store');
 
 // Rounds (design D8): /rounds/new before /rounds/{round}; a {round} that is not a UUID, such as
 // /rounds/12, falls to the 404 below without any query.
