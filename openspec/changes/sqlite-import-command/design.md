@@ -207,6 +207,8 @@ Section « Bascule depuis Next » de `docs/deployment.md`, une étape à la fois
 6. Effacer les copies de la base et des photos dans le conteneur (`docker exec … rm`).
 7. Retour arrière dans les 30 jours : rebasculer le domaine, redémarrer les applications Next ; leur volume est intact.
 
+Corrections après revue (M2, M3, L1 à L3) : `NEXT_IMAGE` et `NEXT_VOLUME` sont relevés dans le bloc des variables, avec un `echo` de contrôle, parce que la répétition saute l'étape 2 et s'en sert à l'étape 3 (la commande de `NEXT_VOLUME` fermait aussi son format par un guillemet double au lieu d'un simple) ; la copie `VACUUM INTO` ouvre la base de Next en lecture seule (`{ readOnly: true }`) ; `docker cp -a` garde l'uid 1000 des copies, celui de l'utilisateur `app` de l'image Laravel, et l'effacement de `/tmp/next` passe par `docker exec -u root` : sans `-a`, `docker cp` donne les fichiers à un autre propriétaire et `rm -rf` échoue (`Permission denied`, vu en local) ; l'étape 6 dit quoi lire (`ls` qui échoue) ; une sous-section « Reprendre après un arrêt » efface `$COPY/app.db`, `$COPY/uploads` et `/tmp/next` avant de repartir de l'étape 2 (de l'étape 3 pour une répétition), parce que `VACUUM INTO` refuse un fichier existant et que `cp -a` copierait dans `uploads/uploads` ; la question de `--force` n'est plus citée en texte figé : elle doit nommer les tables des joueurs initiaux, ou celles d'une répétition précédente sur le staging, et rien d'autre. Ces commandes ont tourné en local le 2026-10-29 sur une base de test en WAL, avec l'image `node:24.22.0-trixie-slim` de Next (SQLite 3.53.4 : copie à l'en-tête 1, hors WAL) et l'image Laravel.
+
 `docs/PORT_TO_LARAVEL.md` est corrigé sur les écarts 1, 5 et 6.
 
 ### D15. Fixture des tests

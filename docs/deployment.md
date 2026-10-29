@@ -392,7 +392,7 @@ Les recherches perdues repartent au redéploiement suivant de la nouvelle versio
 
 La bascule remplace l'application Next par cette stack, sur le même domaine. `golf:import-sqlite` copie la base SQLite de Next et ses photos dans la base PostgreSQL et le volume `storage`, en une transaction. Elle recalcule l'historique d'index et le compare à celui de Next : un écart annule tout. Les décisions sont dans l'ADR 0014.
 
-Chaque étape est faite par le mainteneur, une à la fois : lancer la commande, lire la sortie comme indiqué, puis seulement passer à la suivante. Une sortie différente arrête la bascule. La commande d'import a tourné sur une copie locale de la base de production le 2026-10-29 (essai à blanc, puis import). Les commandes `docker` de cette section ont seulement été relues : l'étape 1 les essaie sur le staging.
+Chaque étape est faite par le mainteneur, une à la fois : lancer la commande, lire la sortie comme indiqué, puis seulement passer à la suivante. Une sortie différente arrête la bascule ; pour recommencer, suivre « Reprendre après un arrêt », en fin de section. La commande d'import a tourné sur une copie locale de la base de production le 2026-10-29 (essai à blanc, puis import). Le 2026-10-29, en local, sur une base de test en WAL : le relevé de `NEXT_IMAGE` et `NEXT_VOLUME` sur un conteneur arrêté, la copie `VACUUM INTO` en lecture seule avec l'image `node:24.22.0-trixie-slim` de Next (copie hors WAL), la copie des photos, `docker cp -a` et l'effacement de `/tmp/next` dans l'image Laravel ont tourné. Les autres commandes `docker` ont seulement été relues : l'étape 1 les essaie sur le staging.
 
 Variables, en plus de `P` et `URL` (voir « Lancer les commandes de cette page ») :
 
@@ -408,23 +408,23 @@ Les noms des conteneurs de Next changent à chaque déploiement. Les relever sur
 docker ps --format '{{.Names}}  {{.Image}}' | grep -i golf
 ```
 
+Relever ensuite l'image et le volume de Next, qui servent à l'étape 3 (répétition comprise). `docker inspect` lit aussi un conteneur arrêté :
+
+```sh
+NEXT_IMAGE="$(docker inspect --format '{{.Config.Image}}' "$NEXT_WEB")"
+NEXT_VOLUME="$(docker inspect --format '{{range .Mounts}}{{if eq .Destination "/data"}}{{.Name}}{{end}}{{end}}' "$NEXT_WEB")"
+echo "image=$NEXT_IMAGE volume=$NEXT_VOLUME"
+```
+
+La sortie nomme l'image de Next et un volume qui finit par `golf-data`. `image=` ou `volume=` vide : `NEXT_WEB` est faux.
+
 ### 1. Répétition sur le staging
 
 Mainteneur. Faire les étapes 3, 4 et 6 avec `P` et `URL` du staging, sans arrêter Next (étape 2) : `VACUUM INTO` lit une image cohérente d'une base en service. Puis comparer à l'œil le staging à Next : accueil, handicaps (index de chaque joueur), trois rounds avec leur photo, Parcours, Importer. Le staging met en file les recherches de rating importées : son worker appelle Simulator Golf Tour, et l'IA si `ANTHROPIC_API_KEY` y est réglée.
 
 ### 2. Arrêter Next
 
-Mainteneur, le jour J. Relever d'abord l'image et le volume de Next, qui servent à l'étape 3 :
-
-```sh
-NEXT_IMAGE="$(docker inspect --format '{{.Config.Image}}' "$NEXT_WEB")"
-NEXT_VOLUME="$(docker inspect --format '{{range .Mounts}}{{if eq .Destination "/data"}}{{.Name}}{{end}}{{end}}" "$NEXT_WEB")"
-echo "$NEXT_IMAGE $NEXT_VOLUME"
-```
-
-La sortie nomme l'image de Next et un volume qui finit par `golf-data`. Une sortie vide : `NEXT_WEB` est faux.
-
-Arrêter le web de Next dans Dokploy (Stop sur son application). Plus personne n'écrit ; le worker finit ce qui reste dans sa file. Lire la file jusqu'à ce qu'elle soit vide :
+Mainteneur, le jour J. `NEXT_IMAGE` et `NEXT_VOLUME` sont relevés (bloc des variables). Arrêter le web de Next dans Dokploy (Stop sur son application). Plus personne n'écrit ; le worker finit ce qui reste dans sa file. Lire la file jusqu'à ce qu'elle soit vide :
 
 ```sh
 docker exec "$NEXT_WORKER" node -e "const { DatabaseSync } = require('node:sqlite'); const db = new DatabaseSync('/data/app.db', { readOnly: true }); console.log(db.prepare(\"select status, count(*) n from jobs where status in ('queued', 'running') group by status\").all())"
@@ -434,13 +434,13 @@ Attendu : `[]`. Une lecture de photo dure au plus 2 minutes ; relancer la comman
 
 ### 3. Copier la base et les photos
 
-Mainteneur. La base Next est en WAL : copier `app.db` seul peut perdre les dernières écritures. `VACUUM INTO` écrit une copie complète, que la commande vérifie. Le conteneur jetable tourne sous l'utilisateur `node` (uid 1000) de l'image Next, qui doit pouvoir écrire dans `$COPY` :
+Mainteneur. La base Next est en WAL : copier `app.db` seul peut perdre les dernières écritures, et `golf:import-sqlite` refuse une base en WAL (« Base en WAL : copier par VACUUM INTO … »). `VACUUM INTO` écrit une copie complète, hors WAL, que la commande vérifie ; la base de Next est ouverte en lecture seule. `$COPY` ne doit contenir ni `app.db` ni `uploads` : `VACUUM INTO` refuse un fichier qui existe, et `cp` copierait les photos dans `uploads/uploads` (voir « Reprendre après un arrêt »). Le conteneur jetable tourne sous l'utilisateur `node` (uid 1000) de l'image Next, qui doit pouvoir écrire dans `$COPY` :
 
 ```sh
 install -d -o 1000 -g 1000 -m 700 "$COPY"
 docker run --rm -i -v "$NEXT_VOLUME:/data" -v "$COPY:/out" --entrypoint node "$NEXT_IMAGE" - <<'JS'
 const { DatabaseSync } = require('node:sqlite');
-const db = new DatabaseSync('/data/app.db');
+const db = new DatabaseSync('/data/app.db', { readOnly: true });
 db.exec("VACUUM INTO '/out/app.db'");
 db.close();
 const copy = new DatabaseSync('/out/app.db', { readOnly: true });
@@ -466,24 +466,24 @@ Mainteneur. Mettre la copie dans le conteneur `web` de la stack Laravel :
 
 ```sh
 docker exec "$P-web-1" mkdir -p /tmp/next
-docker cp "$COPY/app.db" "$P-web-1:/tmp/next/app.db"
-docker cp "$COPY/uploads" "$P-web-1:/tmp/next/uploads"
+docker cp -a "$COPY/app.db" "$P-web-1:/tmp/next/app.db"
+docker cp -a "$COPY/uploads" "$P-web-1:/tmp/next/uploads"
 ```
 
-Aucune sortie quand tout va bien (`docker cp` affiche seulement la taille copiée). Lancer l'essai à blanc. La base a déjà les joueurs de `INITIAL_PLAYERS`, créés par `migrate` : l'essai passe donc aussi `--force`, dans un terminal interactif (`docker exec -it`) :
+Aucune erreur quand tout va bien (`docker cp` affiche seulement la taille copiée). `-a` garde le propriétaire des fichiers, l'uid 1000 de l'image Next, qui est aussi celui de l'utilisateur `app` du conteneur Laravel : il lit les copies et peut les effacer. Lancer l'essai à blanc. La base a déjà les joueurs de `INITIAL_PLAYERS`, créés par `migrate` : l'essai passe donc aussi `--force`, dans un terminal interactif (`docker exec -it`) :
 
 ```sh
 docker exec -it "$P-web-1" php artisan golf:import-sqlite /tmp/next/app.db --uploads=/tmp/next/uploads --force --dry-run
 ```
 
-La commande demande « Vider players (3), player_aliases (3) avant l'import ? » : répondre `yes` (l'essai n'écrit rien). Lire le rapport :
+La commande demande « Vider … avant l'import ? » en nommant chaque table non vide avec son compte. En production, elle nomme seulement les tables des joueurs initiaux (`players (3), player_aliases (3)` avec `INITIAL_PLAYERS=Gab,Manu,Sean`) ; sur le staging, après une répétition, les tables remplies par l'import précédent. Répondre `yes` seulement si elle ne nomme rien d'autre (l'essai n'écrit rien) ; sinon répondre `no`, la commande sort sur « Import abandonné. », et chercher d'où viennent ces lignes. Lire le rapport :
 
 - chaque ligne du tableau a le même compte en `SQLite` et en `PostgreSQL`, et ces comptes sont ceux de l'étape 3 ;
 - « Statistiques identiques : N / N », N étant le compte de `player_round_stats` ;
 - « Photos lues : N », « Recherches de rating à remettre en file : N » ;
 - la dernière ligne est « Essai à blanc : import annulé, rien n'a été écrit. ».
 
-Une autre fin (« Statistiques différentes de la base SQLite : », « Photos manquantes : », « Ligne refusée : … ») arrête la bascule : rien n'a été écrit, la commande sort en 1. Redémarrer le web et le worker de Next dans Dokploy (Start), puis corriger la donnée dans Next avant de recommencer.
+Une autre fin (« Statistiques différentes de la base SQLite : », « Photos manquantes : », « Ligne refusée : … », « Échec du recalcul des statistiques : … », « Base en WAL : … ») arrête la bascule : rien n'a été écrit, la commande sort en 1. Redémarrer le web et le worker de Next dans Dokploy (Start), corriger la donnée dans Next, puis suivre « Reprendre après un arrêt ».
 
 Puis l'import réel, même commande sans `--dry-run` :
 
@@ -491,7 +491,7 @@ Puis l'import réel, même commande sans `--dry-run` :
 docker exec -it "$P-web-1" php artisan golf:import-sqlite /tmp/next/app.db --uploads=/tmp/next/uploads --force
 ```
 
-Répondre `yes` à « Vider players (3), player_aliases (3) avant l'import ? ». Le rapport est celui de l'essai, avec « Photos copiées : N » et « Recherches de rating remises en file : N », et finit par « Import terminé. ». Sans terminal (`--no-interaction`, ou `docker exec` sans `-it`), la réponse est non et la commande sort en 1 sur « Import abandonné. », sans rien écrire.
+La question nomme les mêmes tables et les mêmes comptes qu'à l'essai : répondre `yes` à cette condition seulement. Si une ligne a été écrite entre la question et l'import, la commande refuse (« Tables modifiées depuis la confirmation : … ») sans rien écrire. Le rapport est celui de l'essai, avec « Photos copiées : N » et « Recherches de rating remises en file : N », et finit par « Import terminé. ». Une dernière ligne « Import terminé ; échec de … » dit que l'import est fait, mais qu'une étape d'après n'a pas abouti : une recherche de rating à relancer depuis la page Parcours (« Relancer la recherche »), ou une ancienne photo restée sur le disque, nommée. Ne pas relancer l'import. Sans terminal (`--no-interaction`, ou `docker exec` sans `-it`), la réponse est non et la commande sort en 1 sur « Import abandonné. », sans rien écrire. Un Ctrl-C pendant l'import attend la fin de la transaction, puis arrête la commande.
 
 Le worker Laravel traite ensuite les recherches remises en file, dans les minutes qui suivent (« Déployer une version », étape 6).
 
@@ -510,17 +510,30 @@ Attendu : `200` et la `version` déployée. Ouvrir ensuite `/login`, entrer le c
 Mainteneur. La copie contient toutes les données du groupe :
 
 ```sh
-docker exec "$P-web-1" rm -rf /tmp/next
+docker exec -u root "$P-web-1" rm -rf /tmp/next
 rm -rf "$COPY"
+docker exec "$P-web-1" ls /tmp/next; ls "$COPY"
 ```
 
-Aucune sortie. Faire de même sur le staging après la répétition. Le conteneur `web` perd aussi `/tmp/next` à son prochain redéploiement : `/tmp` n'est pas sur un volume.
+Attendu : deux erreurs, `ls: cannot access '/tmp/next': No such file or directory` et la même pour `$COPY`. `-u root` efface aussi des fichiers que `docker cp` aurait copiés sans `-a`, sous un autre propriétaire. Faire de même sur le staging après la répétition. Le conteneur `web` perd aussi `/tmp/next` à son prochain redéploiement : `/tmp` n'est pas sur un volume.
 
 ### 7. Retour arrière
 
 Mainteneur, dans les 30 jours qui suivent la bascule. Dans Dokploy, retirer le domaine du service `web` Laravel et le relier de nouveau à l'application web de Next, puis redémarrer le web et le worker de Next (Start). Leur volume `golf-data` n'a pas bougé depuis l'étape 2 : Next repart sur la base d'avant la bascule. Ne rien toucher à la stack Laravel. Ce qui a été saisi dans Laravel depuis la bascule n'existe pas dans Next.
 
 Après 30 jours, supprimer les applications Next et leur volume dans Dokploy.
+
+### Reprendre après un arrêt
+
+Mainteneur, avant toute reprise après un arrêt de la bascule ou de la répétition. Effacer les copies d'une tentative précédente, sur l'hôte et dans le conteneur :
+
+```sh
+rm -rf "$COPY/app.db" "$COPY/uploads"
+docker exec -u root "$P-web-1" rm -rf /tmp/next
+ls -A "$COPY"; docker exec "$P-web-1" ls /tmp/next
+```
+
+Attendu : rien pour `ls -A "$COPY"` (ou `No such file or directory` si l'étape 6 l'a effacé : l'étape 3 le recrée), puis `ls: cannot access '/tmp/next': No such file or directory`. Repartir ensuite de l'étape 2, ou de l'étape 3 pour une répétition, qui n'arrête pas Next.
 
 ## Fermer toutes les sessions
 
