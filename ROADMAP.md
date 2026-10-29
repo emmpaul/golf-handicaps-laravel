@@ -82,7 +82,7 @@ Commande `golf:import-sqlite`, puis cutover, fait à la main par le mainteneur.
 
 ## 12. `reduce-mobile-padding`
 
-**Dépend de** : 11. **Statut** : en cours.
+**Dépend de** : 11. **Statut** : fait. Le changement est archivé ; reste au mainteneur, après le déploiement, la vérification sur un vrai iPhone des scénarios « en application d'écran d'accueil » (rangée du haut à 59 px, sans preuve automatique).
 
 Marges resserrées sur téléphone, suite de la vérification des zones sûres sur iPhone laissée par 11 : la rangée « Golf » commence au bas de la zone sûre sans les 10 px ajoutés (`max(54px, safe-top)`), et les marges latérales du contenu passent de 20 à 16 px, alignées sur la barre flottante.
 
