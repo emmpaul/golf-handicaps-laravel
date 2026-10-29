@@ -24,7 +24,7 @@ final class StatsComparison
     {
         $recomputed = [];
         foreach (DB::table('player_round_stats')->get() as $row) {
-            $recomputed[self::key($row->round_id, $row->player_id)] = self::values((array) $row);
+            $recomputed[self::key($row->round_id, $row->player_id)] = self::values((array) $row, 'recalculé');
         }
 
         $differences = [];
@@ -47,7 +47,7 @@ final class StatsComparison
             $sqlite = self::values([
                 ...array_combine(self::COLUMNS, array_map($stats->nullableInt(...), self::COLUMNS)),
                 'counts_in_current' => $stats->int('counts_in_current') === 1,
-            ]);
+            ], 'SQLite');
             foreach (self::COLUMNS as $column) {
                 if ($sqlite[$column] !== $recomputed[$key][$column]) {
                     $differences[] = self::label($roundId, $playerId)." : {$column} SQLite ".self::show($sqlite[$column]).', recalculé '.self::show($recomputed[$key][$column]);
@@ -75,14 +75,21 @@ final class StatsComparison
 
     /**
      * @param  array<string, mixed>  $row
+     * @param  string  $side  « SQLite » or « recalculé », for the message
      * @return array<string, int|bool|null>
+     *
+     * @throws LegacyImportFailed on a value of another type: a fault of the reading, never
+     *                            compared as null
      */
-    private static function values(array $row): array
+    private static function values(array $row, string $side): array
     {
         $values = [];
         foreach (self::COLUMNS as $column) {
             $value = $row[$column] ?? null;
-            $values[$column] = is_int($value) || is_bool($value) ? $value : null;
+            if ($value !== null && ! is_int($value) && ! is_bool($value)) {
+                throw new LegacyImportFailed("Valeur inattendue : player_round_stats.{$column} {$side}, de type ".get_debug_type($value));
+            }
+            $values[$column] = $value;
         }
 
         return $values;

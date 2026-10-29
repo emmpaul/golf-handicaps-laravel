@@ -194,3 +194,20 @@ test('a failure on a difference writes no player nor course in the application l
         ->and($written)->not->toContain('Manu')
         ->and($written)->not->toContain('BETHPAGE');
 });
+
+// Design D11: a value of another type than an integer, a boolean or null is a fault of the
+// reading, never compared as null. PostgreSQL made to return text, as a driver setting would.
+// Mutation that turns it red: the unexpected value normalized to null (the row is then listed as
+// « gross SQLite 72, recalculé aucun »).
+test('a recomputed value of an unexpected type fails the import and names the column', function () {
+    $base = cardWithoutStats()
+        ->stats(1, 1, 72, 72, 10, null, 10, true)
+        ->stats(1, 2, 88, 88, 170, null, 170, true);
+    DB::connection()->getPdo()->setAttribute(PDO::ATTR_STRINGIFY_FETCHES, true);
+
+    [$exitCode, $lines] = importSqlite($base->path);
+    DB::connection()->getPdo()->setAttribute(PDO::ATTR_STRINGIFY_FETCHES, false);
+
+    expect($exitCode)->toBe(1)
+        ->and($lines)->toBe(['Valeur inattendue : player_round_stats.gross recalculé, de type string']);
+});

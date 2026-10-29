@@ -151,6 +151,7 @@ Sauvegarde `backups/golf-handicaps-next-20261028-182752.db` (copie `VACUUM INTO`
 
 - Après `RecomputePlayerStats`, lire les lignes recalculées et celles de SQLite, indexées par `(UUID du round, UUID du joueur)` via `IdMap`. Comparer `gross`, `adjusted`, `differential_t`, `index_before_t`, `index_after_t`, `counts_in_current` par égalité stricte d'entiers (ou de `null`).
 - Différence → une ligne « <parcours> / <tees>, <date>, <joueur> : <colonne> SQLite <v>, recalculé <v> » ; ligne d'un seul côté → « <…> : absente de SQLite » ou « absente du recalcul ». Toutes les différences sont listées (la base réelle a 22 lignes), puis « Import annulé : rien n'a été écrit. ». Ordre : les lignes SQLite par `(round_id, player_id)`, une ligne par colonne qui diffère, puis les lignes recalculées absentes de SQLite. Un index vide s'écrit « aucun », « compte dans l'index » « oui » ou « non » (les mots du scénario « Statistiques identiques »).
+- Une valeur d'un autre type qu'un entier, un booléen ou `null`, d'un côté ou de l'autre, fait échouer l'import (« Valeur inattendue : player_round_stats.gross recalculé, de type string ») au lieu d'être lue comme `null` : une erreur de lecture ne doit pas devenir un écart, ni une égalité `null` = `null` (correction après revue, L6).
 - Le rapport compte « Statistiques identiques : N / N ».
 
 ### D12. Refus, `--force`, remise en file
