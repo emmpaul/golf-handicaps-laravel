@@ -232,6 +232,97 @@ describe('Strokes page', () => {
         expect(totals()).toEqual(['Gab reçoit 2 coups', 'Rory rend 2 coups']);
     });
 
+    // Spec « Handicap de jeu négatif », scenario « Joueur plus 2 »: a player at
+    // −1,6 and Gab at 1,0 on BETHPAGE BLACK / Red without rating, in
+    // « Complet ». Mutation: the given-back strokes put on the lowest indexes
+    // (the index reversal dropped in allocateStrokes) → the −1 lands on holes
+    // 15 and 4 and this test goes red.
+    it('makes a player at −1,6 give back 1 stroke on holes 3 and 14 of BETHPAGE BLACK / Red without rating, Gab « reçoit 1 coup »', async () => {
+        render(
+            <StrokesIndex
+                players={[
+                    { id: GAB, name: 'Gab', indexT: 10 },
+                    { id: RORY, name: 'Rory', indexT: -16 },
+                ]}
+                courses={[
+                    {
+                        courseName: 'BETHPAGE BLACK',
+                        tees: 'Red',
+                        par: 71,
+                        ratingT: null,
+                        slope: null,
+                        strokeIndexes: STROKE_INDEXES,
+                    },
+                ]}
+            />,
+        );
+
+        await choose(['Rory', 'Gab'], 'BETHPAGE BLACK / Red');
+        await userEvent.click(screen.getByRole('radio', { name: 'Complet' }));
+
+        expect(totals()).toEqual(['Gab reçoit 1 coup', 'Rory rend 2 coups']);
+        expect(
+            within(result('Rory'))
+                .getAllByRole('img')
+                .map((cell) => cell.getAttribute('aria-label')),
+        ).toEqual([
+            'Trou 1 : aucun coup',
+            'Trou 2 : aucun coup',
+            'Trou 3 : rend 1 coup',
+            'Trou 4 : aucun coup',
+            'Trou 5 : aucun coup',
+            'Trou 6 : aucun coup',
+            'Trou 7 : aucun coup',
+            'Trou 8 : aucun coup',
+            'Trou 9 : aucun coup',
+            'Trou 10 : aucun coup',
+            'Trou 11 : aucun coup',
+            'Trou 12 : aucun coup',
+            'Trou 13 : aucun coup',
+            'Trou 14 : rend 1 coup',
+            'Trou 15 : aucun coup',
+            'Trou 16 : aucun coup',
+            'Trou 17 : aucun coup',
+            'Trou 18 : aucun coup',
+        ]);
+        expect(
+            within(result('Rory')).getByRole('img', {
+                name: 'Trou 3 : rend 1 coup',
+            }).lastElementChild?.textContent,
+        ).toBe('\u22121');
+        expect(
+            within(result('Rory')).getByRole('img', {
+                name: 'Trou 14 : rend 1 coup',
+            }).lastElementChild?.textContent,
+        ).toBe('\u22121');
+    });
+
+    // Spec « Total des coups d'un joueur », scenario « Le meilleur joueur en
+    // mode Écart »: Gab at 0,6, Manu and Sean, in « Écart ». Mutation: the gap
+    // taken from 0 instead of the lowest playing handicap (`lowest = 0` in
+    // matchStrokes) → « Gab reçoit 1 coup » with a grid and this test goes red.
+    it('gives Gab at 0,6 no stroke and no grid in « Écart » with Manu and Sean', async () => {
+        render(
+            <StrokesIndex
+                players={[
+                    { id: GAB, name: 'Gab', indexT: 6 },
+                    { id: MANU, name: 'Manu', indexT: 174 },
+                    { id: SEAN, name: 'Sean', indexT: 125 },
+                ]}
+                courses={courses}
+            />,
+        );
+
+        await choose(['Manu', 'Sean', 'Gab'], 'PAYNES VALLEY / Blue');
+
+        expect(totals()).toEqual([
+            'Gab ne reçoit aucun coup',
+            'Manu reçoit 16 coups',
+            'Sean reçoit 12 coups',
+        ]);
+        expect(within(result('Gab')).queryByTestId('strokes-holes')).toBeNull();
+    });
+
     it('disables the fifth box once four are checked, and enables it again after unchecking one', async () => {
         render(<StrokesIndex players={players} courses={courses} />);
 
