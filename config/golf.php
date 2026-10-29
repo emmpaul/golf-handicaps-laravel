@@ -26,7 +26,8 @@ return [
     | 2026-10-28. AppServiceProvider refuses to boot when the model has no
     | price or the time zone is unknown: a new model comes with its price.
     | The token bounds give the maximal cost of a call, checked against the
-    | budget before each call.
+    | budget before each call: those of a photo, and those of the reading of
+    | a Simulator Golf Tour scorecard (bounds of the Next application).
     |
     */
 
@@ -36,6 +37,8 @@ return [
         'budget_time_zone' => env('AI_BUDGET_TIME_ZONE', 'America/Montreal'),
         'max_input_tokens' => 6000,
         'max_output_tokens' => 4000,
+        'rating_max_input_tokens' => 2000,
+        'rating_max_output_tokens' => 1500,
         'prices' => [
             'claude-sonnet-5-5' => ['input' => 2, 'output' => 10],
             'claude-opus-5-5' => ['input' => 4, 'output' => 20],

@@ -10,7 +10,9 @@
  *   allowed;
  * - the month computed in UTC: the call of 2026-11-01 02:30 UTC is counted in 2026-11 without
  *   variable;
- * - the month of the cumulated total ignored: the full October still blocks November.
+ * - the month of the cumulated total ignored: the full October still blocks November;
+ * - the cost given to canSpend() ignored for that of a photo: 4 981 000 + 52 000 is refused
+ *   for a reading of an SGT scorecard of 19 000 (course-rating-sgt, design D4).
  */
 
 use App\Domain\AiUsage\AiBudget;
@@ -23,6 +25,24 @@ test('a call is allowed while the month total plus its maximal cost fits the cei
     expect(app(AiBudget::class)->canSpend(CarbonImmutable::parse('2026-10-20 15:00:00', 'UTC')))->toBe($allowed);
 })->with([
     'ceiling reached' => [4950000, false],
+    'ceiling just held' => [4948000, true],
+]);
+
+test('a reading of an SGT scorecard is allowed while the month total plus its own maximal cost fits the ceiling', function (int $spent, bool $allowed) {
+    AiUsage::factory()->inMonth('2026-10')->create(['cost_micro_usd' => $spent]);
+
+    expect(app(AiBudget::class)->canSpend(CarbonImmutable::parse('2026-10-20 15:00:00', 'UTC'), 19000))->toBe($allowed);
+})->with([
+    'ceiling reached' => [4990000, false],
+    'ceiling just held' => [4981000, true],
+]);
+
+test('without a maximal cost, a call keeps that of a photo', function (int $spent, bool $allowed) {
+    AiUsage::factory()->inMonth('2026-10')->create(['cost_micro_usd' => $spent]);
+
+    expect(app(AiBudget::class)->canSpend(CarbonImmutable::parse('2026-10-20 15:00:00', 'UTC')))->toBe($allowed);
+})->with([
+    'ceiling reached' => [4949000, false],
     'ceiling just held' => [4948000, true],
 ]);
 
