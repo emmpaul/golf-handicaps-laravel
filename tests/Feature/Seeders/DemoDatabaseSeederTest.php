@@ -17,9 +17,15 @@
  *   BETHPAGE BLACK / Red and the seeding fails with « Parcours introuvable ».
  */
 
+use App\Domain\Courses\Queries\CourseOverview;
+use App\Domain\Handicaps\Queries\PlayerStandings;
+use App\Domain\Imports\ImportStatus;
+use App\Domain\Imports\Queries\PendingImports;
+use App\Domain\Rounds\Queries\RoundList;
 use App\Domain\Rounds\RoundCard;
 use App\Domain\Rounds\RoundCardChecks;
 use App\Models\CourseRating;
+use App\Models\Import;
 use App\Models\Player;
 use App\Models\PlayerRoundStat;
 use App\Models\Round;
@@ -159,4 +165,31 @@ test('the demonstration rates BETHPAGE BLACK / Red only and computes the index h
 
     expect(PlayerRoundStat::query()->where('round_id', $reference->id)->where('player_id', $manu->id)->value('differential_t'))
         ->toBe(130);
+});
+
+// Mutation: DemoImportsSeeder removed from DemoDatabaseSeeder: PendingImports counts 0 and has no latest id.
+test('the demonstration fills the home, the strokes page and the imports to check', function () {
+    $this->seed(DemoDatabaseSeeder::class);
+
+    $standings = collect(app(PlayerStandings::class)->get())
+        ->map(fn (array $player): array => [$player['name'], $player['indexT'] !== null])
+        ->all();
+    expect($standings)->toBe([['Gab', true], ['Manu', true], ['Sean', true]]);
+
+    $readyId = Import::query()->where('status', ImportStatus::Ready->value)->value('id');
+    expect(app(PendingImports::class)->get())->toBe(['count' => 1, 'latestId' => $readyId]);
+
+    $latest = app(RoundList::class)->get(1);
+    expect($latest)->toHaveCount(1)
+        ->and([$latest[0]['playedOn'], $latest[0]['courseName'], $latest[0]['tees']])
+        ->toBe(['2026-10-17', 'BETHPAGE BLACK', 'Red']);
+
+    $courses = collect(app(CourseOverview::class)->get())
+        ->map(fn (array $course): array => [$course['courseName'], $course['tees'], $course['ratingT'], $course['slope']])
+        ->all();
+    expect($courses)->toBe([
+        ['BETHPAGE BLACK', 'Red', 714, 144],
+        ['CALA NOVA', 'White', null, null],
+        ['PAYNES VALLEY', 'Blue', null, null],
+    ]);
 });
