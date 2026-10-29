@@ -1,5 +1,6 @@
 import { PLAYER_BG } from '@/components/player-swatch';
 import { formatTenths } from '@/lib/format';
+import { useEntered } from '@/lib/motion';
 import { cn } from '@/lib/utils';
 import type { HandicapHistoryRow } from './round-history';
 
@@ -29,7 +30,8 @@ const dayMonth = (playedOn: string) => {
  * ancien au plus récent, à l'échelle du plus grand différentiel du joueur
  * (110 px) ; 4 px pour un différentiel nul ou négatif. Une barre qui compte
  * prend la couleur du joueur, les autres `bar` : l'historique dit « Compte »
- * en texte (DO22).
+ * en texte (DO22). Les barres partent de 4 px et grandissent jusqu'à leur
+ * hauteur en 600 ms (D8).
  */
 export function DifferentialBars({
     history,
@@ -44,6 +46,7 @@ export function DifferentialBars({
         ...history.map((round) => round.differentialT),
     );
     const bars = history.slice(0, SHOWN).reverse();
+    const entered = useEntered();
 
     return (
         <section aria-labelledby="differentials-title" className="mt-[30px]">
@@ -89,7 +92,7 @@ export function DifferentialBars({
                                             : 'bg-bar',
                                     )}
                                     style={{
-                                        height: `${Math.max(FLOOR_PX, Math.round((Math.max(0, round.differentialT) / largest) * TALLEST_PX))}px`,
+                                        height: `${entered ? Math.max(FLOOR_PX, Math.round((Math.max(0, round.differentialT) / largest) * TALLEST_PX)) : FLOOR_PX}px`,
                                     }}
                                 />
                             </span>

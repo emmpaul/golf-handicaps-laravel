@@ -26,7 +26,8 @@ function joinedMessages(problems: readonly Problem[]): string {
  * restants, après un point ambre, en Geist 500, 13 px, ambre ; puis le bouton
  * de 56 px, rayon 14 px, bloqué tant que la carte est incohérente (fond
  * `surface-3`, texte `ink-3`) ou pendant l'enregistrement. `children` : ce qui
- * accompagne l'attente (indicateur de sauvegarde d'un import).
+ * accompagne l'attente (indicateur de sauvegarde d'un import). Le bouton
+ * change de fond et de texte en 300 ms et s'enfonce à 0,98 à l'appui (D8).
  */
 export function EditorSaveBar({
     problems,
@@ -54,7 +55,7 @@ export function EditorSaveBar({
             ) : null}
             <Button
                 size="xl"
-                className="w-full"
+                className="w-full duration-(--dur-swap) ease-[ease] active:not-disabled:scale-[0.98]"
                 disabled={problems.length > 0 || saving}
                 onClick={onSave}
             >

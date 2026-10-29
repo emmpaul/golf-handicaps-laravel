@@ -29,6 +29,25 @@ vi.stubGlobal('matchMedia', () => ({
 const unassigned = { message: 'Ligne sans joueur', cells: ['player0:player'] };
 
 describe('EditorSaveBar', () => {
+    // Spec visual-theme « Animations du design », « Bouton d'enregistrement »
+    // and « Appui »: fill and text change in 300 ms (`ease`), the press scales
+    // to 0,98. Mutation: the 150 ms of the other buttons kept
+    // (`duration-(--dur-press)`) → this test goes red.
+    it('turns « Enregistrer » on in 300 ms and presses it to 0,98', () => {
+        render(
+            <EditorSaveBar problems={[]} saving={false} onSave={() => {}} />,
+        );
+
+        const button = screen.getByRole('button', { name: 'Enregistrer' });
+
+        expect(button).toHaveClass(
+            'duration-(--dur-swap)',
+            'ease-[ease]',
+            'active:not-disabled:scale-[0.98]',
+        );
+        expect(button).not.toHaveClass('duration-(--dur-press)');
+    });
+
     it('shows the message of the line without player in amber and the blocked « 1 problème à corriger »', () => {
         render(
             <EditorSaveBar

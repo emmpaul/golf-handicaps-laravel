@@ -5,6 +5,7 @@ import { AppNav } from '@/components/app-nav';
 import { AppVersion } from '@/components/app-version';
 import { Toaster } from '@/components/ui/toaster';
 import { showFlashToast } from '@/lib/flash-toast';
+import { pageEnterStyle, useEntered, useReducedMotion } from '@/lib/motion';
 
 /**
  * Cadre commun de toutes les pages, posé par défaut dans `app.tsx` (D3, D4).
@@ -15,7 +16,8 @@ import { showFlashToast } from '@/lib/flash-toast';
  * barre flottante : la ligne de version, dernier enfant de `main`, reste
  * visible au-dessus. `chrome="editor"` (éditeur de round) retire la barre
  * d'onglets et le bouton Importer. Le toast, monté une fois, affiche la donnée
- * flash `toast` de chaque réponse.
+ * flash `toast` de chaque réponse. `main` joue l'entrée de page (D8) à chaque
+ * changement d'adresse hors requête : changer de joueur ne la rejoue pas.
  */
 export default function AppLayout({
     children,
@@ -24,7 +26,10 @@ export default function AppLayout({
     children: ReactNode;
     chrome?: 'nav' | 'editor';
 }) {
-    const { app } = usePage().props;
+    const { url, props } = usePage();
+    const { app } = props;
+    const reduced = useReducedMotion();
+    const entered = useEntered(url.split('?')[0]);
 
     useEffect(
         () =>
@@ -41,7 +46,10 @@ export default function AppLayout({
                 data-slot="safe-area-band"
                 className="pointer-events-none fixed inset-x-0 top-0 z-(--z-sticky) h-(--safe-top) bg-bg"
             />
-            <main className="mx-auto flex w-full max-w-(--column) min-w-0 flex-1 flex-col px-(--gutter) pb-[calc(108px+var(--safe-bottom))]">
+            <main
+                style={pageEnterStyle(entered, reduced)}
+                className="mx-auto flex w-full max-w-(--column) min-w-0 flex-1 flex-col px-(--gutter) pb-[calc(108px+var(--safe-bottom))]"
+            >
                 {children}
                 <AppVersion version={app.version} commit={app.commit} />
             </main>

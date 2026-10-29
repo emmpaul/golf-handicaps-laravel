@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it } from 'vite-plus/test';
 
 import {
@@ -128,14 +128,19 @@ describe('ScoringStats', () => {
         expect(valueOf('Moy. brut')).toBe('70,0');
     });
 
-    it('draws the segments of the bar at the share of each class', () => {
+    // The segments grow from a null width over two frames (D8,
+    // motion.test.tsx): their widths are read once grown.
+    it('draws the segments of the bar at the share of each class', async () => {
         render(<ScoringStats stats={gabOneRound} />);
 
-        const widths = Array.from(
-            document.querySelectorAll<HTMLElement>('[data-part="segment"]'),
-        ).map((segment) => segment.style.width);
+        const widths = () =>
+            Array.from(
+                document.querySelectorAll<HTMLElement>('[data-part="segment"]'),
+            ).map((segment) => segment.style.width);
 
-        expect(widths).toEqual(['16.7%', '61.1%', '22.2%', '0%']);
+        await waitFor(() =>
+            expect(widths()).toEqual(['16.7%', '61.1%', '22.2%', '0%']),
+        );
     });
 
     it('writes each par with its average and its signed delta', () => {
