@@ -110,7 +110,7 @@ Dans l'éditeur, chaque ligne de joueur SHALL tenir sur une seule rangée : « L
 - **THEN** sa liste a une bordure ambre `oklch(0.78 0.16 60)` et affiche « Choisir un joueur »
 
 ### Requirement: Grille de saisie sur téléphone
-La grille de l'éditeur SHALL présenter une ligne par trou : numéro, par, index, puis le score de chaque ligne de joueur, avec « ALL. » après le trou 9, « RET. » et « TOT. » après le trou 18. Les noms des lignes MUST rester visibles en tête pendant le défilement vertical, et la grille MUST NOT défiler horizontalement à 320 px avec 4 lignes. Chaque case garde son nom accessible. Les distances se saisissent dans le bloc « Distances » replié sous la grille (décision Q6).
+La grille de l'éditeur SHALL présenter une ligne par trou : numéro, par, index, puis le score de chaque ligne de joueur, avec « ALL. » après le trou 9, « RET. » et « TOT. » après le trou 18. Les noms des lignes MUST rester visibles en tête pendant le défilement vertical, et la grille MUST NOT défiler horizontalement à 320 px avec 4 lignes. Chaque case garde son nom accessible. Les distances se saisissent dans le bloc « Distances » replié sous la grille (décision Q6) ; le bloc MUST s'ouvrir de lui-même quand une distance devient un problème.
 
 #### Scenario: Quatre joueurs à 320 px
 - **WHEN** l'éditeur à 4 lignes de joueur est ouvert sur un écran de 320 px
@@ -131,6 +131,11 @@ La grille de l'éditeur SHALL présenter une ligne par trou : numéro, par, inde
 #### Scenario: Distance en erreur dans un bloc replié
 - **WHEN** l'utilisateur saisit 1200 comme distance du trou 3 puis replie le bloc « Distances »
 - **THEN** le problème reste compté par le bouton d'enregistrement et listé dans la barre d'enregistrement
+
+#### Scenario: Distance en erreur à l'ouverture
+- **GIVEN** un import lu avec 1200 comme distance du trou 3
+- **WHEN** l'utilisateur ouvre l'écran de vérification de cet import
+- **THEN** le bloc « Distances » est ouvert et la case « Distance trou 3 » est en ambre
 
 #### Scenario: Grille large sur ordinateur
 - **WHEN** l'éditeur est ouvert à 1440 px

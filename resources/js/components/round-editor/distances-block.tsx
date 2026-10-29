@@ -1,4 +1,5 @@
 import { ChevronDownIcon } from 'lucide-react';
+import { useState } from 'react';
 import type { CellValue } from '@/lib/round-checks';
 import { cn } from '@/lib/utils';
 import { GridInput } from './score-grid';
@@ -8,7 +9,9 @@ import { GridInput } from './score-grid';
  * « Grille de saisie sur téléphone ») : une case de 44 px par trou, nommée
  * « Distance trou 1 » à « Distance trou 18 », six par rangée pour tenir à
  * 320 px. `details` natif : replié, ses cases restent montées, et un problème
- * de distance reste compté et listé dans la barre d'enregistrement.
+ * de distance reste compté et listé dans la barre d'enregistrement. Il s'ouvre
+ * de lui-même quand une distance devient un problème (DO42), pour que la case
+ * ambre soit en vue ; refermé ensuite par l'utilisateur, il le reste.
  */
 export function DistancesBlock({
     distances,
@@ -21,8 +24,27 @@ export function DistancesBlock({
     onCell: (row: string, hole: number, value: CellValue) => void;
     onLeave?: (cell: string) => void;
 }) {
+    const distanceInvalid = [...invalid].some((key) =>
+        key.startsWith('distance:'),
+    );
+    const [open, setOpen] = useState(distanceInvalid);
+    const [wasInvalid, setWasInvalid] = useState(distanceInvalid);
+
+    // A distance that turns invalid opens the block (state adjusted during render).
+    if (distanceInvalid !== wasInvalid) {
+        setWasInvalid(distanceInvalid);
+
+        if (distanceInvalid) {
+            setOpen(true);
+        }
+    }
+
     return (
-        <details className="group mt-6 border-t border-rule">
+        <details
+            open={open}
+            onToggle={(event) => setOpen(event.currentTarget.open)}
+            className="group mt-6 border-t border-rule"
+        >
             <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between font-mono text-section text-ink-2 uppercase [&::-webkit-details-marker]:hidden">
                 Distances
                 <ChevronDownIcon
