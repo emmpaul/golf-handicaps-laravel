@@ -53,7 +53,7 @@ Avant de commencer : vérifier que `players-and-rounds` (entrée 5 de `ROADMAP.m
 
 ## 8. Données de démonstration
 
-- [ ] 8.1 Écrire `tests/Feature/Seeders/DemoImportsSeederTest.php` : après `seed(DemoDatabaseSeeder::class)`, exactement un import `ready` (ligne lue `JULIEN`), un `failed` « Budget IA du mois atteint », un `queued`, chacun avec sa photo sur le disque `photos` (simulé), 3 lignes d'`ai_usage` du mois courant, `assertNeverPrompted()` ; mutation nommée : seeder qui pousse le job de lecture ; écrire `DemoImportsSeeder` et l'appel depuis `DemoDatabaseSeeder` (D10) ; vérifier vert, puis `make demo` en local et rapporter le nombre d'imports
+- [x] 8.1 Écrire `tests/Feature/Seeders/DemoImportsSeederTest.php` : après `seed(DemoDatabaseSeeder::class)`, exactement un import `ready` (ligne lue `JULIEN`), un `failed` « Budget IA du mois atteint », un `queued`, chacun avec sa photo sur le disque `photos` (simulé), 3 lignes d'`ai_usage` du mois courant, `assertNeverPrompted()` ; mutation nommée : seeder qui pousse le job de lecture ; écrire `DemoImportsSeeder` et l'appel depuis `DemoDatabaseSeeder` (D10) ; vérifier vert, puis `make demo` en local et rapporter le nombre d'imports
 
 ## 9. Production et documentation
 

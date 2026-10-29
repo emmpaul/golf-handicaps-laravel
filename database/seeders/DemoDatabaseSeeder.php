@@ -8,8 +8,8 @@ use RuntimeException;
 
 /**
  * The demonstration base of make demo: the development players, the reference round IMG_3064
- * with its photo, the generated rounds and the rating of BETHPAGE BLACK / Red. Written on an empty base only, so that it never
- * mixes with rounds typed by hand.
+ * with its photo, the generated rounds, the rating of BETHPAGE BLACK / Red and three imports.
+ * Written on an empty base only, so that it never mixes with rounds typed by hand.
  */
 class DemoDatabaseSeeder extends DemoSeeder
 {
@@ -23,6 +23,7 @@ class DemoDatabaseSeeder extends DemoSeeder
             DevelopmentPlayersSeeder::class,
             DemoRoundsSeeder::class,
             DemoCourseRatingsSeeder::class,
+            DemoImportsSeeder::class,
         ]);
     }
 }
