@@ -1,0 +1,97 @@
+<?php
+
+use App\Domain\LegacyImport\LegacyDatabase;
+use Illuminate\Database\QueryException;
+use Illuminate\Support\Facades\DB;
+use Tests\Support\LegacySqlite\LegacySqliteFixture;
+
+// Mutation that turns it red: LegacySchema::check() refuses a table that has more columns than
+// expected (columns compared for equality instead of inclusion).
+test('a base at the level of 0004 is accepted, an extra column included', function () {
+    $base = LegacySqliteFixture::atLevel('0004')
+        ->execute('alter table players add column nickname text')
+        ->player(1, 'Gab', 1792251843742);
+
+    [$exitCode] = importSqlite($base->path);
+
+    expect($exitCode)->toBe(0)
+        ->and(DB::table('players')->pluck('name')->all())->toBe(['Gab']);
+});
+
+// Mutation that turns it red: course_ratings removed from LegacySchema::TABLES.
+test('a base of before the ratings is refused before any write', function () {
+    $base = LegacySqliteFixture::atLevel('0003')->player(1, 'Gab', 1792251843742);
+
+    [$exitCode, $lines] = importSqlite($base->path);
+
+    expect($exitCode)->toBe(1)
+        ->and($lines)->toBe([
+            'Base SQLite au mauvais niveau : migration Drizzle 0004 attendue.',
+            'Table manquante : course_ratings',
+        ])
+        ->and(nonEmptyTargetTables())->toBe([]);
+});
+
+// Mutation that turns it red: correction removed from the columns of imports in
+// LegacySchema::TABLES.
+test('a base without a column of 0004 is refused and the column named', function () {
+    $base = LegacySqliteFixture::atLevel('0004')
+        ->execute('alter table imports drop column correction')
+        ->player(1, 'Gab', 1792251843742);
+
+    [$exitCode, $lines] = importSqlite($base->path);
+
+    expect($exitCode)->toBe(1)
+        ->and($lines)->toBe([
+            'Base SQLite au mauvais niveau : migration Drizzle 0004 attendue.',
+            'Colonne manquante : imports.correction',
+        ])
+        ->and(nonEmptyTargetTables())->toBe([]);
+});
+
+// Mutation that turns it red: the check throws at the first missing table or column.
+test('every missing table and column is listed, not only the first', function () {
+    $base = LegacySqliteFixture::atLevel('0003')->execute('alter table imports drop column correction');
+
+    [$exitCode, $lines] = importSqlite($base->path);
+
+    expect($exitCode)->toBe(1)
+        ->and($lines)->toBe([
+            'Base SQLite au mauvais niveau : migration Drizzle 0004 attendue.',
+            'Colonne manquante : imports.correction',
+            'Table manquante : course_ratings',
+        ]);
+});
+
+// Mutation that turns it red: the file is not checked before the connection is declared (the
+// driver then throws its own SQLiteDatabaseDoesNotExistException).
+test('a missing base is named and nothing is written', function () {
+    [$exitCode, $lines] = importSqlite('/tmp/absente.db');
+
+    expect($exitCode)->toBe(1)
+        ->and($lines)->toBe(['Base SQLite introuvable : /tmp/absente.db'])
+        ->and(nonEmptyTargetTables())->toBe([]);
+});
+
+// Mutation that turns it red: the read-only flag removed from the options of the legacy
+// connection.
+test('the legacy connection refuses any write', function () {
+    $base = LegacySqliteFixture::atLevel('0004');
+
+    $legacy = LegacyDatabase::open($base->path)->connection();
+
+    expect(fn () => $legacy->table('players')->insert(['id' => 1, 'name' => 'Gab', 'created_at' => 1792251843742]))
+        ->toThrow(QueryException::class, 'attempt to write a readonly database');
+});
+
+// Same mutation, if the import ever wrote on the source: the file is compared byte for byte.
+test('the source file is unchanged by an import that succeeds then one that fails', function () {
+    $base = LegacySqliteFixture::atLevel('0004')->player(1, 'Gab', 1792251843742);
+    $fingerprint = hash_file('sha256', $base->path);
+
+    [$firstExitCode] = importSqlite($base->path);
+    [$secondExitCode] = importSqlite($base->path);
+
+    expect([$firstExitCode, $secondExitCode])->toBe([0, 1])
+        ->and(hash_file('sha256', $base->path))->toBe($fingerprint);
+});

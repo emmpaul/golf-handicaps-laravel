@@ -10,6 +10,7 @@ use App\Models\Round;
 use Carbon\CarbonImmutable;
 use Database\Factories\ImportFactory;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Laravel\Ai\Responses\Data\Meta;
@@ -291,4 +292,33 @@ function queriesDuring(Closure $callback): int
     $callback();
 
     return $queries;
+}
+
+/**
+ * Runs golf:import-sqlite on the SQLite base at $path, without a terminal.
+ *
+ * @param  array<string, mixed>  $options
+ * @return array{int, list<string>} the exit code and the lines printed, trimmed, blank lines left out
+ */
+function importSqlite(string $path, array $options = []): array
+{
+    $exitCode = Artisan::call('golf:import-sqlite', ['db' => $path, '--no-interaction' => true, ...$options]);
+    $lines = array_values(array_filter(
+        array_map(trim(...), explode("\n", Artisan::output())),
+        fn (string $line): bool => $line !== '',
+    ));
+
+    return [$exitCode, $lines];
+}
+
+/**
+ * The target tables of golf:import-sqlite that have a row, with their count.
+ *
+ * @return array<string, int>
+ */
+function nonEmptyTargetTables(): array
+{
+    $tables = ['players', 'player_aliases', 'rounds', 'round_holes', 'round_players', 'scores', 'player_round_stats', 'course_ratings', 'imports', 'ai_usage'];
+
+    return array_filter(array_combine($tables, array_map(fn (string $table): int => DB::table($table)->count(), $tables)));
 }
