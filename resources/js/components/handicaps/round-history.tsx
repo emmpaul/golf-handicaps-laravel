@@ -1,6 +1,6 @@
 import { Link } from '@inertiajs/react';
 import { show as showRound } from '@/actions/App/Http/Controllers/RoundController';
-import { Badge } from '@/components/ui/badge';
+import { PLAYER_BG } from '@/components/player-swatch';
 import { formatShortPlayedOn, formatTenths } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
@@ -16,74 +16,83 @@ export type HandicapHistoryRow = {
     countsInCurrent: boolean;
 };
 
-/** Columns: round (date and mark, course and tees), differential, index after; narrow under 768 px so the date and its mark hold on one line at 320 px. */
-const HISTORY_COLUMNS =
-    'grid grid-cols-[minmax(0,1fr)_2.75rem_3.5rem] items-baseline gap-x-2 px-2 max-md:text-sm md:grid-cols-[minmax(0,1fr)_5rem_6rem] md:gap-x-4';
+/** Columns of the design: date and course, differential, index after (60 px each). */
+const HISTORY_COLUMNS = 'grid grid-cols-[minmax(0,1fr)_60px_60px] items-center';
 
 /**
- * The rounds of one player, in the order received (newest first): date with the
- * « Compte » mark on the same line, course and tees apart, differential (bold
- * when it counts) and index after the round. Each row leads to its round.
+ * The rounds of one player (spec handicap-index, « Liste des rounds d'un
+ * joueur », « Marque « Compte » sur la ligne du round »), in the order received
+ * (newest first): the date with the « Compte » dot of 6 px in the colour of
+ * the player on the same line, course « · » tees under it, cut by « … »,
+ * differential and index after in Geist Mono. Each row leads to its round.
  */
 export function RoundHistory({
     name,
     history,
+    colorSlot,
 }: {
     name: string;
     history: HandicapHistoryRow[];
+    colorSlot: number;
 }) {
     return (
-        <div className="min-w-0">
+        <div className="mt-[34px] min-w-0">
             <div
                 aria-hidden
                 className={cn(
                     HISTORY_COLUMNS,
-                    'bg-band text-sm text-band-ink py-1.5 font-medium',
+                    'border-b border-rule pb-2.5 font-mono text-caption text-ink-2 uppercase',
                 )}
             >
-                <span>Round</span>
+                <span>Date · parcours</span>
                 <span className="text-right">Diff.</span>
-                <span className="text-right">Index après</span>
+                <span className="text-right">Après</span>
             </div>
             <ul aria-label={`Rounds de ${name}`}>
                 {history.map((round) => (
-                    <li key={round.roundId} className="border-b">
+                    <li
+                        key={round.roundId}
+                        className="border-b border-rule-soft"
+                    >
                         <Link
                             href={showRound(round.roundId)}
                             className={cn(
                                 HISTORY_COLUMNS,
-                                'py-2 transition-[background-color] duration-(--dur-micro) ease-out hover:bg-muted focus-visible:-outline-offset-2',
+                                'min-h-13 py-2 font-mono text-link transition-opacity duration-(--dur-press) active:opacity-60',
                             )}
                         >
-                            <span className="flex min-w-0 flex-col gap-0.5">
+                            <span className="flex min-w-0 flex-col gap-[5px] font-sans">
                                 <span
                                     data-testid="round-date"
-                                    className="flex items-center gap-2 whitespace-nowrap"
+                                    className="flex items-center gap-2 text-link whitespace-nowrap"
                                 >
                                     <time dateTime={round.playedOn}>
                                         {formatShortPlayedOn(round.playedOn)}
                                     </time>
                                     {round.countsInCurrent ? (
-                                        <Badge>Compte</Badge>
+                                        <span
+                                            role="img"
+                                            aria-label="Compte"
+                                            className={cn(
+                                                'size-1.5 flex-none rounded-full',
+                                                PLAYER_BG[colorSlot],
+                                            )}
+                                        />
                                     ) : null}
                                 </span>
-                                <span className="text-sm flex flex-wrap gap-x-2 [overflow-wrap:anywhere] text-muted-foreground">
-                                    <span>{round.courseName}</span>
-                                    <span>{round.tees}</span>
+                                <span className="truncate text-body-12 leading-none text-ink-2">
+                                    {round.courseName} · {round.tees}
                                 </span>
                             </span>
                             <span
                                 data-testid="round-differential"
-                                className={cn(
-                                    'text-right tabular-nums',
-                                    round.countsInCurrent && 'font-semibold',
-                                )}
+                                className="text-right"
                             >
                                 {formatTenths(round.differentialT)}
                             </span>
                             <span
                                 data-testid="round-index-after"
-                                className="text-right tabular-nums"
+                                className="text-right text-ink-2"
                             >
                                 {formatTenths(round.indexAfterT)}
                             </span>
