@@ -6,6 +6,8 @@
  *   still matches one segment, so the nested /handicaps/0190a6b2-7c3e-7000-8000-000000000001/edit
  *   then answers 404;
  * - put the placeholder route of Rounds back before RoundController: /rounds serves
+ *   section-placeholder again;
+ * - put the placeholder route of Importer back before ImportController: /import serves
  *   section-placeholder again.
  */
 
@@ -22,7 +24,6 @@ test('each section without a page serves the placeholder', function (string $uri
             ->component('section-placeholder')
             ->where('section', $section));
 })->with([
-    'import' => ['/import', 'Importer'],
     'handicaps' => ['/handicaps', 'Handicaps'],
     'strokes' => ['/strokes', 'Coups'],
 ]);
@@ -47,6 +48,7 @@ test('a section that has its page no longer serves the placeholder', function (s
         ->assertDontSee('section-placeholder')
         ->assertDontSee('Section à venir');
 })->with([
+    'import' => ['/import', 'import/index'],
     'rounds' => ['/rounds', 'rounds/index'],
     'players' => ['/players', 'players/index'],
 ]);
