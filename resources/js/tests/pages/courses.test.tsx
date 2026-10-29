@@ -710,7 +710,11 @@ describe('Courses page, lookup on Simulator Golf Tour', () => {
         ).toBeNull();
     });
 
-    it('posts « Confirmer » on its Wayfinder action, « Confirmation de la rating… » on its row only, its buttons disabled', async () => {
+    /**
+     * Renders BETHPAGE BLACK / Red proposed and PAYNES VALLEY / Blue failed,
+     * then clicks the button named `name`; the visit starts and never ends.
+     */
+    async function clickWhileSending(name: string): Promise<void> {
         post.mockImplementation((_url, _data, options) => {
             (options as VisitOptions).onStart?.({});
         });
@@ -720,12 +724,14 @@ describe('Courses page, lookup on Simulator Golf Tour', () => {
         );
 
         await act(async () => {
-            await userEvent.click(
-                screen.getByRole('button', {
-                    name: 'Confirmer 71,4 / 144 pour BETHPAGE BLACK / Red',
-                }),
-            );
+            await userEvent.click(screen.getByRole('button', { name }));
         });
+    }
+
+    it('posts « Confirmer » on its Wayfinder action, « Confirmation de la rating… » on its row only, its buttons disabled', async () => {
+        await clickWhileSending(
+            'Confirmer 71,4 / 144 pour BETHPAGE BLACK / Red',
+        );
 
         expect(post).toHaveBeenCalledTimes(1);
         expect(post.mock.calls[0][0]).toEqual({
@@ -758,21 +764,9 @@ describe('Courses page, lookup on Simulator Golf Tour', () => {
     });
 
     it('shows « Relance de la recherche… » while relaunching, the buttons of BETHPAGE BLACK / Red still enabled', async () => {
-        post.mockImplementation((_url, _data, options) => {
-            (options as VisitOptions).onStart?.({});
-        });
-
-        render(
-            <CoursesIndex courses={[proposed, failed]} lookupPending={false} />,
+        await clickWhileSending(
+            'Relancer la recherche pour PAYNES VALLEY / Blue',
         );
-
-        await act(async () => {
-            await userEvent.click(
-                screen.getByRole('button', {
-                    name: 'Relancer la recherche pour PAYNES VALLEY / Blue',
-                }),
-            );
-        });
 
         expect(post.mock.calls[0][0]).toEqual({
             url: `/courses/ratings/${PAYNES_ID}/lookup`,
