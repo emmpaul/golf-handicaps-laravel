@@ -9,7 +9,9 @@ import { ComputationHelp } from '@/components/handicaps/computation-help';
 // Mutations: « slope / 113 » instead of « 113 / slope », « par + 3 », « 2 de 6
 // à 8 » changed to « 2 de 7 à 8 », the 6-round adjustment dropped, or the
 // straight apostrophe in « Différentiel d’un round » → the text test goes red;
-// the block open by default → the closed test goes red.
+// the block open by default → the closed test goes red; `text-sm` kept on
+// the block or `text-muted-foreground` on its lines (sizes outside the closed
+// scale of the design, which produce no style, DO26) → the scale test goes red.
 
 const LINES = [
     'Score ajusté : chaque trou compte au plus par + 4.',
@@ -29,6 +31,34 @@ function details(): HTMLDetailsElement {
 }
 
 describe('ComputationHelp', () => {
+    // DO26: the sizes of the design scale (D2), no class outside it.
+    it('writes the title at 13 px Geist 500 and the lines at 12 px in ink-2', () => {
+        render(<ComputationHelp />);
+
+        const summary = screen.getByText('Comment l’index est calculé');
+        const list = details().querySelector('ul') as HTMLElement;
+        const classes = [
+            details().className,
+            summary.className,
+            list.className,
+        ].join(' ');
+
+        expect(summary.className).toContain('text-link-13');
+        expect(summary.className).toContain('min-h-11');
+        expect(list.className).toContain('text-body-12');
+        expect(list.className).toContain('text-ink-2');
+        expect(details().className).toContain('border-rule');
+        expect(
+            classes
+                .split(/\s+/)
+                .filter((name) =>
+                    /^(max-md:|md:)?(text-(sm|xs|base|lg)|text-muted-foreground|max-w-2xl)$/.test(
+                        name,
+                    ),
+                ),
+        ).toEqual([]);
+    });
+
     it('renders closed, titled « Comment l’index est calculé », no line visible', () => {
         render(<ComputationHelp />);
 
