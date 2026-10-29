@@ -63,6 +63,14 @@ class DemoRoundsSeeder extends DemoSeeder
         'Manu' => [0, 1, 1, 1, 2, 2, 3],
     ];
 
+    /**
+     * The one hole above par + 4 of the demonstration, so that the page « Calcul de l'index » shows
+     * a capped hole: Manu plays 8 on the par 3 of hole 2 in the generated round 19 (PAYNES VALLEY,
+     * 2026-09-10). Written over the strokes drawn, after the draw, so that every other score stays
+     * the same.
+     */
+    private const array CAPPED_HOLE = ['round' => 19, 'player' => 'Manu', 'hole' => 2, 'strokes' => 8];
+
     /** The reference card IMG_3064, as read on the photo. */
     private const array REFERENCE_LINES = [
         'Gab' => [5, 5, 3, 5, 4, 4, 4, 3, 5, 4, 4, 4, 4, 3, 4, 5, 3, 3],
@@ -91,10 +99,10 @@ class DemoRoundsSeeder extends DemoSeeder
                 $firstDay->addDays(intdiv($i * $span, self::GENERATED_ROUNDS - 1))->toDateString(),
                 array_map(fn (string $player): array => [
                     'playerId' => $playerIds[$player],
-                    'strokes' => array_map(
+                    'strokes' => $this->withCappedHole($i, $player, array_map(
                         fn (int $par): int => $par + (int) fake()->randomElement(self::OVER_PAR[$player]),
                         $course['pars'],
-                    ),
+                    )),
                 ], array_values($players)),
             ));
         }
@@ -107,6 +115,19 @@ class DemoRoundsSeeder extends DemoSeeder
         $path = "rounds/{$reference->id}.webp";
         $photos->put($path, (string) file_get_contents(database_path('data/img3064.webp')));
         $reference->update(['photo_path' => $path]);
+    }
+
+    /**
+     * @param  list<int>  $strokes
+     * @return list<int>
+     */
+    private function withCappedHole(int $round, string $player, array $strokes): array
+    {
+        if ($round !== self::CAPPED_HOLE['round'] || $player !== self::CAPPED_HOLE['player']) {
+            return $strokes;
+        }
+
+        return array_values(array_replace($strokes, [self::CAPPED_HOLE['hole'] - 1 => self::CAPPED_HOLE['strokes']]));
     }
 
     /**

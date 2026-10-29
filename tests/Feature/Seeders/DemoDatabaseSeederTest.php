@@ -19,9 +19,14 @@
  * - DemoConfirmedRatingSeeder writing the confirmed rating by an update, without
  *   ConfirmCourseRatingProposal: the history is not recomputed and Gab and Manu stay at 10 and
  *   170 on the reference round.
+ * - the capped hole of DemoRoundsSeeder left out, or written on another round or hole: Manu has
+ *   no capped hole, or not hole 2 of PAYNES VALLEY on 2026-09-10 at 8 for a par 3;
+ * - the capped hole written by changing the strokes drawn for Manu (another value of OVER_PAR)
+ *   instead of overriding one hole after the draw: the signatures of the first five rounds move.
  */
 
 use App\Domain\Courses\Queries\CourseOverview;
+use App\Domain\Handicaps\Queries\PlayerIndexComputation;
 use App\Domain\Handicaps\Queries\PlayerStandings;
 use App\Domain\Imports\Queries\PendingImports;
 use App\Domain\Rounds\Queries\RoundList;
@@ -212,4 +217,27 @@ test('the demonstration fills the home, the strokes page and the imports to chec
         ['CALA NOVA', 'White', null, null],
         ['PAYNES VALLEY', 'Blue', null, null],
     ]);
+});
+
+// The page « Calcul de l'index » (index-computation-page, task 7.1) has a full example in the
+// demonstration: Manu's latest round is on the confirmed rating of BETHPAGE BLACK / Red, the one
+// before on CALA NOVA without rating, and his 2026-09-10 round on PAYNES VALLEY has 8 on the par 3
+// of hole 2, capped at 7.
+test('the demonstration gives Manu a capped hole, a round without rating and a round on a confirmed rating among his 20 latest rounds', function () {
+    $this->seed(DemoDatabaseSeeder::class);
+
+    $computation = app(PlayerIndexComputation::class)->get(Player::query()->where('name', 'Manu')->sole()->id);
+    $round = fn (string $playedOn): array => collect($computation['rounds'])->firstWhere('playedOn', $playedOn);
+
+    expect($computation['cappedHole'])->toBe(['hole' => 2, 'par' => 3, 'strokes' => 8])
+        ->and($computation['rounds'])->toHaveCount(20)
+        ->and(array_slice(array_map(
+            fn (array $round): array => [$round['playedOn'], $round['courseName'], $round['ratingT'], $round['slope']],
+            $computation['rounds'],
+        ), 0, 2))->toBe([
+            ['2026-10-17', 'BETHPAGE BLACK', 714, 144],
+            ['2026-10-15', 'CALA NOVA', null, null],
+        ])
+        ->and([$round('2026-09-10')['courseName'], $round('2026-09-10')['gross'], $round('2026-09-10')['adjusted']])
+        ->toBe(['PAYNES VALLEY', 93, 92]);
 });
