@@ -30,7 +30,7 @@ import {
 // - the TOTAL row dropped → the card test finds no « TOTAL · PAR 71 »;
 // - ALLER summed over holes 1 to 8 → the card test reads 33 and goes red;
 // - the photo put above the legend → the photo test goes red;
-// - ComputationHelp removed → the explanation test goes red;
+// - ComputationLink removed → the link test goes red;
 // - « Modifier » left at the foot of the page → the top row test goes red.
 
 vi.mock('@inertiajs/react', async (importOriginal) => ({
@@ -307,15 +307,27 @@ describe('Round page', () => {
         ).toBeTruthy();
     });
 
-    it('offers « Comment l’index est calculé », closed, after the card', () => {
+    // Spec handicap-index « Lien vers le calcul de l'index »: a link to the
+    // computation page, none of the rule lines on the page. Mutations: the
+    // former folded block kept, or the link sent to /handicaps → red.
+    it('links « Comment l’index est calculé » to /handicaps/calcul, without the rule lines', () => {
         render(<RoundsShow round={round} />);
 
-        const title = screen.getByText('Comment l’index est calculé');
-
-        expect(title.tagName).toBe('SUMMARY');
-        expect((title.closest('details') as HTMLDetailsElement).open).toBe(
-            false,
-        );
+        expect(
+            screen
+                .getByRole('link', { name: 'Comment l’index est calculé' })
+                .getAttribute('href'),
+        ).toBe('/handicaps/calcul');
+        expect(
+            screen.queryByText(
+                'Score ajusté : chaque trou compte au plus par + 4.',
+            ),
+        ).toBeNull();
+        expect(
+            screen.queryByText(
+                'Parcours sans rating : la course rating vaut le par du round et le slope 113.',
+            ),
+        ).toBeNull();
     });
 
     it('puts the back link « Rounds », « Modifier » and « Supprimer » in the top row', () => {

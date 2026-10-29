@@ -33,3 +33,16 @@ test('every route asks for the passcode session, except the open ones', function
         'PUT storage/{path}',
     ]);
 });
+
+test('the page « Calcul de l\'index » asks for the passcode session', function () {
+    // Spec handicap-index, « Page « Calcul de l'index » », « Sans session ».
+    // Mutation that turns this test red: the route handicaps.computation removed, or declared
+    // with withoutMiddleware(RequirePasscode::class).
+    app(Kernel::class);
+    $router = app(Router::class);
+    $route = $router->getRoutes()->getByName('handicaps.computation');
+
+    expect($route)->not->toBeNull()
+        ->and(implode('|', $route->methods()).' '.$route->uri())->toBe('GET|HEAD handicaps/calcul')
+        ->and(in_array(RequirePasscode::class, $router->gatherRouteMiddleware($route), true))->toBeTrue();
+});

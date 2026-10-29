@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Domain\Handicaps\Queries\PlayerHandicapHistory;
+use App\Domain\Handicaps\Queries\PlayerIndexComputation;
 use App\Domain\Handicaps\Queries\PlayerScoringStats;
 use App\Domain\Handicaps\Queries\PlayerStandings;
 use Illuminate\Http\Request;
@@ -19,9 +20,7 @@ class HandicapController extends Controller
     public function index(Request $request, PlayerStandings $standings, PlayerHandicapHistory $history, PlayerScoringStats $scoringStats): Response
     {
         $players = $standings->get();
-        $ids = array_column($players, 'id');
-        $requested = $request->query('joueur');
-        $selectedId = in_array($requested, $ids, true) ? $requested : ($ids[0] ?? null);
+        $selectedId = $this->selectedPlayerId($request, $players);
 
         return Inertia::render('handicaps/index', [
             'players' => $players,
@@ -30,5 +29,35 @@ class HandicapController extends Controller
             'history' => fn (): array => $selectedId === null ? [] : $history->get($selectedId),
             'scoringStats' => Inertia::defer(fn (): ?array => $selectedId === null ? null : $scoringStats->get($selectedId)),
         ]);
+    }
+
+    /**
+     * The page « Calcul de l'index » (design D1 and D4 of index-computation-page): the player
+     * chosen as on the Handicaps page, and the facts of the player's computation, null without
+     * player.
+     */
+    public function computation(Request $request, PlayerStandings $standings, PlayerIndexComputation $computation): Response
+    {
+        $players = $standings->get();
+        $selectedId = $this->selectedPlayerId($request, $players);
+
+        return Inertia::render('handicaps/computation', [
+            'players' => $players,
+            'selectedPlayerId' => $selectedId,
+            'computation' => fn (): ?array => $selectedId === null ? null : $computation->get($selectedId),
+        ]);
+    }
+
+    /**
+     * The player named by ?joueur=, or the first by name when the identifier names no player.
+     *
+     * @param  list<array{id: string}>  $players
+     */
+    private function selectedPlayerId(Request $request, array $players): ?string
+    {
+        $ids = array_column($players, 'id');
+        $requested = $request->query('joueur');
+
+        return in_array($requested, $ids, true) ? $requested : ($ids[0] ?? null);
     }
 }

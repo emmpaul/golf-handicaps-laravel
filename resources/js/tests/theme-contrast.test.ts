@@ -16,6 +16,9 @@ import { sources } from './sources';
 // named; a fifth token added to OUT_OF_PAIRS → the out-of-pairs list test goes
 // red; --color-ink-3 dropped from OUT_OF_PAIRS → the classification test names
 // it.
+// index-computation-page D7: ink-soft is the text of the rule lines, on bg and
+// surface-1. Mutation: --color-ink-soft set to oklch(0.4 0.005 260) → the hex
+// test and the pair test name it.
 
 // Text: running text, secondary text, text on filled controls and pills.
 const textPairs: [string, string][] = [
@@ -27,6 +30,8 @@ const textPairs: [string, string][] = [
     ['color-ink-2', 'color-surface-1'],
     ['color-ink-2', 'color-surface-2'],
     ['color-ink-2', 'color-surface-3'],
+    ['color-ink-soft', 'color-bg'],
+    ['color-ink-soft', 'color-surface-1'],
     ['color-bg', 'color-ink'],
     ['color-accent', 'color-bg'],
     ['color-signal', 'color-bg'],
@@ -94,6 +99,7 @@ describe('dark palette values', () => {
         ['color-ink-2', '#95989F'],
         ['color-ink-3', '#606369'],
         ['color-ink-4', '#45484D'],
+        ['color-ink-soft', '#D5D7DB'],
         ['color-over', '#7D8086'],
         ['color-accent', '#FF9C3B'],
         ['color-signal', '#F66D67'],

@@ -34,8 +34,8 @@ import type { CourseWithLookup } from '@/pages/courses/index';
 // BETHPAGE BLACK ») → the naming test goes red; « Retirer la rating » shown on
 // a row without rating → the removal presence test goes red; « Enregistrer »
 // left enabled during the removal → the removal pending test goes red;
-// `aria-describedby` dropped → the error test goes red; ComputationHelp
-// removed → the explanation test goes red.
+// `aria-describedby` dropped → the error test goes red; ComputationLink
+// removed → the link test goes red.
 // Spec course-ratings « Page Parcours » (MODIFIED by visual-redesign), « Mise
 // en page de la page Parcours » and « Recherche SGT dans le bloc d'un
 // parcours » (DO10):
@@ -508,15 +508,27 @@ describe('Courses page', () => {
         expect(within(row(PAYNES)).getByRole('status')).toBeEmptyDOMElement();
     });
 
-    it('offers « Comment l’index est calculé », closed', () => {
+    // Spec handicap-index « Lien vers le calcul de l'index »: a link to the
+    // computation page, none of the rule lines on the page. Mutations: the
+    // former folded block kept, or the link sent to /handicaps → red.
+    it('links « Comment l’index est calculé » to /handicaps/calcul, without the rule lines', () => {
         render(<CoursesIndex courses={courses} lookupPending={false} />);
 
-        const title = screen.getByText('Comment l’index est calculé');
-
-        expect(title.tagName).toBe('SUMMARY');
-        expect((title.closest('details') as HTMLDetailsElement).open).toBe(
-            false,
-        );
+        expect(
+            screen
+                .getByRole('link', { name: 'Comment l’index est calculé' })
+                .getAttribute('href'),
+        ).toBe('/handicaps/calcul');
+        expect(
+            screen.queryByText(
+                'Score ajusté : chaque trou compte au plus par + 4.',
+            ),
+        ).toBeNull();
+        expect(
+            screen.queryByText(
+                'Parcours sans rating : la course rating vaut le par du round et le slope 113.',
+            ),
+        ).toBeNull();
     });
 });
 

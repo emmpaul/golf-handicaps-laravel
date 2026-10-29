@@ -32,6 +32,9 @@ Route::get('/', HomeController::class)->name('home');
 // Handicaps and Strokes (home-and-match-strokes, design D6): the player of the Handicaps page is
 // in ?joueur=; a sub-address, such as /strokes/xyz, falls to the 404 below.
 Route::get('/handicaps', [HandicapController::class, 'index'])->name('handicaps.index');
+// The page « Calcul de l'index » (index-computation-page, design D1): a fixed segment, the
+// player in ?joueur= as on /handicaps.
+Route::get('/handicaps/calcul', [HandicapController::class, 'computation'])->name('handicaps.computation');
 Route::get('/strokes', [StrokesController::class, 'index'])->name('strokes.index');
 
 // Imports (scorecard-ai-import, design D6): an address under /import without a route, such as

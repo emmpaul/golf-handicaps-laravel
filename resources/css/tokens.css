@@ -24,6 +24,8 @@
     --color-ink-2: oklch(0.68 0.01 260);
     --color-ink-3: oklch(0.5 0.01 260);
     --color-ink-4: oklch(0.4 0.01 260);
+    /* Texte des lignes de règle du calcul de l'index (index-computation-page D7). */
+    --color-ink-soft: oklch(0.88 0.005 260);
     --color-over: oklch(0.6 0.01 260);
     /* Couleurs porteuses de sens. */
     --color-accent: oklch(0.78 0.16 60);
@@ -85,9 +87,19 @@
     --text-name-m-17: 17px;
     --text-name-m-17--line-height: 1;
     --text-name-m-17--font-weight: 600;
+    /* Différentiel de l'étape 02 du calcul de l'index (index-computation-page D7). */
+    --text-num-36: 36px;
+    --text-num-36--line-height: 1;
+    --text-num-36--letter-spacing: -0.04em;
+    --text-num-36--font-weight: 500;
     --text-num-m: 24px;
     --text-num-m--line-height: 1;
     --text-num-m--font-weight: 500;
+    /* Différentiels de la liste et cases d'ajustement (index-computation-page D7). */
+    --text-num-20: 20px;
+    --text-num-20--line-height: 1;
+    --text-num-20--letter-spacing: -0.03em;
+    --text-num-20--font-weight: 500;
     --text-num-m-18: 18px;
     --text-num-m-18--line-height: 1;
     --text-num-m-18--font-weight: 500;
@@ -112,6 +124,10 @@
     --text-label-13: 13px;
     --text-label-13--line-height: 1;
     --text-label-13--font-weight: 600;
+    /* Lignes de règle du calcul de l'index (index-computation-page D7). */
+    --text-prose: 15px;
+    --text-prose--line-height: 1.45;
+    --text-prose--font-weight: 400;
     --text-body: 14px;
     --text-body--line-height: 1.5;
     --text-body--font-weight: 400;

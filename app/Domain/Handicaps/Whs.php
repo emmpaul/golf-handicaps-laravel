@@ -11,7 +11,7 @@ namespace App\Domain\Handicaps;
 final class Whs
 {
     /** The highest a hole counts for the handicap: par + 4 (quadruple bogey). */
-    private const int MAX_OVER_PAR = 4;
+    public const int MAX_OVER_PAR = 4;
 
     /** The index looks at the 20 latest rounds at most. */
     private const int WINDOW = 20;
@@ -69,7 +69,7 @@ final class Whs
         }
 
         $provisional = $n < 3;
-        [$best, $adjustmentT] = $provisional ? [$n, 0] : self::whsRule($n);
+        [$best, $adjustmentT] = self::retainedAndAdjustment($n);
 
         $retained = $recent;
         usort($retained, fn (int $a, int $b): int => $rounds[$a]->differentialT <=> $rounds[$b]->differentialT);
@@ -111,15 +111,17 @@ final class Whs
     }
 
     /**
-     * The WHS table: for n rounds (3 to 20), the number of best differentials retained and the
-     * adjustment in tenths.
+     * The WHS table: for n rounds (1 to 20), the number of best differentials retained and the
+     * adjustment in tenths. Under 3 rounds the index is provisional: every differential, no
+     * adjustment.
      *
      * @return array{int, int}
      */
-    private static function whsRule(int $n): array
+    public static function retainedAndAdjustment(int $n): array
     {
         return match (true) {
-            $n <= 3 => [1, -20],
+            $n < 3 => [$n, 0],
+            $n === 3 => [1, -20],
             $n === 4 => [1, -10],
             $n === 5 => [1, 0],
             $n === 6 => [2, -10],
@@ -136,7 +138,7 @@ final class Whs
     /**
      * Next's Math.floor(x + 0.5): to the nearest integer, 0,5 up, negative values included.
      */
-    private static function roundHalfUp(float|int $value): int
+    public static function roundHalfUp(float|int $value): int
     {
         return (int) floor($value + 0.5);
     }
