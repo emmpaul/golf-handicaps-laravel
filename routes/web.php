@@ -24,9 +24,6 @@ Route::inertia('/', 'home')->name('home');
 
 // Sections without a page yet: each address and its sub-addresses serve the placeholder,
 // until the section's own change replaces the route under the same name.
-Route::inertia('/import/{path?}', 'section-placeholder', ['section' => 'Importer'])
-    ->where('path', '.*')
-    ->name('import.index');
 Route::inertia('/handicaps/{path?}', 'section-placeholder', ['section' => 'Handicaps'])
     ->where('path', '.*')
     ->name('handicaps.index');
@@ -34,8 +31,13 @@ Route::inertia('/strokes/{path?}', 'section-placeholder', ['section' => 'Coups']
     ->where('path', '.*')
     ->name('strokes.index');
 
-// Imports (scorecard-ai-import, design D6).
-Route::post('/imports', [ImportController::class, 'store'])->name('imports.store');
+// Imports (scorecard-ai-import, design D6): an address under /import without a route, such as
+// /import/xyz, falls to the 404 below.
+Route::controller(ImportController::class)->group(function () {
+    Route::get('/import', 'index')->name('import.index');
+    Route::post('/imports', 'store')->name('imports.store');
+    Route::get('/imports/{import}', 'show')->whereUuid('import')->name('imports.show');
+});
 Route::get('/imports/{import}/photo', ImportPhotoController::class)->whereUuid('import')->name('imports.photo');
 
 // Rounds (design D8): /rounds/new before /rounds/{round}; a {round} that is not a UUID, such as
