@@ -72,9 +72,9 @@ Refonte visuelle selon le design « Golf handicap app redesign » du mainteneur 
 
 ## 10. `sqlite-import-command`
 
-**Dépend de** : 9, 11. **Statut** : à proposer.
+**Dépend de** : 9, 11. **Statut** : proposé. L'apply attend l'archivage de 8, 9 et 11.
 
-Commande `golf:import-sqlite`, puis cutover.
+Commande `golf:import-sqlite`, puis cutover. La répétition sur le staging et le cutover de production sont faits à la main par le mainteneur.
 
 ## Définition de terminé
 
