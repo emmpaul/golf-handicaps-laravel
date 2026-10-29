@@ -97,15 +97,15 @@ class SgtScorecardReader implements Agent, HasProviderOptions, HasStructuredOutp
 
     /**
      * The card of a reading, or null when it is unusable: a refusal or a truncated output (an
-     * empty array), a shape out of the schema, found false, a rating out of 40–90 or a slope out
-     * of 55–155 or not whole. The rating goes to tenths.
+     * empty array), a shape out of the schema, found false, no tee at all (decision Q17), a
+     * rating out of 40–90 or a slope out of 55–155 or not whole. The rating goes to tenths.
      *
      * @param  array<mixed>  $answer
      */
     private static function card(array $answer): ?SgtCard
     {
         if (($answer['found'] ?? null) !== true || ! is_int($answer['par'] ?? null)
-            || ! is_array($answer['tees'] ?? null) || ! array_is_list($answer['tees'])) {
+            || ! is_array($answer['tees'] ?? null) || $answer['tees'] === [] || ! array_is_list($answer['tees'])) {
             return null;
         }
 
