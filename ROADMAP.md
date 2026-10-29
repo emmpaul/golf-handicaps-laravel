@@ -88,7 +88,7 @@ Marges resserrées sur téléphone, suite de la vérification des zones sûres s
 
 ## 13. `index-computation-page`
 
-**Dépend de** : 6, 9 et 11. **Statut** : en cours.
+**Dépend de** : 6, 9 et 11. **Statut** : fait. Le changement est archivé ; reste au mainteneur le trou plafonné de démonstration de Manu, pas vu dans le navigateur parce que la base de développement avait été remplie avant le changement du seeder : lancer `make demo`, puis ouvrir `/handicaps/calcul` sur Manu.
 
 Page « Calcul de l'index » (`/handicaps/calcul`), dessinée dans le design « Golf handicap app redesign » du mainteneur : le calcul déroulé en cinq étapes (score ajusté, différentiel, différentiels retenus, ajustement, index) avec les rounds du joueur choisi, puis les cas particuliers. Le bloc replié « Comment l’index est calculé » des pages Joueurs, Handicaps, Parcours et d'un round devient un lien vers cette page.
 
