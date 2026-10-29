@@ -22,6 +22,8 @@
     </source>
     <php>
         <env name="APP_ENV" value="testing"/>
+        <!-- Design D9: no test inherits the Anthropic key of the development .env. -->
+        <env name="ANTHROPIC_API_KEY" value="" force="true"/>
         <env name="APP_PASSCODE" value="birdie-2026"/>
         <env name="APP_MAINTENANCE_DRIVER" value="file"/>
         <env name="BCRYPT_ROUNDS" value="4"/>

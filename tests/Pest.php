@@ -2,15 +2,28 @@
 
 use App\Domain\Rounds\Actions\CreateRound;
 use App\Domain\Rounds\RoundCard;
+use App\Integrations\Ai\ScorecardPhotoReader;
 use App\Models\Player;
 use App\Models\PlayerRoundStat;
 use App\Models\Round;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
 pest()->extend(TestCase::class)
     ->use(RefreshDatabase::class)
     ->in('Feature');
+
+// Design D9: no test reaches Anthropic or any other host. Unit tests that do not boot the
+// application have no facade to fake, hence the TestCase guard.
+pest()->beforeEach(function () {
+    if (! $this instanceof TestCase) {
+        return;
+    }
+
+    ScorecardPhotoReader::fake()->preventStrayPrompts();
+    Http::preventStrayRequests();
+})->in('Feature', 'Unit');
 
 /**
  * @return array<string, list<string>> the aliases of each player, keyed by player name
