@@ -3,6 +3,7 @@
 use App\Http\Controllers\CourseController;
 use App\Http\Controllers\CourseRatingController;
 use App\Http\Controllers\ImportController;
+use App\Http\Controllers\ImportCorrectionController;
 use App\Http\Controllers\ImportPhotoController;
 use App\Http\Controllers\LoginController;
 use App\Http\Controllers\PlayerAliasController;
@@ -39,6 +40,11 @@ Route::controller(ImportController::class)->group(function () {
     Route::get('/imports/{import}', 'show')->whereUuid('import')->name('imports.show');
 });
 Route::get('/imports/{import}/photo', ImportPhotoController::class)->whereUuid('import')->name('imports.photo');
+// JSON only, sent by the autosave of the correction screen.
+Route::put('/imports/{import}/correction', ImportCorrectionController::class)
+    ->whereUuid('import')
+    ->missing(fn () => response()->json(['error' => 'Import introuvable'], 404))
+    ->name('imports.correction.update');
 
 // Rounds (design D8): /rounds/new before /rounds/{round}; a {round} that is not a UUID, such as
 // /rounds/12, falls to the 404 below without any query.
