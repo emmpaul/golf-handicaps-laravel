@@ -13,27 +13,35 @@ import {
 
 import PlayersIndex from '@/pages/players/index';
 
-// Spec players « Liste des joueurs », « Ajout d'un joueur », « Retrait d'un
-// alias » and loading-feedback « Attentes des joueurs et des rounds ». The real
-// <Form> of each inline form submits through the Inertia router; only the
-// router's verbs are stubbed (jsdom cannot run a visit), and the visit
-// callbacks they receive (onStart, onError) drive the form's own state.
-// Head needs the head manager of createInertiaApp and renders nothing here;
-// the orb paints on a canvas jsdom cannot draw.
+// Spec players « Liste des joueurs », « Index sur la page Joueurs », « Ajout
+// d'un joueur », « Retrait d'un alias », « Mise en page de la page Joueurs »,
+// « Modification repliée d'un joueur » and loading-feedback « Attentes des
+// joueurs et des rounds ». The real <Form> of each inline form submits through
+// the Inertia router; only the router's verbs are stubbed (jsdom cannot run a
+// visit), and the visit callbacks they receive (onStart, onError) drive the
+// form's own state. Head needs the head manager of createInertiaApp and
+// renders nothing here; usePage is simulated for the top row; the orb paints
+// on a canvas jsdom cannot draw.
 // Mutations: label « Enregistrement du joueur » without « … » → the pending
 // test goes red; `disabled={processing}` removed from the submit button → the
 // pending test goes red; `aria-describedby` dropped → the error test goes red;
 // « Aucun alias » replaced by « — » → the empty aliases test goes red; an
 // alias label written with the straight apostrophe (« Retirer l'alias »,
 // « Ajouter l'alias ») instead of the typographic one → the alias tests go red;
-// « (provisoire) » dropped from the index → the index test goes red;
-// ComputationHelp removed from the page → the explanation test goes red.
+// the state « INDEX » written for a provisional index (`provisional` ignored)
+// → the index test reads « INDEX » for Manu and goes red; each line open on
+// its own (one `open` state per line instead of the page's) → the « one line
+// open » test finds Sean still open and goes red; the line closed on an error
+// (`setOpen(null)` on submit) → the error test goes red; the swatch at the
+// slot + 1 → the line test goes red; ComputationHelp removed from the page →
+// the explanation test goes red.
 // Spec players « Index sur la page Joueurs »: Gab 10,0, Manu 14,5 provisional,
 // Sean without round.
 
 vi.mock('@inertiajs/react', async (importOriginal) => ({
     ...(await importOriginal<typeof import('@inertiajs/react')>()),
     Head: () => null,
+    usePage: () => ({ url: '/players', props: {} }),
 }));
 
 vi.mock('thinking-orbs', () => ({
@@ -48,7 +56,14 @@ const EMMA_ALIAS = '0190a6b2-7c3e-7000-8000-000000000004';
 const SEAN = '0190a6b2-7c3e-7000-8000-000000000005';
 
 const players = [
-    { id: GAB, name: 'gab', aliases: [], indexT: 100, provisional: false },
+    {
+        id: GAB,
+        name: 'gab',
+        aliases: [],
+        indexT: 100,
+        provisional: false,
+        colorSlot: 0,
+    },
     {
         id: MANU,
         name: 'Manu',
@@ -58,8 +73,16 @@ const players = [
         ],
         indexT: 145,
         provisional: true,
+        colorSlot: 1,
     },
-    { id: SEAN, name: 'Sean', aliases: [], indexT: null, provisional: false },
+    {
+        id: SEAN,
+        name: 'Sean',
+        aliases: [],
+        indexT: null,
+        provisional: false,
+        colorSlot: 2,
+    },
 ];
 
 type VisitOptions = {
@@ -85,6 +108,18 @@ function addSection() {
     return screen.getByRole('region', { name: 'Ajouter un joueur' });
 }
 
+/** The line of the player named `name`. */
+const row = (name: string) =>
+    screen
+        .getByRole('heading', { level: 2, name })
+        .closest('li') as HTMLElement;
+
+/** Opens the line of `name` by its « Modifier ». */
+const openRow = (name: string) =>
+    userEvent.click(
+        within(row(name)).getByRole('button', { name: 'Modifier' }),
+    );
+
 describe('Players page', () => {
     it('lists the players in the order received, each with its aliases', () => {
         render(<PlayersIndex players={players} />);
@@ -105,14 +140,138 @@ describe('Players page', () => {
         ).toEqual(['EMMA', 'MANU']);
     });
 
-    it('shows « Index 10,0 », « Index 14,5 (provisoire) » and « Index — »', () => {
+    it("shows the index over its state: « 10,0 » « INDEX », « 14,5 » « PROVISOIRE », « — » « PAS D'INDEX »", () => {
         render(<PlayersIndex players={players} />);
 
         expect(
             screen
                 .getAllByTestId('player-index')
                 .map((index) => index.textContent),
-        ).toEqual(['Index 10,0', 'Index 14,5 (provisoire)', 'Index —']);
+        ).toEqual(['10,0INDEX', '14,5PROVISOIRE', "—PAS D'INDEX"]);
+    });
+
+    // Spec « Mise en page de la page Joueurs ».
+    it('draws each line with its 10 px swatch, its name at 20 px and its index at 22 px', () => {
+        render(<PlayersIndex players={players} />);
+
+        const manu = row('Manu');
+        const swatch = manu.querySelector(
+            '[aria-hidden="true"]',
+        ) as HTMLElement;
+
+        expect(swatch.className).toContain('bg-player-2');
+        expect(swatch.className).toContain('size-2.5');
+        expect(
+            within(manu).getByRole('heading', { level: 2 }).className,
+        ).toContain('text-name-m');
+        expect(within(manu).getByText('14,5').className).toContain(
+            'text-num-l',
+        );
+        expect(within(manu).getByText('PROVISOIRE').className).toContain(
+            'text-caption',
+        );
+    });
+
+    it('shows « ALIAS » then the alias pills of 32 px, each with its remove button', () => {
+        render(<PlayersIndex players={players} />);
+
+        const manu = row('Manu');
+        const pill = within(manu)
+            .getByText('MANU')
+            .closest('li') as HTMLElement;
+
+        expect(within(manu).getByText('Alias').className).toContain(
+            'uppercase',
+        );
+        expect(pill.className).toContain('h-8');
+        expect(pill.className).toContain('bg-surface-2');
+        expect(
+            within(pill).getByRole('button', {
+                name: 'Retirer l’alias MANU de Manu',
+            }),
+        ).toBeInTheDocument();
+    });
+
+    // Spec « Modification repliée d'un joueur ».
+    it('folds the rename and the new alias behind « Modifier », which becomes « Fermer »', async () => {
+        render(<PlayersIndex players={players} />);
+
+        expect(screen.queryByLabelText('Nouvel alias de Sean')).toBeNull();
+        expect(screen.queryByRole('button', { name: 'Renommer' })).toBeNull();
+
+        await openRow('Sean');
+
+        const sean = row('Sean');
+        expect(
+            (within(sean).getByLabelText('Nom de Sean') as HTMLInputElement)
+                .value,
+        ).toBe('Sean');
+        expect(
+            within(sean).getByRole('button', { name: 'Renommer' }),
+        ).toBeInTheDocument();
+        expect(
+            within(sean).getByLabelText('Nouvel alias de Sean'),
+        ).toBeInTheDocument();
+        expect(
+            within(sean).getByRole('button', { name: 'Ajouter l’alias' })
+                .textContent,
+        ).toBe('Ajouter l’alias');
+        expect(
+            within(sean).getByText(
+                'Les alias servent à reconnaître le joueur sur les photos de carte.',
+            ),
+        ).toBeInTheDocument();
+        expect(
+            within(sean)
+                .getByRole('button', { name: 'Fermer' })
+                .getAttribute('aria-expanded'),
+        ).toBe('true');
+
+        await userEvent.click(
+            within(sean).getByRole('button', { name: 'Fermer' }),
+        );
+
+        expect(screen.queryByLabelText('Nouvel alias de Sean')).toBeNull();
+    });
+
+    it('keeps one player open at a time', async () => {
+        render(<PlayersIndex players={players} />);
+
+        await openRow('Sean');
+        await openRow('gab');
+
+        expect(
+            screen.getByLabelText('Nouvel alias de gab'),
+        ).toBeInTheDocument();
+        expect(screen.queryByLabelText('Nouvel alias de Sean')).toBeNull();
+        expect(
+            within(row('Sean')).getByRole('button', { name: 'Modifier' }),
+        ).toBeInTheDocument();
+    });
+
+    it('keeps the line open with « Ce joueur existe déjà » under the name when the rename is refused', async () => {
+        vi.mocked(router.patch).mockImplementation((_url, _data, options) => {
+            (options as VisitOptions).onError?.({
+                name: 'Ce joueur existe déjà',
+            });
+        });
+
+        render(<PlayersIndex players={players} />);
+        await openRow('Manu');
+
+        const name = within(row('Manu')).getByLabelText('Nom de Manu');
+        await userEvent.clear(name);
+        await userEvent.type(name, 'GAB');
+        await userEvent.click(
+            within(row('Manu')).getByRole('button', { name: 'Renommer' }),
+        );
+
+        expect(within(row('Manu')).getByRole('alert').textContent).toBe(
+            'Ce joueur existe déjà',
+        );
+        expect(
+            within(row('Manu')).getByRole('button', { name: 'Fermer' }),
+        ).toBeInTheDocument();
     });
 
     it('offers « Comment l’index est calculé », closed', () => {
@@ -129,27 +288,13 @@ describe('Players page', () => {
     it('shows « Aucun alias » for a player without alias', () => {
         render(<PlayersIndex players={players} />);
 
-        const gabRow = screen
-            .getByRole('heading', { level: 2, name: 'gab' })
-            .closest('li') as HTMLElement;
+        const gabRow = row('gab');
 
+        expect(within(gabRow).getByText('Alias')).toBeInTheDocument();
         expect(within(gabRow).getByText('Aucun alias').textContent).toBe(
             'Aucun alias',
         );
         expect(screen.queryByRole('list', { name: 'Alias de gab' })).toBeNull();
-    });
-
-    it('offers « Ajouter l’alias » to each player', () => {
-        render(<PlayersIndex players={players} />);
-
-        const gabRow = screen
-            .getByRole('heading', { level: 2, name: 'gab' })
-            .closest('li') as HTMLElement;
-
-        expect(
-            within(gabRow).getByRole('button', { name: 'Ajouter l’alias' })
-                .textContent,
-        ).toBe('Ajouter l’alias');
     });
 
     it('removes an alias at once, without confirmation', async () => {
@@ -179,6 +324,10 @@ describe('Players page', () => {
             within(addSection()).getByRole('button', { name: 'Ajouter' }),
         );
 
+        expect(
+            within(addSection()).getByRole('button', { name: 'Ajouter' })
+                .className,
+        ).toContain('bg-ink');
         expect(post).toHaveBeenCalledTimes(1);
         expect(post.mock.calls[0][0]).toBe('/players');
         expect(post.mock.calls[0][1]).toEqual({
