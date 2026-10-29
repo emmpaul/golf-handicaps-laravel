@@ -42,7 +42,7 @@ Joueurs, alias, rounds, saisie manuelle, données de démonstration et cibles `m
 
 ## 6. `handicap-index`
 
-**Dépend de** : 5. **Statut** : à proposer.
+**Dépend de** : 5. **Statut** : fait.
 
 Calcul WHS, table `player_round_stats`, ratings et slopes saisis à la main.
 
