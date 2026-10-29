@@ -9,7 +9,9 @@ import { describe, expect, it } from 'vite-plus/test';
 // red; --text-title set to 26px → "--text-title" goes red; a
 // --color-paper token added back → the paper test goes red; the dark
 // `prefers-color-scheme` block added back → the media test goes red;
-// `color-scheme: dark` removed from app.css → the colour-scheme test goes red.
+// `color-scheme: dark` removed from app.css → the colour-scheme test goes red;
+// --gutter set back to 20px → the gutter test goes red (change
+// reduce-mobile-padding: content margins of 16 px, those of the floating bar).
 const tokens = readFileSync('resources/css/tokens.css', 'utf8');
 const app = readFileSync('resources/css/app.css', 'utf8');
 
@@ -127,6 +129,13 @@ describe('design tokens in tokens.css', () => {
             expect(valueOf(name)).toBe(expected);
         });
     }
+
+    it('declares side margins of 16 px for the content and the floating bar', () => {
+        expect({
+            gutter: valueOf('--gutter'),
+            gutterNav: valueOf('--gutter-nav'),
+        }).toEqual({ gutter: '16px', gutterNav: '16px' });
+    });
 
     it('declares --shadow-float once', () => {
         expect(valueOf('--shadow-float')).toBe(

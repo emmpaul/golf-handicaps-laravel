@@ -19,6 +19,10 @@ import Login from '@/pages/login';
 // kept beside « Golf » (E3) → the design test finds an svg and goes red; the
 // button left in outline → the design test goes red; the narrow column of
 // the former layout (`max-w-sm px-4`) → the column test goes red.
+// Reduce-mobile-padding (spec app-shell « Rangée du haut des pages »): the
+// row « Golf » starts at the bottom of the safe area, no margin added.
+// Mutation: `pt-[max(54px,calc(var(--safe-top)+10px))]` back on the row →
+// the top-of-row test goes red.
 
 const formState = vi.hoisted(() => ({
     errors: {} as Record<string, string>,
@@ -106,7 +110,17 @@ describe('Login page', () => {
         ).toContain('bg-ink');
     });
 
-    it('lays the page in the column of 390 px with the gutters of 20 px', () => {
+    it('starts the row « Golf » at 54 px or at the bottom of the safe area, no margin added', () => {
+        renderPage();
+
+        const row = screen.getByText('Golf').parentElement as HTMLElement;
+        const classes = row.className.split(/\s+/);
+
+        expect(classes).toContain('pt-[max(54px,var(--safe-top))]');
+        expect(classes.filter((name) => name.includes('+10px'))).toEqual([]);
+    });
+
+    it('lays the page in the column of 390 px with the gutters of 16 px', () => {
         renderPage();
 
         const main = screen.getByRole('main');

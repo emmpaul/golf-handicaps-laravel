@@ -18,7 +18,7 @@ export default function Login() {
     return (
         <>
             <Head title="Connexion" />
-            <p className="flex min-h-11 items-center pt-[max(54px,calc(var(--safe-top)+10px))]">
+            <p className="flex min-h-11 items-center pt-[max(54px,var(--safe-top))]">
                 <span className="text-label">Golf</span>
             </p>
             <h1 className="mt-[22px] text-title">Handicaps golf</h1>

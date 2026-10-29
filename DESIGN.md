@@ -40,7 +40,7 @@ Une app de téléphone sombre et typographique : des chiffres en très grand, pe
 - `--color-scrim` (`rgba(0, 0, 0, 0.6)`) est le voile de la feuille ; `--shadow-float` (`0 10px 30px rgba(0, 0, 0, 0.5)`) est la seule ombre, portée par la barre d'onglets, le bouton Importer et le toast.
 - Rayons nommés par leur valeur : `rounded-pill` (999 px), `rounded-22` (coins du haut de la feuille), `rounded-14` (bouton collé en bas, groupe de tuiles), `rounded-12`, `rounded-10` (champ), `rounded-9`, `rounded-8` (sous-total, case de l'éditeur), `rounded-6` (case de coups), `rounded-4`, `rounded-3`, `rounded-2` (pastille de joueur).
 - `app.css` pointe les variables shadcn des primitives sur ces tokens : `--background` → `bg`, `--foreground` et `--primary` → `ink`, `--primary-foreground` → `bg`, `--muted` → `surface-1`, `--muted-foreground` → `ink-2`, `--border` et `--input` → `rule`, `--destructive` → `signal`, `--destructive-foreground` → `on-signal`, `--ring` → `ink`.
-- `:root` de `tokens.css` porte les durées (`--dur-*`), les marges (`--gutter` 20 px, `--gutter-nav` 16 px), la colonne (`--column` 390 px) et les z-index (`--z-*`) ; `:root` d'`app.css` les zones sûres (`--safe-top`, `--safe-bottom`).
+- `:root` de `tokens.css` porte les durées (`--dur-*`), les marges (`--gutter` et `--gutter-nav`, 16 px chacune), la colonne (`--column` 390 px) et les z-index (`--z-*`) ; `:root` d'`app.css` les zones sûres (`--safe-top`, `--safe-bottom`).
 - `cn` étend `tailwind-merge` avec les styles `--text-*`, les rayons et l'ombre de `tokens.css` : sans cela, `cn('text-bg', 'text-label')` retirait la couleur. `lib/utils.test.ts` échoue si un style manque.
 
 ## Échelle typographique
@@ -77,9 +77,9 @@ Les capitales passent par `uppercase` : le DOM garde la casse d'origine, et les 
 ## Cadre et mesures
 
 - Colonne : `main`, la barre d'onglets et le bouton Importer tiennent dans `max-w-(--column)` (390 px) centrée ; en dessous, la page occupe l'écran. Le fond de `body` reste `bg` à toute largeur.
-- Marges latérales de 20 px (`px-(--gutter)`), 16 px pour la barre flottante.
+- Marges latérales de 16 px (`px-(--gutter)`) sur toutes les pages, connexion comprise, alignées sur la barre flottante (`--gutter` = `--gutter-nav`). Les deux jetons restent distincts pour que la barre puisse évoluer seule.
 - Bande de zone sûre : un élément fixe (`data-slot="safe-area-band"`) de `--safe-top` de haut, fond `bg`, au-dessus du contenu. Pas d'en-tête collé.
-- Rangée du haut (`PageTopRow`), 44 px, qui défile avec la page : « Golf » à gauche (lien vers l'accueil, sauf sur l'accueil) ou un lien de retour (chevron de 18 px, `text-link` gris), les actions à droite. Haut à `max(44px, safe-top)` pour une rangée à retour ou à actions, `max(54px, safe-top + 10px)` pour « Golf » seul : sans zone sûre, la mesure du design.
+- Rangée du haut (`PageTopRow`), 44 px, qui défile avec la page : « Golf » à gauche (lien vers l'accueil, sauf sur l'accueil) ou un lien de retour (chevron de 18 px, `text-link` gris), les actions à droite. Haut à `max(44px, safe-top)` pour une rangée à retour ou à actions, `max(54px, safe-top)` pour « Golf » seul ou suivi d'une valeur : sans zone sûre, la mesure du design ; avec une zone sûre plus haute, la rangée commence à son bas, sans marge ajoutée.
 - Bas de page : `pb-[calc(108px+var(--safe-bottom))]`, pour que la ligne de version reste au-dessus de la barre flottante.
 - Barre d'onglets (`AppNav`, `NavLink`) : `nav` fixe à 28 px au-dessus du bas de la zone sûre, pilule de 60 px de haut, fond `surface-2`, filet `rule`, quatre onglets (Rounds, Handicaps, Coups, Joueurs) dont seul le courant montre son libellé, puis le bouton rond Importer de 60 px, ambre, avec la pastille du nombre d'imports à vérifier. Le libellé est toujours dans le DOM et le lien garde son `aria-label`. `aria-current="page"` sur la section courante, sur Importer pour `/import`.
 - Écrans de l'éditeur (nouveau round, modification, vérification d'un import) : la page déclare `layout = { chrome: 'editor' }`, le layout ne rend ni barre d'onglets ni Importer ; le lien de retour et `EditorSaveBar` en tiennent lieu.
