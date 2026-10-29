@@ -15,8 +15,20 @@ arch('eloquent models use uuid identifiers')
 arch('the domain layer does not depend on http or the frontend')
     ->expect('App\Domain')->not->toUse(['Illuminate\Http', 'Inertia', 'App\Http']);
 
+// Mutation that turns this test and the jobs-only rule below red:
+// `use App\Integrations\Ai\ScorecardPhotoReader` in an Action of App\Domain, called in a method.
 arch('the domain layer does not depend on integrations')
     ->expect('App\Domain')->not->toUse('App\Integrations');
+
+// Mutation that turns this test red: `use Laravel\Ai\Enums\Lab` in an Action of App\Domain, used
+// in a method.
+arch('the domain layer does not call the ai sdk')
+    ->expect('App\Domain')->not->toUse('Laravel\Ai');
+
+// Design D9: only the reading job calls the AI integration; the domain writes its result.
+// Same mutation as above.
+arch('only the jobs use the ai integration')
+    ->expect('App\Integrations\Ai')->toOnlyBeUsedIn(['App\Jobs', 'App\Integrations\Ai']);
 
 arch('integrations do not depend on controllers or the frontend')
     ->expect('App\Integrations')->not->toUse(['App\Http', 'Inertia']);
