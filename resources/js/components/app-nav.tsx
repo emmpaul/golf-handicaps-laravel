@@ -1,17 +1,16 @@
-import { Link } from '@inertiajs/react';
+import { usePage } from '@inertiajs/react';
 import { Camera, Flag, ListOrdered, TrendingUp, Users } from 'lucide-react';
-import { BrandMark } from '@/components/brand-mark';
+import { useId } from 'react';
 import { NavLink } from '@/components/nav-link';
-import { home } from '@/routes';
+import { cn } from '@/lib/utils';
 import { index as handicapsIndex } from '@/routes/handicaps';
 import { index as importIndex } from '@/routes/import';
 import { index as playersIndex } from '@/routes/players';
 import { index as roundsIndex } from '@/routes/rounds';
 import { index as strokesIndex } from '@/routes/strokes';
 
-/** Sections de l'app, partagées par les navigations du haut et du bas. */
-export const LINKS = [
-    { href: importIndex.url(), label: 'Importer', icon: Camera },
+/** Les quatre onglets de la barre, dans l'ordre du design (D4). */
+export const TABS = [
     { href: roundsIndex.url(), label: 'Rounds', icon: ListOrdered },
     { href: handicapsIndex.url(), label: 'Handicaps', icon: TrendingUp },
     { href: strokesIndex.url(), label: 'Coups', icon: Flag },
@@ -19,63 +18,96 @@ export const LINKS = [
 ] as const;
 
 /**
- * Navigation entre sections : liens en haut à partir de `md` (le courant
- * souligné d'un filet d'encre de 2 px), barre d'onglets fixée en bas en dessous
- * (onglet courant : bloc d'encre plein sous l'icône). Les deux sont rendues,
- * l'une ou l'autre masquée en CSS. Les marges de zone sûre viennent des
- * variables de `app.css`.
+ * Barre flottante du bas (D4) : la pilule des quatre onglets puis le bouton
+ * rond Importer, dans la colonne de 390 px (décision Q3), 28 px au-dessus de
+ * la zone sûre du bas. Seul l'onglet courant montre son libellé ; les autres
+ * le gardent dans le DOM, refermé à une largeur maximale nulle. La pastille du
+ * bouton Importer compte les imports prêts à vérifier (`pendingImports`,
+ * prop partagée différée, D7).
  */
 export function AppNav() {
+    const { pendingImports } = usePage().props;
+    const badgeId = useId();
+    const pending = typeof pendingImports === 'number' ? pendingImports : 0;
+
     return (
-        <>
-            {/* Collé en haut, fond plein du papier (= `html` et `body`) : Safari iOS y
-                prend sa teinte et rien ne passe flou dessous. La rangée de la marque
-                commence 8 px sous la zone sûre. */}
-            <header className="sticky top-0 z-40 border-b bg-background pt-[calc(var(--safe-top)+--spacing(2))]">
-                <nav
-                    aria-label="Navigation principale"
-                    className="mx-auto flex w-full max-w-7xl items-center gap-4 px-4 pb-2"
-                >
-                    <Link
-                        href={home.url()}
-                        className="font-heading text-xl mr-auto flex shrink-0 items-center gap-2 leading-none font-extrabold max-md:min-h-11"
-                    >
-                        <BrandMark /> Golf
-                    </Link>
-                    {LINKS.map(({ href, label }) => (
+        <nav
+            aria-label="Sections"
+            className="fixed inset-x-0 bottom-[calc(28px+var(--safe-bottom))] z-(--z-sticky-nav) mx-auto flex max-w-(--column) items-center gap-2.5 px-(--gutter-nav)"
+        >
+            <ul className="flex h-15 flex-1 items-center justify-between rounded-pill border border-rule bg-surface-2 px-[7px] text-ink-2 shadow-float">
+                {TABS.map(({ href, label, icon: Icon }) => (
+                    <li key={href} className="flex">
                         <NavLink
-                            key={href}
                             href={href}
-                            className="text-sm hidden h-11 shrink-0 items-center border-y-2 border-transparent text-muted-foreground transition-[color,border-color] duration-(--dur-micro) ease-out hover:text-foreground aria-[current=page]:border-b-foreground aria-[current=page]:font-medium aria-[current=page]:text-foreground md:flex"
+                            label={label}
+                            className={(current) =>
+                                cn(
+                                    'flex h-11 min-w-11 items-center justify-center rounded-pill [transition:background-color_var(--dur-nav)_var(--ease-design),color_var(--dur-nav)_var(--ease-design),padding_var(--dur-nav)_var(--ease-design),scale_var(--dur-press)] active:scale-94',
+                                    current
+                                        ? 'bg-ink px-3.5 text-bg'
+                                        : 'bg-ink/0 px-3 text-ink-2',
+                                )
+                            }
                         >
-                            {label}
+                            {(current) => (
+                                <>
+                                    <Icon
+                                        aria-hidden
+                                        className="size-5 flex-none"
+                                        strokeWidth={2.1}
+                                    />
+                                    <span
+                                        data-slot="tab-label"
+                                        className={cn(
+                                            'block overflow-hidden text-label-13 whitespace-nowrap [transition:max-width_var(--dur-nav)_var(--ease-design),opacity_var(--dur-fade)_ease,margin-left_var(--dur-nav)_var(--ease-design)]',
+                                            current
+                                                ? 'ml-2 max-w-[90px] opacity-100'
+                                                : 'ml-0 max-w-0 opacity-0',
+                                        )}
+                                    >
+                                        {label}
+                                    </span>
+                                </>
+                            )}
                         </NavLink>
-                    ))}
-                </nav>
-            </header>
-            <nav
-                aria-label="Sections"
-                className="fixed inset-x-0 bottom-0 z-40 flex h-(--bottom-chrome) flex-col border-t-2 border-foreground bg-background pb-(--safe-bottom) md:hidden"
+                    </li>
+                ))}
+            </ul>
+            <NavLink
+                href={importIndex.url()}
+                label="Importer"
+                aria-describedby={pending > 0 ? badgeId : undefined}
+                className={() =>
+                    'relative flex size-15 flex-none items-center justify-center rounded-full bg-accent text-bg shadow-float transition-[scale] duration-(--dur-press) ease-out active:scale-92'
+                }
             >
-                <ul className="grid flex-1 grid-cols-5">
-                    {LINKS.map(({ href, label, icon: Icon }) => (
-                        <li key={href} className="flex">
-                            <NavLink
-                                href={href}
-                                className="group text-xs flex flex-1 flex-col items-center justify-center gap-0.5 text-muted-foreground aria-[current=page]:font-medium aria-[current=page]:text-foreground"
-                            >
+                {() => (
+                    <>
+                        <Camera
+                            aria-hidden
+                            className="size-6"
+                            strokeWidth={2.2}
+                        />
+                        {pending > 0 && (
+                            <>
                                 <span
-                                    data-slot="tab-pill"
-                                    className="flex h-7 w-12 items-center justify-center group-aria-[current=page]:bg-primary group-aria-[current=page]:text-primary-foreground"
+                                    data-slot="pending-badge"
+                                    aria-hidden
+                                    className="absolute -top-0.5 -right-0.5 h-5 min-w-5 rounded-[10px] bg-ink px-[5px] text-center font-mono text-section leading-5 font-semibold tracking-normal text-bg ring-3 ring-bg"
                                 >
-                                    <Icon aria-hidden className="size-5" />
+                                    {pending}
                                 </span>
-                                {label}
-                            </NavLink>
-                        </li>
-                    ))}
-                </ul>
-            </nav>
-        </>
+                                <span id={badgeId} className="sr-only">
+                                    {pending === 1
+                                        ? '1 import à vérifier'
+                                        : `${pending} imports à vérifier`}
+                                </span>
+                            </>
+                        )}
+                    </>
+                )}
+            </NavLink>
+        </nav>
     );
 }

@@ -15,6 +15,8 @@ declare module '@inertiajs/core' {
                 version: string;
                 commit: string | null;
             };
+            /** Imports prêts à vérifier sans round, prop différée (design D7). */
+            pendingImports?: number;
             [key: string]: unknown;
         };
         flashDataType: {
