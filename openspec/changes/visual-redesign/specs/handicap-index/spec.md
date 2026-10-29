@@ -101,12 +101,12 @@ La page Handicaps SHALL montrer, sous « DIFFÉRENTIELS » et « COMPTE », une 
 - **THEN** sa barre a la couleur `oklch(0.72 0.24 145)` et la date « 17/10 » dessous
 
 ### Requirement: Étiquettes du graphique des différentiels
-Au-delà de 10 barres, le graphique des différentiels SHALL écrire le différentiel et la date d'une barre sur deux, en partant de la plus récente, toujours étiquetée ; ces étiquettes MUST NOT se chevaucher ni sortir du graphique, et celles des autres barres MUST rester lues par les lecteurs d'écran.
+Au-delà de 10 barres, le graphique des différentiels SHALL écrire le différentiel et la date d'une barre sur deux jusqu'à 16 barres, d'une sur trois au-delà, en partant de la plus récente, toujours étiquetée ; ces étiquettes MUST NOT se chevaucher ni sortir du graphique, et celles des autres barres MUST rester lues par les lecteurs d'écran.
 
 #### Scenario: Vingt barres sur téléphone
 - **GIVEN** Gab a joué 20 rounds, du 1er au 20 octobre 2026
 - **WHEN** l'utilisateur ouvre `/handicaps` sur Gab à 320 puis 390 px
-- **THEN** les dates « 2/10 », « 4/10 » … « 20/10 » s'écrivent sous une barre sur deux avec leur différentiel au-dessus, aucune ne chevauche sa voisine, et « 20/10 » et son différentiel tiennent dans le graphique
+- **THEN** les dates « 2/10 », « 5/10 » … « 20/10 » s'écrivent sous une barre sur trois avec leur différentiel au-dessus, aucune ne chevauche sa voisine, et « 20/10 » et son différentiel tiennent dans le graphique
 
 ### Requirement: Statistiques de jeu d'un joueur
 Sous le graphique des différentiels, la page Handicaps SHALL montrer « STATS » et le nombre de trous joués, puis trois valeurs : « MOY. BRUT », moyenne des bruts arrondie au dixième ; « MEILLEUR BRUT », le plus petit brut ; « PAR OU MIEUX », la part des trous joués en par ou mieux, en pour cent entier. Elles portent sur tous les rounds enregistrés du joueur, tous parcours, sans limite de nombre, rating ignorée ; un round compte 18 trous.
