@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vite-plus/test';
 
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Field, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select';
 
@@ -12,7 +13,9 @@ import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select'
 // au clavier »; design D5, D9).
 // Mutations: `md:h-8` kept on the default button, the input or the select →
 // the « no md:h-8 » tests go red; field contour at `border-ink-3` instead of
-// `border-rule` → the input and select tests go red.
+// `border-rule` → the input and select tests go red; contour of a field in
+// error at `signal` (the former `aria-invalid:border-signal`) instead of the
+// amber of the grid cells and the date (DO25) → the error tests go red.
 
 function classesOf(element: Element): string[] {
     return element.className.split(/\s+/);
@@ -61,6 +64,63 @@ describe('buttons', () => {
 });
 
 describe('fields', () => {
+    // DO25: a field in error takes the amber contour of the grid cells and of
+    // the date; `signal` stays for what destroys and for « under par ».
+    it('outlines an input in error in amber, never in signal', () => {
+        render(<Input aria-label="Nouveau joueur" aria-invalid />);
+
+        const classes = classesOf(
+            screen.getByRole('textbox', { name: 'Nouveau joueur' }),
+        );
+
+        expect(classes).toEqual(
+            expect.arrayContaining([
+                'aria-invalid:border-accent/60',
+                'aria-invalid:bg-accent/8',
+            ]),
+        );
+        expect(classes.filter((name) => name.includes('signal'))).toEqual([]);
+    });
+
+    it('outlines a native select in error in amber, never in signal', () => {
+        render(
+            <NativeSelect aria-label="Parcours" aria-invalid>
+                <NativeSelectOption value="1">BETHPAGE BLACK</NativeSelectOption>
+            </NativeSelect>,
+        );
+
+        const classes = classesOf(
+            screen.getByRole('combobox', { name: 'Parcours' }),
+        );
+
+        expect(classes).toEqual(
+            expect.arrayContaining([
+                'aria-invalid:border-accent/60',
+                'aria-invalid:bg-accent/8',
+            ]),
+        );
+        expect(classes.filter((name) => name.includes('signal'))).toEqual([]);
+    });
+
+    it('colours the label of a field in error in amber, never in signal', () => {
+        render(
+            <Field data-invalid>
+                <FieldLabel>Rating</FieldLabel>
+            </Field>,
+        );
+
+        const classes = classesOf(
+            screen.getByRole('group'),
+        );
+
+        expect(classes).toContain('data-[invalid=true]:text-accent');
+        expect(
+            classes.filter(
+                (name) => name.includes('signal') || name.includes('destructive'),
+            ),
+        ).toEqual([]);
+    });
+
     it('gives the input 48 px, 16 px text, the rule contour and a 10 px radius', () => {
         render(<Input aria-label="Nouveau joueur" />);
 
