@@ -18,22 +18,22 @@ Page `/courses` réduite à 14 parcours sur 2 740. Le bloc `<script id='courses-
 
 Chaque ligne vaut `[id, nom, lieu, par, difficulté, …, latitude, longitude]` (13 champs). Parcours gardés et rôle de chacun dans les tests :
 
-| id | Nom | Par | Rôle |
-| --- | --- | --- | --- |
-| 30 | Bethpage Black | 71 | parcours de référence (carte `IMG_3064`) : nom égal, retenu |
-| 3216 | Calanova Golf Club | 72 | parcours de la prod ; « CALA NOVA » ne le trouve pas |
-| 573 | Paynes Valley | 72 | parcours de la prod : nom égal, retenu |
-| 574 | Paynes Valley 19th | 3 | contient « Paynes Valley », par différent : exclu |
-| 477 | Sanctuary | 72 | « THE SANCTUARY » de la prod (`the` de tête retiré) |
-| 3291 | Sanctuary GC | 72 | candidat en sous-chaîne, même par |
-| 1873 | Sanctuary Lake | 71 | candidat en sous-chaîne, autre par : exclu |
-| 1969 | Sanctuary Moon | 72 | sous-chaîne, latitude et longitude `null` |
-| 1951 | The Pines Sanctuary Cove | 72 | sous-chaîne, nom en « The » : candidat de « SANCTUARY COVE » avec 477 |
-| 3466 | Tualatin Country Club | 72 | parcours de la prod |
-| 3222 | Diamond Hawk Golf Course & Pub | 72 | `&` normalisé en ` and `, slug The Course View observé |
-| 1841 | 401 Par Golf, Par 3 Course. | 63 | difficulté `null`, ponctuation du slug |
-| 2341 | 3 Ponds Farm | 71 | première ligne de la page |
-| 2184 | Zoar Village G.C. | 72 | dernière ligne de la page |
+| id   | Nom                            | Par | Rôle                                                                  |
+| ---- | ------------------------------ | --- | --------------------------------------------------------------------- |
+| 30   | Bethpage Black                 | 71  | parcours de référence (carte `IMG_3064`) : nom égal, retenu           |
+| 3216 | Calanova Golf Club             | 72  | parcours de la prod ; « CALA NOVA » ne le trouve pas                  |
+| 573  | Paynes Valley                  | 72  | parcours de la prod : nom égal, retenu                                |
+| 574  | Paynes Valley 19th             | 3   | contient « Paynes Valley », par différent : exclu                     |
+| 477  | Sanctuary                      | 72  | « THE SANCTUARY » de la prod (`the` de tête retiré)                   |
+| 3291 | Sanctuary GC                   | 72  | candidat en sous-chaîne, même par                                     |
+| 1873 | Sanctuary Lake                 | 71  | candidat en sous-chaîne, autre par : exclu                            |
+| 1969 | Sanctuary Moon                 | 72  | sous-chaîne, latitude et longitude `null`                             |
+| 1951 | The Pines Sanctuary Cove       | 72  | sous-chaîne, nom en « The » : candidat de « SANCTUARY COVE » avec 477 |
+| 3466 | Tualatin Country Club          | 72  | parcours de la prod                                                   |
+| 3222 | Diamond Hawk Golf Course & Pub | 72  | `&` normalisé en `and`, slug The Course View observé                  |
+| 1841 | 401 Par Golf, Par 3 Course.    | 63  | difficulté `null`, ponctuation du slug                                |
+| 2341 | 3 Ponds Farm                   | 71  | première ligne de la page                                             |
+| 2184 | Zoar Village G.C.              | 72  | dernière ligne de la page                                             |
 
 ## `scorecard_30.jpg`
 

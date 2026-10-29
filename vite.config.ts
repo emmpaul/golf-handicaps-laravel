@@ -89,6 +89,8 @@ export default defineConfig({
             'openspec/**',
             'resources/js/components/ui/*',
             'resources/views/mail/*',
+            // The page of Simulator Golf Tour as served, read by SgtCoursesPage.
+            'tests/fixtures/sgt/courses.html',
         ],
         sortTailwindcss: {
             functions: ['clsx', 'cn', 'cva'],
