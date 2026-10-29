@@ -188,8 +188,9 @@ describe('with a session', function () {
         $this->get('/rounds')->assertOk()->assertInertia(fn (Assert $page) => $page->has('rounds', 10));
 
         // The rounds, their lines, the players of the lines, the gross per line, the
-        // statistics of every line with the rating of its round.
-        expect($queries)->toBe(5);
+        // statistics of every line with the rating of its round, and the count of the imports to
+        // check shared with every page (DO35).
+        expect($queries)->toBe(6);
     });
 
     test('the manual entry gets the day in Montreal and the known courses', function () {
