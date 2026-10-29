@@ -388,6 +388,140 @@ La version qui apporte la recherche SGT rend `rating_t` et `slope` facultatifs d
 
 Les recherches perdues repartent au redéploiement suivant de la nouvelle version : `golf:queue-rating-lookups` les remet en file.
 
+## Bascule depuis Next
+
+La bascule remplace l'application Next par cette stack, sur le même domaine. `golf:import-sqlite` copie la base SQLite de Next et ses photos dans la base PostgreSQL et le volume `storage`, en une transaction. Elle recalcule l'historique d'index et le compare à celui de Next : un écart annule tout. Les décisions sont dans l'ADR 0014.
+
+Chaque étape est faite par le mainteneur, une à la fois : lancer la commande, lire la sortie comme indiqué, puis seulement passer à la suivante. Une sortie différente arrête la bascule. La commande d'import a tourné sur une copie locale de la base de production le 2026-10-29 (essai à blanc, puis import). Les commandes `docker` de cette section ont seulement été relues : l'étape 1 les essaie sur le staging.
+
+Variables, en plus de `P` et `URL` (voir « Lancer les commandes de cette page ») :
+
+```sh
+NEXT_WEB=<conteneur web de Next>
+NEXT_WORKER=<conteneur worker de Next>
+COPY=/root/golf-cutover
+```
+
+Les noms des conteneurs de Next changent à chaque déploiement. Les relever sur le serveur, dans l'onglet de chaque application Next de Dokploy ou avec :
+
+```sh
+docker ps --format '{{.Names}}  {{.Image}}' | grep -i golf
+```
+
+### 1. Répétition sur le staging
+
+Mainteneur. Faire les étapes 3, 4 et 6 avec `P` et `URL` du staging, sans arrêter Next (étape 2) : `VACUUM INTO` lit une image cohérente d'une base en service. Puis comparer à l'œil le staging à Next : accueil, handicaps (index de chaque joueur), trois rounds avec leur photo, Parcours, Importer. Le staging met en file les recherches de rating importées : son worker appelle Simulator Golf Tour, et l'IA si `ANTHROPIC_API_KEY` y est réglée.
+
+### 2. Arrêter Next
+
+Mainteneur, le jour J. Relever d'abord l'image et le volume de Next, qui servent à l'étape 3 :
+
+```sh
+NEXT_IMAGE="$(docker inspect --format '{{.Config.Image}}' "$NEXT_WEB")"
+NEXT_VOLUME="$(docker inspect --format '{{range .Mounts}}{{if eq .Destination "/data"}}{{.Name}}{{end}}{{end}}" "$NEXT_WEB")"
+echo "$NEXT_IMAGE $NEXT_VOLUME"
+```
+
+La sortie nomme l'image de Next et un volume qui finit par `golf-data`. Une sortie vide : `NEXT_WEB` est faux.
+
+Arrêter le web de Next dans Dokploy (Stop sur son application). Plus personne n'écrit ; le worker finit ce qui reste dans sa file. Lire la file jusqu'à ce qu'elle soit vide :
+
+```sh
+docker exec "$NEXT_WORKER" node -e "const { DatabaseSync } = require('node:sqlite'); const db = new DatabaseSync('/data/app.db', { readOnly: true }); console.log(db.prepare(\"select status, count(*) n from jobs where status in ('queued', 'running') group by status\").all())"
+```
+
+Attendu : `[]`. Une lecture de photo dure au plus 2 minutes ; relancer la commande jusqu'à `[]`. Arrêter ensuite le worker de Next dans Dokploy. Garder les deux applications et leur volume : c'est le retour arrière.
+
+### 3. Copier la base et les photos
+
+Mainteneur. La base Next est en WAL : copier `app.db` seul peut perdre les dernières écritures. `VACUUM INTO` écrit une copie complète, que la commande vérifie. Le conteneur jetable tourne sous l'utilisateur `node` (uid 1000) de l'image Next, qui doit pouvoir écrire dans `$COPY` :
+
+```sh
+install -d -o 1000 -g 1000 -m 700 "$COPY"
+docker run --rm -i -v "$NEXT_VOLUME:/data" -v "$COPY:/out" --entrypoint node "$NEXT_IMAGE" - <<'JS'
+const { DatabaseSync } = require('node:sqlite');
+const db = new DatabaseSync('/data/app.db');
+db.exec("VACUUM INTO '/out/app.db'");
+db.close();
+const copy = new DatabaseSync('/out/app.db', { readOnly: true });
+console.log('integrity_check', copy.prepare('PRAGMA integrity_check').get().integrity_check);
+for (const { name } of copy.prepare("select name from sqlite_master where type = 'table' order by name").all()) {
+    console.log(`${name}\t${copy.prepare(`select count(*) n from "${name}"`).get().n}`);
+}
+JS
+```
+
+Attendu : `integrity_check ok`, puis le nombre de lignes de chaque table. Noter ces comptes : le rapport de l'étape 4 doit donner les mêmes. Puis les photos :
+
+```sh
+docker run --rm -v "$NEXT_VOLUME:/data:ro" -v "$COPY:/out" --entrypoint cp "$NEXT_IMAGE" -a /data/uploads /out/uploads
+ls "$COPY/uploads" | wc -l
+```
+
+Attendu : le nombre de photos, au moins le nombre de rounds avec photo. L'import vérifie chaque fichier référencé et nomme ceux qui manquent.
+
+### 4. Importer
+
+Mainteneur. Mettre la copie dans le conteneur `web` de la stack Laravel :
+
+```sh
+docker exec "$P-web-1" mkdir -p /tmp/next
+docker cp "$COPY/app.db" "$P-web-1:/tmp/next/app.db"
+docker cp "$COPY/uploads" "$P-web-1:/tmp/next/uploads"
+```
+
+Aucune sortie quand tout va bien (`docker cp` affiche seulement la taille copiée). Lancer l'essai à blanc. La base a déjà les joueurs de `INITIAL_PLAYERS`, créés par `migrate` : l'essai passe donc aussi `--force`, dans un terminal interactif (`docker exec -it`) :
+
+```sh
+docker exec -it "$P-web-1" php artisan golf:import-sqlite /tmp/next/app.db --uploads=/tmp/next/uploads --force --dry-run
+```
+
+La commande demande « Vider players (3), player_aliases (3) avant l'import ? » : répondre `yes` (l'essai n'écrit rien). Lire le rapport :
+
+- chaque ligne du tableau a le même compte en `SQLite` et en `PostgreSQL`, et ces comptes sont ceux de l'étape 3 ;
+- « Statistiques identiques : N / N », N étant le compte de `player_round_stats` ;
+- « Photos lues : N », « Recherches de rating à remettre en file : N » ;
+- la dernière ligne est « Essai à blanc : import annulé, rien n'a été écrit. ».
+
+Une autre fin (« Statistiques différentes de la base SQLite : », « Photos manquantes : », « Ligne refusée : … ») arrête la bascule : rien n'a été écrit, la commande sort en 1. Redémarrer le web et le worker de Next dans Dokploy (Start), puis corriger la donnée dans Next avant de recommencer.
+
+Puis l'import réel, même commande sans `--dry-run` :
+
+```sh
+docker exec -it "$P-web-1" php artisan golf:import-sqlite /tmp/next/app.db --uploads=/tmp/next/uploads --force
+```
+
+Répondre `yes` à « Vider players (3), player_aliases (3) avant l'import ? ». Le rapport est celui de l'essai, avec « Photos copiées : N » et « Recherches de rating remises en file : N », et finit par « Import terminé. ». Sans terminal (`--no-interaction`, ou `docker exec` sans `-it`), la réponse est non et la commande sort en 1 sur « Import abandonné. », sans rien écrire.
+
+Le worker Laravel traite ensuite les recherches remises en file, dans les minutes qui suivent (« Déployer une version », étape 6).
+
+### 5. Basculer le domaine
+
+Mainteneur. Dans Dokploy, retirer le domaine de l'application web de Next, puis le relier au service `web` de la stack Laravel (« Première installation », étape 5). Vérifier :
+
+```sh
+curl -si "$URL/api/version"
+```
+
+Attendu : `200` et la `version` déployée. Ouvrir ensuite `/login`, entrer le code, puis l'accueil, Handicaps (l'index de chaque joueur est celui de Next) et un round avec sa photo.
+
+### 6. Effacer les copies
+
+Mainteneur. La copie contient toutes les données du groupe :
+
+```sh
+docker exec "$P-web-1" rm -rf /tmp/next
+rm -rf "$COPY"
+```
+
+Aucune sortie. Faire de même sur le staging après la répétition. Le conteneur `web` perd aussi `/tmp/next` à son prochain redéploiement : `/tmp` n'est pas sur un volume.
+
+### 7. Retour arrière
+
+Mainteneur, dans les 30 jours qui suivent la bascule. Dans Dokploy, retirer le domaine du service `web` Laravel et le relier de nouveau à l'application web de Next, puis redémarrer le web et le worker de Next (Start). Leur volume `golf-data` n'a pas bougé depuis l'étape 2 : Next repart sur la base d'avant la bascule. Ne rien toucher à la stack Laravel. Ce qui a été saisi dans Laravel depuis la bascule n'existe pas dans Next.
+
+Après 30 jours, supprimer les applications Next et leur volume dans Dokploy.
+
 ## Fermer toutes les sessions
 
 « Se déconnecter » ferme la session d'un seul navigateur. Pour fermer toutes les sessions de tous les appareils, changer `APP_PASSCODE` dans Dokploy, puis Deploy. La session garde une empreinte du code, et plus aucune ne correspond (ADR 0007). Chacun ressaisit le nouveau code, l'ancien est refusé.

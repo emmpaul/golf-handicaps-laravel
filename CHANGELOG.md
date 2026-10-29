@@ -105,6 +105,8 @@ All notable changes to this application, version by version. The format follows 
 - A colour per player, from the six of the design by order of creation (`colorSlot`), without a column.
 - Count of imports to check on the Importer button of every page (shared `pendingImports` prop).
 - ADR 0013 (visual redesign).
+- `golf:import-sqlite` artisan command: one-time strict import of the SQLite base and photos of the Next.js app, in one transaction, refused on a non-empty base unless `--force` is confirmed, with a `--dry-run` that does everything then rolls back; the handicap history is recomputed and compared to the Next one, any difference cancels the import; pending rating lookups are queued after the commit.
+- Cutover procedure from the Next.js app in `docs/deployment.md` (« Bascule depuis Next »), ADR 0014 (one-time import of the Next SQLite base) and the Import de la base Next section of `ARCHITECTURE.md`.
 
 ### Changed
 

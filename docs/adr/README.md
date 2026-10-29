@@ -17,3 +17,4 @@ Une ADR par décision d'architecture, numérotée, écrite dans le même lot que
 | [0011](0011-lecture-des-cartes-par-ia-et-photos-webp.md)      | Lecture des cartes par l'IA et photos en WebP          | Acceptée                     |
 | [0012](0012-recherche-des-ratings-sur-simulator-golf-tour.md) | Recherche des ratings sur Simulator Golf Tour          | Acceptée                     |
 | [0013](0013-refonte-visuelle.md)                              | Refonte visuelle                                       | Acceptée                     |
+| [0014](0014-import-unique-de-la-base-sqlite-de-next.md)       | Import unique de la base SQLite de Next                | Acceptée                     |
