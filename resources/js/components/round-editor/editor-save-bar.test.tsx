@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vite-plus/test';
 
@@ -92,6 +92,35 @@ describe('EditorSaveBar', () => {
         expect(
             screen.getByRole('button', { name: '3 problèmes à corriger' }),
         ).toBeDisabled();
+    });
+
+    // L12, DO43: a screen reader hears the problems as a list named
+    // « Problèmes », one item per message, the « · » between them being
+    // decoration. Mutation: the messages joined in one span again → no list,
+    // this test goes red.
+    it('lists the remaining messages under the name « Problèmes »', () => {
+        render(
+            <EditorSaveBar
+                problems={[
+                    unassigned,
+                    { message: 'Case vide', cells: ['player1:3'] },
+                    { message: 'Case vide', cells: ['player1:4'] },
+                ]}
+                saving={false}
+                onSave={() => {}}
+            />,
+        );
+
+        const list = screen.getByRole('list', { name: 'Problèmes' });
+
+        expect(
+            within(list)
+                .getAllByRole('listitem')
+                .map((item) => item.textContent),
+        ).toEqual(['Ligne sans joueur', ' · Case vide (×2)']);
+        expect(list.querySelector('[aria-hidden="true"]')?.textContent).toBe(
+            ' · ',
+        );
     });
 
     it('shows no message and « Enregistrer » in ink on a coherent card', async () => {
