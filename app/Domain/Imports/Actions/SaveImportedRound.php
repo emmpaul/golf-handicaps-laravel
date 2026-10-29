@@ -2,6 +2,7 @@
 
 namespace App\Domain\Imports\Actions;
 
+use App\Domain\Imports\Exceptions\ImportAlreadySaved;
 use App\Domain\Players\Actions\AssignAlias;
 use App\Domain\Players\PlayerNameMatcher;
 use App\Domain\Rounds\Actions\CreateRound;
@@ -25,12 +26,17 @@ final class SaveImportedRound
     ) {}
 
     /**
+     * @throws ImportAlreadySaved when the import has a round, checked under the lock: two tabs
+     *                            saving the same import save one round
      * @throws IncoherentRoundCard before any write
      */
     public function handle(Import $import, RoundCard $card): Round
     {
         return DB::transaction(function () use ($import, $card): Round {
             $locked = Import::query()->lockForUpdate()->findOrFail($import->id);
+            if ($locked->round_id !== null) {
+                throw new ImportAlreadySaved;
+            }
 
             $round = $this->createRound->handle($card);
             $round->update(['photo_path' => $locked->photo_path]);
