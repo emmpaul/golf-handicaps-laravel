@@ -81,7 +81,7 @@ All notable changes to this application, version by version. The format follows 
 - Net leaderboard on the round page (gross, playing handicap, net, net rank, "pas encore d'index"), rating line linked to `/courses`, "Gagnant net" column and "Parcours" link on `/rounds`, current index of each player on `/players`.
 - "Comment l’index est calculé" explanation, folded by default, on the round page, `/players` and `/courses`.
 - `golf:recompute-stats` artisan command: recomputes the index history of every player who has a round, idempotent.
-- Demonstration data: `DemoCourseRatingsSeeder` types 71,4 / 144 on BETHPAGE BLACK / Red, so `make demo` shows a course with and without rating.
+- Demonstration data: BETHPAGE BLACK / Red rated 71,4 / 144 (proposed by `DemoCourseRatingsSeeder`, confirmed by `DemoConfirmedRatingSeeder` after the rounds), so `make demo` shows a course with and without rating.
 - ADR 0010 (index in integer tenths and derived table) and an Index and ratings section in `ARCHITECTURE.md`.
 - Scorecard import by AI at `/import`: a photo is decoded and re-encoded in the browser, kept as a WebP of 3000 px at most without EXIF or XMP on the `photos` disk, and read by a queued job (`ReadScorecardImport`) through the Laravel AI SDK with structured output; the import list follows each import ("En attente", "Lecture en cours", "Prêt à vérifier", "Échec") every 2 s while one is waiting, with "Vérifier", "Supprimer", "Voir le round" and "Relancer la lecture".
 - `imports` and `ai_usage` tables in UUID v7, with their models and factories.
