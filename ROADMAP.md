@@ -72,7 +72,7 @@ Refonte visuelle selon le design « Golf handicap app redesign » du mainteneur 
 
 ## 10. `sqlite-import-command`
 
-**Dépend de** : 9, 11. **Statut** : proposé. L'apply attend l'archivage de 9 et 11.
+**Dépend de** : 9, 11. **Statut** : fait. Le changement est archivé ; restent au mainteneur la répétition de la bascule sur le staging (`docs/deployment.md`, « Bascule depuis Next »), la comparaison de l'index de chaque joueur avec celui de Next en production, puis la bascule réelle.
 
 Commande `golf:import-sqlite`, puis cutover. La répétition sur le staging et le cutover de production sont faits à la main par le mainteneur.
 
