@@ -19,8 +19,11 @@ const sum = (values: number[]) =>
 /** Holes 1 to 9 (`from` 0) or 10 to 18 (`from` 9) of a row of 18 values. */
 const nine = (values: number[], from: number) => values.slice(from, from + 9);
 
-/** Cellule de score : 52 px au plus, resserrée jusqu'à la marque de 32 px à 320 px. */
-const SCORE_CELL = 'w-[52px] min-w-8 p-0 text-center';
+/**
+ * Cellule de score : 52 px, 44 px au moins (spec « Carte de score à quatre
+ * joueurs ») ; au-delà, la carte défile dans son cadre (DO47).
+ */
+const SCORE_CELL = 'w-[52px] min-w-11 max-w-[52px] p-0 text-center';
 
 /** Rangée de sous-total : 40 px, fond `surface-1`, coins de 8 px. */
 function SubtotalRow({ label, totals }: { label: string; totals: number[] }) {
@@ -54,99 +57,108 @@ function SubtotalRow({ label, totals }: { label: string; totals: number[] }) {
  * « Mise en page de la page d'un round ») : une rangée de 44 px par trou,
  * numéro, « P4 · 8 », puis le score de chaque joueur dans l'ordre de la carte
  * avec sa marque ; « ALLER » après le trou 9, « RETOUR » et « TOTAL » après le
- * 18. L'en-tête donne les cinq premières lettres de chaque nom. À 320 px,
- * quatre joueurs tiennent sans défilement : les colonnes de score se
- * resserrent jusqu'à la marque. La légende suit la carte.
+ * 18. L'en-tête donne les cinq premières lettres de chaque nom, coupées par
+ * « … » si la colonne est trop étroite. À 320 px avec quatre joueurs, les
+ * colonnes de score gardent 44 px et la carte défile dans son cadre (DO47).
+ * La légende suit la carte.
  */
 export function RoundScorecard({ card }: { card: SavedCard }) {
     const pars = card.holes.map((hole) => hole.par);
 
     return (
         <section aria-label="Carte de score du round" className="flex flex-col">
-            <table
-                aria-label="Carte de score"
-                className="w-full border-separate border-spacing-0 tabular-nums"
+            {/* À 320 px avec quatre joueurs, la carte défile dans son cadre, jamais la page (DO47). */}
+            <div
+                tabIndex={0}
+                className="overflow-x-auto overscroll-x-contain outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring focus-visible:outline-solid"
             >
-                <thead>
-                    <tr className="font-mono text-caption text-ink-2 uppercase">
-                        <th
-                            scope="col"
-                            className="w-10 border-b border-rule pb-2.5 text-left font-medium"
-                        >
-                            Trou
-                        </th>
-                        <th
-                            scope="col"
-                            className="border-b border-rule pb-2.5 text-left font-medium whitespace-nowrap"
-                        >
-                            Par · idx
-                        </th>
-                        {card.lines.map((line) => (
+                <table
+                    aria-label="Carte de score"
+                    className="w-full border-separate border-spacing-0 tabular-nums"
+                >
+                    <thead>
+                        <tr className="font-mono text-caption text-ink-2 uppercase">
                             <th
-                                key={line.playerId}
                                 scope="col"
-                                className={cn(
-                                    SCORE_CELL,
-                                    'border-b border-rule pb-2.5 font-medium',
-                                )}
+                                className="w-10 border-b border-rule pb-2.5 text-left font-medium"
                             >
-                                {line.name.slice(0, 5).toLocaleUpperCase('fr')}
+                                Trou
                             </th>
-                        ))}
-                    </tr>
-                </thead>
-                <tbody>
-                    {card.holes.map((hole, i) => (
-                        <Fragment key={i}>
-                            <tr className="h-11">
+                            <th
+                                scope="col"
+                                className="border-b border-rule pb-2.5 text-left font-medium whitespace-nowrap"
+                            >
+                                Par · idx
+                            </th>
+                            {card.lines.map((line) => (
                                 <th
-                                    scope="row"
-                                    className="border-b border-rule-soft text-left font-mono text-num-m-17 font-medium"
-                                >
-                                    {i + 1}
-                                </th>
-                                <td className="border-b border-rule-soft font-mono text-meta-12 whitespace-nowrap text-ink-2">
-                                    P{hole.par} · {hole.strokeIndex}
-                                </td>
-                                {card.lines.map((line) => (
-                                    <td
-                                        key={line.playerId}
-                                        className={cn(
-                                            SCORE_CELL,
-                                            'border-b border-rule-soft font-mono text-num-m-16',
-                                        )}
-                                    >
-                                        <span className="inline-flex justify-center">
-                                            <ScoreMark
-                                                strokes={line.strokes[i]}
-                                                par={hole.par}
-                                            />
-                                        </span>
-                                    </td>
-                                ))}
-                            </tr>
-                            {i === 8 ? (
-                                <SubtotalRow
-                                    label={`ALLER · PAR ${sum(nine(pars, 0))}`}
-                                    totals={card.lines.map((line) =>
-                                        sum(nine(line.strokes, 0)),
+                                    key={line.playerId}
+                                    scope="col"
+                                    className={cn(
+                                        SCORE_CELL,
+                                        'truncate border-b border-rule pb-2.5 font-medium',
                                     )}
-                                />
-                            ) : null}
-                        </Fragment>
-                    ))}
-                    <SubtotalRow
-                        label={`RETOUR · PAR ${sum(nine(pars, 9))}`}
-                        totals={card.lines.map((line) =>
-                            sum(nine(line.strokes, 9)),
-                        )}
-                    />
-                    <SubtotalRow
-                        label={`TOTAL · PAR ${sum(pars)}`}
-                        totals={card.lines.map((line) => sum(line.strokes))}
-                    />
-                </tbody>
-            </table>
+                                >
+                                    {line.name
+                                        .slice(0, 5)
+                                        .toLocaleUpperCase('fr')}
+                                </th>
+                            ))}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {card.holes.map((hole, i) => (
+                            <Fragment key={i}>
+                                <tr className="h-11">
+                                    <th
+                                        scope="row"
+                                        className="border-b border-rule-soft text-left font-mono text-num-m-17 font-medium"
+                                    >
+                                        {i + 1}
+                                    </th>
+                                    <td className="border-b border-rule-soft font-mono text-meta-12 whitespace-nowrap text-ink-2">
+                                        P{hole.par} · {hole.strokeIndex}
+                                    </td>
+                                    {card.lines.map((line) => (
+                                        <td
+                                            key={line.playerId}
+                                            className={cn(
+                                                SCORE_CELL,
+                                                'border-b border-rule-soft font-mono text-num-m-16',
+                                            )}
+                                        >
+                                            <span className="inline-flex justify-center">
+                                                <ScoreMark
+                                                    strokes={line.strokes[i]}
+                                                    par={hole.par}
+                                                />
+                                            </span>
+                                        </td>
+                                    ))}
+                                </tr>
+                                {i === 8 ? (
+                                    <SubtotalRow
+                                        label={`ALLER · PAR ${sum(nine(pars, 0))}`}
+                                        totals={card.lines.map((line) =>
+                                            sum(nine(line.strokes, 0)),
+                                        )}
+                                    />
+                                ) : null}
+                            </Fragment>
+                        ))}
+                        <SubtotalRow
+                            label={`RETOUR · PAR ${sum(nine(pars, 9))}`}
+                            totals={card.lines.map((line) =>
+                                sum(nine(line.strokes, 9)),
+                            )}
+                        />
+                        <SubtotalRow
+                            label={`TOTAL · PAR ${sum(pars)}`}
+                            totals={card.lines.map((line) => sum(line.strokes))}
+                        />
+                    </tbody>
+                </table>
+            </div>
             <div className="mt-4">
                 <ScoreLegend />
             </div>

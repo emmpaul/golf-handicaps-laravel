@@ -185,7 +185,7 @@ Sur iPhone, dans Safari comme en application ajoutée à l'écran d'accueil, la 
 - **THEN** la bande collée en haut, de la hauteur de la zone sûre, a un fond calculé entièrement opaque égal au fond de `html` et de `body`, sans filtre d'arrière-plan
 
 ### Requirement: Pas de défilement horizontal de la page
-Dès 320 px de large, aucune page ni aucun état ouvert (feuille, liste, calendrier) MUST NOT élargir la page au-delà de l'écran, et aucun contenu MUST NOT défiler horizontalement dans son propre cadre. Aucune information MUST NOT être masquée sans moyen de la voir : un nom trop long se coupe par « … » et reste lisible en entier ailleurs sur la page ou dans son nom accessible.
+Dès 320 px de large, aucune page ni aucun état ouvert (feuille, liste, calendrier) MUST NOT élargir la page au-delà de l'écran, et aucun contenu MUST NOT défiler horizontalement dans son propre cadre, sauf la carte de score d'un round, qui garde des colonnes de score de 44 px et défile alors dans son cadre. Aucune information MUST NOT être masquée sans moyen de la voir : un nom trop long se coupe par « … » et reste lisible en entier ailleurs sur la page ou dans son nom accessible.
 
 #### Scenario: Pages du cadre commun
 - **WHEN** l'utilisateur ouvre l'accueil, chacune des quatre sections et `/import` à 320 puis 390 px
@@ -197,7 +197,7 @@ Dès 320 px de large, aucune page ni aucun état ouvert (feuille, liste, calendr
 
 #### Scenario: Carte de score à quatre joueurs
 - **WHEN** l'utilisateur ouvre à 320 px un round de quatre joueurs
-- **THEN** les colonnes des joueurs passent de 52 à 44 px, « P4 · 16 » reste entier et la page ne défile pas horizontalement
+- **THEN** les colonnes des joueurs passent de 52 à 44 px, « P4 · 16 » reste entier, un nom trop long pour sa colonne finit par « … », la carte défile horizontalement dans son cadre et la page ne défile pas horizontalement
 
 ### Requirement: Cibles tactiles et texte des champs sur téléphone
 Chaque bouton, champ, liste déroulante, onglet et lien d'action SHALL offrir une zone de toucher d'au moins 44 px de haut, et le texte des champs et des listes déroulantes MUST faire 16 px, pour qu'iOS ne zoome pas au focus. Les champs et listes du design font 48 px, les boutons de liste 44 px, le bouton principal collé en bas 56 px.

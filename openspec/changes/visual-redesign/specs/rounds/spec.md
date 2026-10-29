@@ -68,7 +68,7 @@ La page d'un round SHALL afficher la carte de score en une rangée par trou : nu
 
 #### Scenario: Carte sur téléphone
 - **WHEN** l'utilisateur ouvre à 320 puis 390 px un round de 4 joueurs
-- **THEN** chaque rangée montre le trou, le par, l'index et les quatre scores, l'en-tête montre les quatre noms, et ni la carte ni la page ne défilent horizontalement
+- **THEN** chaque rangée montre le trou, le par, l'index et les quatre scores, l'en-tête montre les quatre noms, la page ne défile pas horizontalement, et la carte ne défile dans son cadre qu'à 320 px
 
 #### Scenario: Légende
 - **WHEN** la carte s'affiche
