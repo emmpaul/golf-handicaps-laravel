@@ -1,18 +1,19 @@
 import { Head, usePoll } from '@inertiajs/react';
 import { useEffect, useState } from 'react';
 import { relaunch } from '@/actions/App/Http/Controllers/CourseRatingLookupController';
+import { index as roundsIndex } from '@/actions/App/Http/Controllers/RoundController';
 import {
     CourseAction,
     CourseActionScope,
 } from '@/components/courses/course-action';
 import type { CourseActionKind } from '@/components/courses/course-action';
-import { LookupStatus } from '@/components/courses/lookup-status';
+import { COURSE_PILL, LookupStatus } from '@/components/courses/lookup-status';
 import { ManualRatingForm } from '@/components/courses/manual-rating-form';
 import { hasSgtOutcome, SgtOutcome } from '@/components/courses/sgt-outcome';
 import { ComputationHelp } from '@/components/handicaps/computation-help';
-import { PageTitle } from '@/components/page-title';
+import { PageTopRow } from '@/components/page-top-row';
+import { Badge } from '@/components/ui/badge';
 import { formatTenths } from '@/lib/format';
-import { cn } from '@/lib/utils';
 
 /** Un parcours connu, tel que CourseOverview l'envoie (design D6). */
 export type CourseOverview = {
@@ -54,6 +55,8 @@ export type SgtCandidate = {
  * `status` à `null` ; `note` est `null` sur une ligne confirmée (Q18).
  */
 export type CourseWithLookup = CourseOverview & {
+    /** Rounds joués sur ce parcours et ces tees (« 3 rounds », D14). */
+    roundCount: number;
     id: string | null;
     status: CourseRatingStatus | null;
     label: string | null;
@@ -72,29 +75,40 @@ export type CourseWithLookup = CourseOverview & {
 const POLL_INTERVAL_MS = 2000;
 
 /**
- * Colonnes de la table à partir de 1 024 px : parcours et tees, rating et
- * état, colonne Simulator Golf Tour, saisie à la main (variantes `sgt` et
- * `plain` de Next). Sans rien à montrer côté SGT sur aucune rangée, la colonne
- * disparaît. En dessous, chaque rangée empile ces parties.
+ * Pastille de rating (spec « Page Parcours », DO10) : « 71,4 / 144 · CONFIRMÉ »
+ * en vert quand la recherche est « Confirmé », « 71,4 / 144 » neutre pendant
+ * une nouvelle proposition, sinon « SANS RATING » neutre.
  */
-const COURSE_COLUMNS = {
-    sgt: 'lg:grid lg:grid-cols-[minmax(0,1.1fr)_10rem_minmax(0,1.3fr)_minmax(0,1.2fr)] lg:items-start lg:gap-x-6',
-    plain: 'lg:grid lg:grid-cols-[minmax(0,1.1fr)_10rem_minmax(0,2.5fr)] lg:items-start lg:gap-x-6',
-};
+function RatingPill({ course }: { course: CourseWithLookup }) {
+    const { ratingT, slope, status } = course;
+    const rated = ratingT !== null && slope !== null;
+    const confirmed = rated && status === 'confirmed';
+    let text = 'SANS RATING';
+
+    if (rated) {
+        text = `${formatTenths(ratingT)} / ${slope}${confirmed ? ' · CONFIRMÉ' : ''}`;
+    }
+
+    return (
+        <Badge
+            data-testid="course-rating"
+            variant={confirmed ? 'ok' : 'secondary'}
+            className={COURSE_PILL}
+        >
+            {text}
+        </Badge>
+    );
+}
 
 /**
- * Un parcours : rating ou « sans rating » et l'état de sa recherche, sa
- * colonne SGT, sa saisie à la main et « Relancer la recherche » quand il a une
- * ligne, recherche en cours comprise (Q6). Une action envoyée attend sur sa
- * seule ligne.
+ * Le bloc d'un parcours (spec « Mise en page de la page Parcours ») : nom,
+ * « · » et tees, « PAR 71 » ; pastille de rating, statut de la recherche et
+ * nombre de rounds ; note ; parcours SGT, proposition, tees lus ou candidats ;
+ * saisie à la main, puis « Relancer la recherche » quand il a une ligne,
+ * recherche en cours comprise (Q6), et « Retirer la rating ». Une action
+ * envoyée attend sur son seul bloc.
  */
-function CourseRow({
-    course,
-    sgt,
-}: {
-    course: CourseWithLookup;
-    sgt: boolean;
-}) {
+function CourseRow({ course }: { course: CourseWithLookup }) {
     const label = `${course.courseName} / ${course.tees}`;
     const { id, ratingT, slope } = course;
     const [sending, setSending] = useState<CourseActionKind | null>(null);
@@ -103,55 +117,59 @@ function CourseRow({
         <CourseActionScope value={{ sending, setSending }}>
             <li
                 aria-label={label}
-                className={cn(
-                    'flex min-w-0 flex-col gap-3 border-b px-2 py-3',
-                    sgt ? COURSE_COLUMNS.sgt : COURSE_COLUMNS.plain,
-                )}
+                className="flex min-w-0 flex-col border-b border-rule-soft py-[18px]"
             >
-                {/* Parcours et tees en deux éléments, sans point médian ; le par à côté. */}
-                <div className="flex min-w-0 flex-col gap-0.5">
-                    <h2 className="font-heading text-xl leading-tight font-bold [overflow-wrap:anywhere]">
-                        {course.courseName}
+                <div className="flex items-baseline justify-between gap-3">
+                    <h2 className="min-w-0 text-name-m-17 leading-[1.2] [overflow-wrap:anywhere]">
+                        {course.courseName}{' '}
+                        <span className="font-normal text-ink-2">
+                            · {course.tees}
+                        </span>
                     </h2>
-                    <span className="text-sm flex flex-wrap gap-x-4 text-muted-foreground">
-                        <span>Tees {course.tees}</span>
-                        <span>Par {course.par}</span>
+                    <span className="flex-none font-mono text-meta-12 text-ink-2">
+                        PAR {course.par}
                     </span>
                 </div>
-                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 lg:flex-col lg:items-start">
-                    <span
-                        data-testid="course-rating"
-                        className="font-heading text-xl font-bold tabular-nums"
-                    >
-                        {ratingT !== null && slope !== null
-                            ? `${formatTenths(ratingT)} / ${slope}`
-                            : 'sans rating'}
-                    </span>
+                <div className="mt-2.5 flex flex-wrap items-center gap-2 font-mono text-meta-12">
+                    <RatingPill course={course} />
                     <LookupStatus course={course} />
+                    <span className="text-ink-2">
+                        {course.roundCount}{' '}
+                        {course.roundCount > 1 ? 'rounds' : 'round'}
+                    </span>
                 </div>
-                {sgt ? (
-                    <div className="flex min-w-0 flex-col gap-2 max-lg:empty:hidden">
+                {course.note !== null ? (
+                    <p
+                        data-testid="course-note"
+                        className="mt-2 text-body-13 text-ink-2"
+                    >
+                        {course.note}
+                    </p>
+                ) : null}
+                {hasSgtOutcome(course) ? (
+                    <div className="mt-3 flex min-w-0 flex-col gap-1">
                         <SgtOutcome course={course} />
                     </div>
                 ) : null}
-                <div className="flex min-w-0 flex-col items-start gap-2">
-                    {/* Clé sur la rating reçue : après une saisie ou un retrait, les champs repartent des valeurs du serveur ; une relecture qui la garde ne vide pas une saisie en cours. */}
-                    <ManualRatingForm
-                        key={`${ratingT}-${slope}`}
-                        courseName={course.courseName}
-                        tees={course.tees}
-                        ratingT={ratingT}
-                        slope={slope}
-                    />
-                    {id === null ? null : (
-                        <CourseAction
-                            action={relaunch(id)}
-                            kind="relaunch"
-                            label="Relancer la recherche"
-                            accessibleName={`Relancer la recherche pour ${label}`}
-                        />
-                    )}
-                </div>
+                {/* Clé sur la rating reçue : après une saisie ou un retrait, les champs repartent des valeurs du serveur ; une relecture qui la garde ne vide pas une saisie en cours. */}
+                <ManualRatingForm
+                    key={`${ratingT}-${slope}`}
+                    courseName={course.courseName}
+                    tees={course.tees}
+                    ratingT={ratingT}
+                    slope={slope}
+                    links={
+                        id === null ? null : (
+                            <CourseAction
+                                action={relaunch(id)}
+                                kind="relaunch"
+                                label="Relancer la recherche"
+                                accessibleName={`Relancer la recherche pour ${label}`}
+                                appearance="link"
+                            />
+                        )
+                    }
+                />
             </li>
         </CourseActionScope>
     );
@@ -161,7 +179,8 @@ function CourseRow({
  * Parcours connus avec leur course rating et leur slope (spec
  * `course-ratings`) : valeur confirmée ou « sans rating », état de la
  * recherche sur Simulator Golf Tour et ses actions, saisie, correction et
- * retrait à la main, puis l'explication du calcul. Tant qu'une recherche est
+ * retrait à la main, un bloc par parcours, puis l'explication du calcul (spec
+ * « Mise en page de la page Parcours »). Tant qu'une recherche est
  * en cours, seules `courses` et `lookupPending` se relisent toutes les 2 s. Hors de la navigation
  * principale : « Rounds » reste la section courante (`lib/sections.ts`).
  */
@@ -172,7 +191,6 @@ export default function CoursesIndex({
     courses: CourseWithLookup[];
     lookupPending: boolean;
 }) {
-    const sgt = courses.some(hasSgtOutcome);
     const { start, stop } = usePoll(
         POLL_INTERVAL_MS,
         { only: ['courses', 'lookupPending'] },
@@ -190,47 +208,29 @@ export default function CoursesIndex({
     return (
         <>
             <Head title="Parcours" />
-            <div className="flex flex-col gap-1">
-                <PageTitle>Parcours</PageTitle>
-                <p className="text-sm text-muted-foreground">
-                    Course rating et slope par parcours et tees. Une rating
-                    saisie compte aussitôt dans les index, pour tous les rounds
-                    du parcours.
-                </p>
-            </div>
+            <PageTopRow back={{ href: roundsIndex.url(), label: 'Rounds' }} />
+            <h1 className="text-title">Parcours</h1>
+            <p className="mt-2.5 text-body-13 text-ink-2">
+                Course rating et slope par parcours et tees. Une valeur ne
+                compte dans les index qu'une fois confirmée.
+            </p>
             {courses.length === 0 ? (
-                <p className="border-t-2 border-foreground pt-3 text-muted-foreground">
+                <p className="mt-5 border-t border-rule pt-5 text-body text-ink-2">
                     Aucun parcours : enregistrez d'abord un round.
                 </p>
             ) : (
-                <div className="min-w-0">
-                    <div
-                        aria-hidden
-                        className={cn(
-                            'bg-band text-sm text-band-ink hidden px-2 py-1.5 font-medium',
-                            sgt ? COURSE_COLUMNS.sgt : COURSE_COLUMNS.plain,
-                        )}
-                    >
-                        <span>Parcours</span>
-                        <span>Rating / slope</span>
-                        {sgt ? <span>Simulator Golf Tour</span> : null}
-                        <span>Saisie à la main</span>
-                    </div>
-                    <ul
-                        aria-label="Parcours"
-                        className="max-lg:border-t-2 max-lg:border-foreground"
-                    >
-                        {courses.map((course) => (
-                            <CourseRow
-                                key={`${course.courseName} / ${course.tees}`}
-                                course={course}
-                                sgt={sgt}
-                            />
-                        ))}
-                    </ul>
-                </div>
+                <ul aria-label="Parcours" className="mt-5 border-t border-rule">
+                    {courses.map((course) => (
+                        <CourseRow
+                            key={`${course.courseName} / ${course.tees}`}
+                            course={course}
+                        />
+                    ))}
+                </ul>
             )}
-            <ComputationHelp />
+            <div className="mt-7">
+                <ComputationHelp />
+            </div>
         </>
     );
 }

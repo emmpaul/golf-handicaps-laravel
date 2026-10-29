@@ -20,6 +20,12 @@
  * - the stroke indexes taken from the oldest round of the pair (a second query of the holes of
  *   the first round played on it): BETHPAGE BLACK / Red reads 16, 8, … instead of 8, 16, ….
  *
+ * Visual-redesign, design D14 (« 3 rounds » in the block of a course):
+ * - the rounds counted by exact name and tees (without lower and trim): « bethpage black » and
+ *   « BETHPAGE BLACK  » are not counted with « BETHPAGE BLACK », 1 instead of 3;
+ * - the rounds counted by course name only (tees ignored): BETHPAGE BLACK / Red reads 4 with the
+ *   round on its tees Gold.
+ *
  * Course-rating-sgt, design D8:
  * - the The Course View link taken from the name of the round (« THE SANCTUARY ») instead of the
  *   SGT name (« Sanctuary »): the-sanctuary instead of sanctuary;
@@ -125,10 +131,11 @@ describe('with a session', function () {
                     ->where('courses', [
                         [
                             'courseName' => 'BETHPAGE BLACK', 'tees' => 'Red', 'par' => 71, 'ratingT' => 714, 'slope' => 144, 'strokeIndexes' => BETHPAGE_RED_STROKE_INDEXES,
+                            'roundCount' => 1,
                             ...withoutLookup(),
                             'id' => $this->rating->id, 'status' => 'confirmed', 'label' => 'Confirmé', 'source' => 'manual',
                         ],
-                        ['courseName' => 'PAYNES VALLEY', 'tees' => 'Blue', 'par' => 72, 'ratingT' => null, 'slope' => null, 'strokeIndexes' => BETHPAGE_RED_STROKE_INDEXES, ...withoutLookup()],
+                        ['courseName' => 'PAYNES VALLEY', 'tees' => 'Blue', 'par' => 72, 'ratingT' => null, 'slope' => null, 'strokeIndexes' => BETHPAGE_RED_STROKE_INDEXES, 'roundCount' => 1, ...withoutLookup()],
                     ])
                     ->where('lookupPending', false));
         });
@@ -162,6 +169,20 @@ describe('with a session', function () {
 
         $this->get('/courses')->assertInertia(fn (Assert $page) => $page
             ->where('courses.0.strokeIndexes', [8, 16, 18, 2, 4, 10, 6, 14, 12, 9, 11, 7, 3, 17, 1, 5, 13, 15]));
+    });
+
+    test('each course counts its rounds on its name and tees, whatever the case and the spaces around', function () {
+        createRoundCard(referenceCardOnCourse($this->gab->id, 'BETHPAGE BLACK', 'Red', '2026-10-01'));
+        createRoundCard(referenceCardOnCourse($this->gab->id, 'bethpage black', 'red', '2026-10-02'));
+        createRoundCard(referenceCardOnCourse($this->gab->id, 'BETHPAGE BLACK  ', ' Red', '2026-10-03'));
+        createRoundCard(referenceCardOnCourse($this->gab->id, 'BETHPAGE BLACK', 'Gold', '2026-10-04'));
+
+        $courses = $this->get('/courses')->inertiaProps('courses');
+
+        expect(array_map(fn (array $course): array => [$course['courseName'], $course['tees'], $course['roundCount']], $courses))->toBe([
+            ['BETHPAGE BLACK', 'Gold', 1],
+            ['BETHPAGE BLACK', 'Red', 3],
+        ]);
     });
 
     test('the courses are ordered by name whatever the case', function () {
@@ -253,7 +274,7 @@ describe('with a session', function () {
             $this->get('/courses')->assertInertia(fn (Assert $page) => $page
                 ->where('courses', [[
                     'courseName' => 'BETHPAGE BLACK', 'tees' => 'Red', 'par' => 71, 'ratingT' => null, 'slope' => null,
-                    'strokeIndexes' => BETHPAGE_RED_STROKE_INDEXES,
+                    'strokeIndexes' => BETHPAGE_RED_STROKE_INDEXES, 'roundCount' => 1,
                     'id' => $rating->id, 'status' => 'proposed', 'label' => 'Proposition à confirmer', 'note' => null, 'source' => null,
                     'sgtCourseName' => 'Bethpage Black', 'sgtCourseLocation' => 'Farmingdale, NY',
                     'proposal' => ['name' => 'Red', 'ratingT' => 714, 'slope' => 144],

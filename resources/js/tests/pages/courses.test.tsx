@@ -36,10 +36,25 @@ import type { CourseWithLookup } from '@/pages/courses/index';
 // left enabled during the removal → the removal pending test goes red;
 // `aria-describedby` dropped → the error test goes red; ComputationHelp
 // removed → the explanation test goes red.
+// Spec course-ratings « Page Parcours » (MODIFIED by visual-redesign), « Mise
+// en page de la page Parcours » and « Recherche SGT dans le bloc d'un
+// parcours » (DO10):
+// - the confirmed pill written without « · CONFIRMÉ » → the confirmed test
+//   goes red;
+// - « · CONFIRMÉ » shown whatever the status (during a proposal) → the
+//   proposal test goes red;
+// - the SGT links dropped from the block (SgtCourse not rendered) → the
+//   proposal test finds no « Carte SGT » and goes red;
+// - every status pill neutral (one variant) → the colour test goes red;
+// - « 1 rounds » for one round → the count test goes red.
+// Capitals of the design: « PAR 71 », « SANS RATING », « · CONFIRMÉ » are
+// written as such (the design changes the word); the labels « Rating » and
+// « Slope » keep their case under `uppercase` (design D2).
 
 vi.mock('@inertiajs/react', async (importOriginal) => ({
     ...(await importOriginal<typeof import('@inertiajs/react')>()),
     Head: () => null,
+    usePage: () => ({ url: '/courses', props: {} }),
 }));
 
 vi.mock('thinking-orbs', () => ({
@@ -74,6 +89,7 @@ function course(
         ratingT: null,
         slope: null,
         strokeIndexes: STROKE_INDEXES,
+        roundCount: 1,
         id: null,
         status: null,
         label: null,
@@ -98,6 +114,7 @@ const courses = [
         ratingT: 714,
         slope: 144,
         source: 'manual',
+        roundCount: 3,
     }),
     course('PAYNES VALLEY', 'Blue', { par: 72 }),
 ];
@@ -136,21 +153,25 @@ const BETHPAGE = 'BETHPAGE BLACK / Red';
 const PAYNES = 'PAYNES VALLEY / Blue';
 
 describe('Courses page', () => {
-    it('shows « BETHPAGE BLACK », « Tees Red », « Par 71 », « 71,4 / 144 » and the prefilled fields', () => {
+    it('shows « BETHPAGE BLACK · Red », « PAR 71 », « 71,4 / 144 · CONFIRMÉ », « 3 rounds » and the prefilled fields', () => {
         render(<CoursesIndex courses={courses} lookupPending={false} />);
 
         const bethpage = row(BETHPAGE);
+        const pill = within(bethpage).getByTestId('course-rating');
 
         expect(
             within(bethpage).getByRole('heading', { level: 2 }).textContent,
-        ).toBe('BETHPAGE BLACK');
-        expect(within(bethpage).getByText('Tees Red').textContent).toBe(
-            'Tees Red',
+        ).toBe('BETHPAGE BLACK · Red');
+        expect(within(bethpage).getByText('· Red').className).toContain(
+            'text-ink-2',
         );
-        expect(within(bethpage).getByText('Par 71').textContent).toBe('Par 71');
-        expect(within(bethpage).getByTestId('course-rating').textContent).toBe(
-            '71,4 / 144',
+        expect(within(bethpage).getByText('PAR 71').className).toContain(
+            'text-meta-12',
         );
+        expect(pill.textContent).toBe('71,4 / 144 · CONFIRMÉ');
+        expect(pill.className).toContain('text-ok');
+        expect(pill.className).toContain('bg-ok/15');
+        expect(within(bethpage).getByText('3 rounds')).toBeInTheDocument();
         expect(screen.getByLabelText(`Rating de ${BETHPAGE}`)).toHaveValue(
             '71,4',
         );
@@ -159,14 +180,68 @@ describe('Courses page', () => {
         );
     });
 
-    it('shows « sans rating » and empty fields for PAYNES VALLEY', () => {
+    it('shows the neutral « SANS RATING », « 1 round » and empty fields for PAYNES VALLEY', () => {
         render(<CoursesIndex courses={courses} lookupPending={false} />);
 
-        expect(
-            within(row(PAYNES)).getByTestId('course-rating').textContent,
-        ).toBe('sans rating');
+        const pill = within(row(PAYNES)).getByTestId('course-rating');
+
+        expect(pill.textContent).toBe('SANS RATING');
+        expect(pill.className).toContain('bg-surface-3');
+        expect(pill.className).toContain('text-ink-2');
+        expect(within(row(PAYNES)).getByText('1 round')).toBeInTheDocument();
         expect(screen.getByLabelText(`Rating de ${PAYNES}`)).toHaveValue('');
         expect(screen.getByLabelText(`Slope de ${PAYNES}`)).toHaveValue('');
+    });
+
+    it('lays out « RATING », « SLOPE » and the filled « Enregistrer » on one row, with their hints', () => {
+        render(<CoursesIndex courses={courses} lookupPending={false} />);
+
+        const rating = screen.getByLabelText(`Rating de ${PAYNES}`);
+        const slope = screen.getByLabelText(`Slope de ${PAYNES}`);
+        const save = within(row(PAYNES)).getByRole('button', {
+            name: 'Enregistrer',
+        });
+        const grid = save.parentElement as HTMLElement;
+
+        expect(rating.getAttribute('placeholder')).toBe('ex. 71,4');
+        expect(slope.getAttribute('placeholder')).toBe('ex. 144');
+        expect(rating.className).toContain('font-mono');
+        expect(within(row(PAYNES)).getByText('Rating').className).toContain(
+            'uppercase',
+        );
+        expect(within(row(PAYNES)).getByText('Slope')).toBeInTheDocument();
+        expect(save.className).toContain('bg-ink');
+        expect(grid.className).toContain('grid-cols-[1fr_1fr_auto]');
+        expect(grid.contains(rating) && grid.contains(slope)).toBe(true);
+    });
+
+    it('writes « Relancer la recherche » and « Retirer la rating » as grey underlined links of 40 px under the fields', () => {
+        render(
+            <CoursesIndex
+                courses={[
+                    course('BETHPAGE BLACK', 'Red', {
+                        id: BETHPAGE_ID,
+                        status: 'confirmed',
+                        label: 'Confirmé',
+                        ratingT: 714,
+                        slope: 144,
+                    }),
+                ]}
+                lookupPending={false}
+            />,
+        );
+
+        for (const name of [
+            'Relancer la recherche pour BETHPAGE BLACK / Red',
+            'Retirer la rating de BETHPAGE BLACK / Red',
+        ]) {
+            const link = within(row(BETHPAGE)).getByRole('button', { name });
+
+            expect(link.className).toContain('underline');
+            expect(link.className).toContain('text-link-13');
+            expect(link.className).toContain('text-ink-2');
+            expect(link.className).toContain('min-h-10');
+        }
     });
 
     it('names each field after its course and tees', () => {
@@ -182,6 +257,24 @@ describe('Courses page', () => {
             'Rating de PAYNES VALLEY / Blue',
             'Slope de PAYNES VALLEY / Blue',
         ]);
+    });
+
+    // Spec « Mise en page de la page Parcours ». Mutation: the back link
+    // pointed at the home page (section top row « Golf ») → red.
+    it('opens on the back link « Rounds », the title « Parcours » and the text of the design', () => {
+        render(<CoursesIndex courses={courses} lookupPending={false} />);
+
+        expect(
+            screen.getByRole('link', { name: 'Rounds' }).getAttribute('href'),
+        ).toBe('/rounds');
+        expect(screen.getByRole('heading', { level: 1 }).textContent).toBe(
+            'Parcours',
+        );
+        expect(
+            screen.getByText(
+                "Course rating et slope par parcours et tees. Une valeur ne compte dans les index qu'une fois confirmée.",
+            ),
+        ).toBeInTheDocument();
     });
 
     it("shows « Aucun parcours : enregistrez d'abord un round. » without course", () => {
@@ -523,39 +616,91 @@ describe('Courses page, lookup on Simulator Golf Tour', () => {
     });
     const withoutRow = course('PAYNES VALLEY', 'White', { par: 72 });
 
-    it('shows « Recherche en cours » with the pending indicator, and « 71,4 / 144 » « Confirmé » without it', () => {
+    it('shows « Recherche en cours » in cyan with the pending indicator, and « 71,4 / 144 · CONFIRMÉ » without status nor indicator', () => {
         render(<CoursesIndex courses={[pending, confirmed]} lookupPending />);
 
         const searching = row('BETHPAGE BLACK / Red');
         const done = row('PAYNES VALLEY / Blue');
+        const status = within(searching).getByTestId('course-status');
 
-        expect(within(searching).getByTestId('course-status').textContent).toBe(
-            'Recherche en cours',
-        );
+        expect(status.textContent).toBe('Recherche en cours');
+        expect(status.className).toContain('text-info');
+        expect(status.className).toContain('bg-info/15');
         expect(within(searching).getAllByTestId('orb')).toHaveLength(1);
         expect(within(done).getByTestId('course-rating').textContent).toBe(
-            '71,4 / 144',
+            '71,4 / 144 · CONFIRMÉ',
         );
-        expect(within(done).getByTestId('course-status').textContent).toBe(
-            'Confirmé',
-        );
+        expect(within(done).queryByTestId('course-status')).toBeNull();
         expect(within(done).queryByTestId('orb')).toBeNull();
         expect(within(done).queryByTestId('course-note')).toBeNull();
     });
 
-    it('shows « sans rating », « Recherche échouée » and « SGT injoignable »', () => {
+    it('colours the statuts: a choice to make in amber, a failure in red, the others neutral', () => {
+        render(
+            <CoursesIndex
+                courses={[
+                    proposed,
+                    chooseTee,
+                    chooseCourse,
+                    failed,
+                    notFound,
+                    course('PAYNES VALLEY', 'White', {
+                        id: PAYNES_ID,
+                        status: 'manual',
+                        label: 'Saisie manuelle',
+                        note: 'Lecture IA impossible',
+                    }),
+                ]}
+                lookupPending={false}
+            />,
+        );
+
+        const statusOf = (label: string) =>
+            within(row(label)).getByTestId('course-status').className;
+
+        expect(statusOf('BETHPAGE BLACK / Red')).toContain('text-accent');
+        expect(statusOf('BETHPAGE BLACK / Gold')).toContain('text-accent');
+        expect(statusOf('SANCTUARY COVE / Blue')).toContain('text-accent');
+        expect(statusOf('PAYNES VALLEY / Blue')).toContain('text-signal');
+        expect(statusOf('CALA NOVA / White')).toContain('text-ink-2');
+        expect(statusOf('PAYNES VALLEY / White')).toContain('text-ink-2');
+        expect(
+            within(row('PAYNES VALLEY / White')).getByTestId('course-note')
+                .className,
+        ).toContain('text-body-13');
+    });
+
+    it('shows « SANS RATING », the red « Recherche échouée » and « SGT injoignable »', () => {
         render(<CoursesIndex courses={[failed]} lookupPending={false} />);
 
         const line = row('PAYNES VALLEY / Blue');
 
         expect(within(line).getByTestId('course-rating').textContent).toBe(
-            'sans rating',
+            'SANS RATING',
         );
         expect(within(line).getByTestId('course-status').textContent).toBe(
             'Recherche échouée',
         );
         expect(within(line).getByTestId('course-note').textContent).toBe(
             'SGT injoignable',
+        );
+    });
+
+    it('keeps « 71,4 / 144 » without « · CONFIRMÉ » beside « Proposition à confirmer » after a relaunch of a confirmed course', () => {
+        render(
+            <CoursesIndex
+                courses={[{ ...proposed, ratingT: 714, slope: 144 }]}
+                lookupPending={false}
+            />,
+        );
+
+        const line = row('BETHPAGE BLACK / Red');
+        const pill = within(line).getByTestId('course-rating');
+
+        expect(pill.textContent).toBe('71,4 / 144');
+        expect(pill.className).toContain('text-ink-2');
+        expect(within(line).getByTestId('course-status').textContent).toBe(
+            'Proposition à confirmer',
         );
     });
 
@@ -573,11 +718,21 @@ describe('Courses page, lookup on Simulator Golf Tour', () => {
         expect(within(line).getByTestId('course-proposal').textContent).toBe(
             'Proposition : tee Red, 71,4 / 144',
         );
+        expect(within(line).getByTestId('course-rating').textContent).toBe(
+            'SANS RATING',
+        );
+        const confirmButton = within(line).getByRole('button', {
+            name: 'Confirmer 71,4 / 144 pour BETHPAGE BLACK / Red',
+        });
+        expect(confirmButton.textContent).toBe('Confirmer');
+        expect(confirmButton.className).toContain('border-rule');
+        expect(confirmButton.className).toContain('h-11');
+        // Above the fields of the block.
         expect(
-            within(line).getByRole('button', {
-                name: 'Confirmer 71,4 / 144 pour BETHPAGE BLACK / Red',
-            }).textContent,
-        ).toBe('Confirmer');
+            confirmButton.compareDocumentPosition(
+                screen.getByLabelText('Rating de BETHPAGE BLACK / Red'),
+            ) & Node.DOCUMENT_POSITION_FOLLOWING,
+        ).toBeTruthy();
 
         const card = within(line).getByRole('link', { name: 'Carte SGT' });
         const view = within(line).getByRole('link', {
@@ -593,7 +748,12 @@ describe('Courses page, lookup on Simulator Golf Tour', () => {
         for (const link of [card, view]) {
             expect(link.getAttribute('target')).toBe('_blank');
             expect(link.getAttribute('rel')).toBe('noreferrer');
+            expect(link.className).toContain('text-link-13');
+            expect(link.className).toContain('min-h-10');
         }
+        expect(
+            within(line).getByText('SGT : Bethpage Black').className,
+        ).toContain('text-link');
     });
 
     it('shows no SGT link on a row « Introuvable sur SGT »', () => {
@@ -626,6 +786,10 @@ describe('Courses page, lookup on Simulator Golf Tour', () => {
             'Junior71,0 / 120Retenir',
             'PAR354,0 / 120Retenir',
         ]);
+        for (const tee of within(tees).getAllByRole('listitem')) {
+            expect(tee.className).toContain('min-h-13');
+            expect(tee.className).toContain('border-rule-soft');
+        }
 
         await userEvent.click(
             within(line).getByRole('button', {
