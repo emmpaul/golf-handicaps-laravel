@@ -5,6 +5,7 @@ namespace App\Providers;
 use App\Http\Session\AnonymousDatabaseSessionHandler;
 use App\Support\WorkerHeartbeat;
 use Carbon\CarbonImmutable;
+use DateTimeZone;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Queue\Events\JobFailed;
 use Illuminate\Queue\Events\JobProcessed;
@@ -15,6 +16,7 @@ use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
+use InvalidArgumentException;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -32,8 +34,31 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->configureDefaults();
+        $this->ensureAiConfiguration();
         $this->configureSessionStorage();
         $this->configureWorkerHeartbeat();
+    }
+
+    /**
+     * Stop every process, web, worker and migrate alike, when the AI budget cannot be counted:
+     * an unknown time zone, or a model without a price in config/golf.php, with or without an
+     * API key (design D4).
+     *
+     * @throws InvalidArgumentException naming the variable to fix
+     */
+    protected function ensureAiConfiguration(): void
+    {
+        $timeZone = config()->string('golf.ai.budget_time_zone');
+        // ALL_WITH_BC: America/Montreal, the default, is a backward-compatible link, absent from
+        // the canonical list.
+        if (! in_array($timeZone, DateTimeZone::listIdentifiers(DateTimeZone::ALL_WITH_BC), true)) {
+            throw new InvalidArgumentException("AI_BUDGET_TIME_ZONE {$timeZone} n’est pas un fuseau horaire IANA connu");
+        }
+
+        $model = config()->string('golf.ai.model');
+        if (! array_key_exists($model, config()->array('golf.ai.prices'))) {
+            throw new InvalidArgumentException("AI_MODEL {$model} n’a pas de tarif dans config/golf.php");
+        }
     }
 
     /**
