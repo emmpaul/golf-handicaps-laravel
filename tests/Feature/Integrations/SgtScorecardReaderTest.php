@@ -14,7 +14,9 @@
  * - the usage dropped on an unusable reading: 0 / 0 instead of 1 500 / 300;
  * - an empty list of tees accepted: found true without tees gives a card without tee
  *   (decision Q17);
- * - the call bounded to 90 s, as the reading of a photo: the prompt carries 90 instead of 60.
+ * - the call bounded to 90 s, as the reading of a photo: the prompt carries 90 instead of 60;
+ * - the name of a tee not checked: an empty or blank name, or one of 101 characters (longer
+ *   than proposed_tee), gives a card; a bound of 99 drops the name of 100 characters.
  */
 
 use App\Domain\Courses\Sgt\SgtTee;
@@ -62,7 +64,19 @@ test('an unusable reading gives no card and keeps its billed usage', function (a
     'refusal or truncated output' => [[]],
     'found without any tee' => [['found' => true, 'par' => 71, 'tees' => []]],
     'out of the schema' => [['found' => true, 'par' => 71, 'tees' => [['name' => 'Red', 'rating' => 71.4]]]],
+    // proposed_tee is a varchar(100), and an empty name cannot be retained.
+    'empty tee name' => [['found' => true, 'par' => 71, 'tees' => [['name' => '', 'rating' => 71.4, 'slope' => 144]]]],
+    'blank tee name' => [['found' => true, 'par' => 71, 'tees' => [['name' => '   ', 'rating' => 71.4, 'slope' => 144]]]],
+    'tee name of 101 characters' => [['found' => true, 'par' => 71, 'tees' => [['name' => str_repeat('R', 101), 'rating' => 71.4, 'slope' => 144]]]],
 ]);
+
+test('a tee name of 100 characters is kept', function () {
+    SgtScorecardReader::fake([billedSgtReading(['found' => true, 'par' => 71, 'tees' => [['name' => str_repeat('R', 100), 'rating' => 71.4, 'slope' => 144]]])]);
+
+    $reading = app(SgtScorecardReader::class)->read(sgtScorecard30());
+
+    expect(array_map(fn (SgtTee $tee): int => mb_strlen($tee->name), $reading->card->tees ?? []))->toBe([100]);
+});
 
 test('the reading sends the scorecard as served by SGT and nothing of the application', function () {
     createPlayersOnTest('Gab', 'Manu', 'Sean');

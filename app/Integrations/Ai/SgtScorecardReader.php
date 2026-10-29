@@ -38,6 +38,8 @@ class SgtScorecardReader implements Agent, HasProviderOptions, HasStructuredOutp
     /** Seconds of the call; with the two SGT requests it stays under the job timeout. */
     public const int TIMEOUT_SECONDS = 60;
 
+    private const int MAX_TEE_NAME_LENGTH = 100;
+
     private const string PROMPT = 'Donne le par et la rating et le slope de chaque tee de la carte.';
 
     public function instructions(): string
@@ -101,7 +103,8 @@ class SgtScorecardReader implements Agent, HasProviderOptions, HasStructuredOutp
     /**
      * The card of a reading, or null when it is unusable: a refusal or a truncated output (an
      * empty array), a shape out of the schema, found false, no tee at all (decision Q17), a
-     * rating out of 40–90 or a slope out of 55–155 or not whole. The rating goes to tenths.
+     * rating out of 40–90 or a slope out of 55–155 or not whole, a tee name empty or longer than
+     * 100 characters. The rating goes to tenths.
      *
      * @param  array<mixed>  $answer
      */
@@ -126,7 +129,9 @@ class SgtScorecardReader implements Agent, HasProviderOptions, HasStructuredOutp
 
     private static function tee(mixed $tee): ?SgtTee
     {
-        if (! is_array($tee) || ! is_string($tee['name'] ?? null)) {
+        // A name that fits proposed_tee (varchar(100)) and that can be retained.
+        $name = is_array($tee) ? ($tee['name'] ?? null) : null;
+        if (! is_string($name) || trim($name) === '' || mb_strlen($name) > self::MAX_TEE_NAME_LENGTH) {
             return null;
         }
 
@@ -142,6 +147,6 @@ class SgtScorecardReader implements Agent, HasProviderOptions, HasStructuredOutp
             return null;
         }
 
-        return new SgtTee($tee['name'], (int) round($rating * 10), $slope);
+        return new SgtTee($name, (int) round($rating * 10), $slope);
     }
 }
