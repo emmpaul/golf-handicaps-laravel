@@ -171,9 +171,9 @@ describe('Sending a photo', () => {
         const chooseButton = photoInput().closest('label') as HTMLElement;
 
         expect(take.getAttribute('capture')).toBe('environment');
-        expect(takeButton.className).toContain('bg-primary');
+        expect(takeButton.className).toContain('bg-ink');
         expect(chooseButton.textContent).toBe('Choisir une photo');
-        expect(chooseButton.className).toContain('border-foreground');
+        expect(chooseButton.className).toContain('border-rule');
         expect(takeButton.nextElementSibling).toBe(chooseButton);
         expect(screen.queryByText('Photo de la carte')).toBeNull();
     });

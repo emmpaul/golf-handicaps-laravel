@@ -1,20 +1,18 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vite-plus/test';
 
-import {
-    AlertDialog,
-    AlertDialogContent,
-    AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select';
 
-// jsdom computes no layout: the classes that size the controls are the
-// contract (spec app-shell « Cibles tactiles et texte des champs sur
-// téléphone », visual-theme « Focus visible au clavier »).
-// Mutations: `h-11` → `h-9` in the default size of button.tsx → the button
-// test goes red; `text-base` → `text-sm` in input.tsx → the input test goes red.
+// jsdom computes no layout: the classes that size and colour the controls
+// are the contract (spec app-shell « Cibles tactiles et texte des champs sur
+// téléphone », visual-theme « Contraste sur le thème sombre », « Focus visible
+// au clavier »; design D5, D9).
+// Mutations: `md:h-8` kept on the default button, the input or the select →
+// the « no md:h-8 » tests go red; field contour at `border-ink-3` instead of
+// `border-rule` → the input and select tests go red.
 
 function classesOf(element: Element): string[] {
     return element.className.split(/\s+/);
@@ -31,44 +29,88 @@ function outlineTransitions(element: Element): string[] {
     );
 }
 
-describe('touch targets under 768 px', () => {
-    it('gives the default button 44 px under md and 32 px from md', () => {
-        render(<Button>Enregistrer</Button>);
+describe('buttons', () => {
+    it('gives the default button 48 px at every width, filled with ink', () => {
+        render(<Button>Ajouter</Button>);
+
+        const classes = classesOf(screen.getByRole('button', { name: 'Ajouter' }));
+
+        expect(classes).toEqual(
+            expect.arrayContaining(['h-12', 'bg-ink', 'text-bg', 'rounded-10']),
+        );
+        expect(classes.filter((name) => name.startsWith('md:'))).toEqual([]);
+    });
+
+    it('outlines the outline button with the rule colour', () => {
+        render(<Button variant="outline">Renommer</Button>);
+
+        expect(screen.getByRole('button', { name: 'Renommer' })).toHaveClass(
+            'border-rule',
+            'bg-transparent',
+        );
+    });
+
+    it('fills the destructive button with signal, text in on-signal', () => {
+        render(<Button variant="destructive">Supprimer</Button>);
+
+        expect(screen.getByRole('button', { name: 'Supprimer' })).toHaveClass(
+            'bg-signal',
+            'text-on-signal',
+        );
+    });
+});
+
+describe('fields', () => {
+    it('gives the input 48 px, 16 px text, the rule contour and a 10 px radius', () => {
+        render(<Input aria-label="Nouveau joueur" />);
 
         const classes = classesOf(
-            screen.getByRole('button', { name: 'Enregistrer' }),
+            screen.getByRole('textbox', { name: 'Nouveau joueur' }),
         );
 
-        expect(classes).toContain('h-11');
-        expect(classes).toContain('md:h-8');
+        expect(classes).toEqual(
+            expect.arrayContaining([
+                'h-12',
+                'text-body-l',
+                'border-rule',
+                'rounded-10',
+                'bg-surface-1',
+            ]),
+        );
+        expect(classes.filter((name) => name.startsWith('md:'))).toEqual([]);
     });
 
-    it('gives the input 44 px and 16 px text under md', () => {
-        render(<Input aria-label="Nom" />);
-
-        const classes = classesOf(screen.getByRole('textbox', { name: 'Nom' }));
-
-        expect(classes).toContain('h-11');
-        expect(classes).toContain('text-base');
-        expect(classes).toContain('md:h-8');
-        expect(classes).toContain('md:text-sm');
-    });
-
-    it('gives the native select 44 px and 16 px text under md', () => {
+    it('gives the native select 48 px, 16 px text, the rule contour and a 10 px radius', () => {
         render(
-            <NativeSelect aria-label="Joueur">
-                <NativeSelectOption value="1">Alice</NativeSelectOption>
+            <NativeSelect aria-label="Parcours">
+                <NativeSelectOption value="1">BETHPAGE BLACK</NativeSelectOption>
             </NativeSelect>,
         );
 
         const classes = classesOf(
-            screen.getByRole('combobox', { name: 'Joueur' }),
+            screen.getByRole('combobox', { name: 'Parcours' }),
         );
 
-        expect(classes).toContain('h-11');
-        expect(classes).toContain('text-base');
-        expect(classes).toContain('md:h-8');
-        expect(classes).toContain('md:text-sm');
+        expect(classes).toEqual(
+            expect.arrayContaining([
+                'h-12',
+                'text-body-l',
+                'border-rule',
+                'rounded-10',
+                'bg-surface-1',
+            ]),
+        );
+        expect(classes.filter((name) => name.startsWith('md:'))).toEqual([]);
+    });
+
+    it('borders the unchecked checkbox with ink-4', () => {
+        render(<Checkbox aria-label="Sean" />);
+
+        expect(screen.getByRole('checkbox', { name: 'Sean' })).toHaveClass(
+            'border-ink-4',
+            'checked:border-ink',
+            'checked:bg-ink',
+        );
     });
 });
 
@@ -91,25 +133,5 @@ describe('keyboard focus', () => {
         expect(classesOf(input)).toContain('focus-visible:outline-2');
         expect(classesOf(input)).toContain('focus-visible:outline-ring');
         expect(outlineTransitions(input)).toEqual([]);
-    });
-});
-
-describe('alert dialog', () => {
-    it('keeps the open dialog within 20 rem, the narrowest screen', () => {
-        render(
-            <AlertDialog open>
-                <AlertDialogContent>
-                    <AlertDialogTitle>Supprimer le round ?</AlertDialogTitle>
-                </AlertDialogContent>
-            </AlertDialog>,
-        );
-
-        expect(classesOf(screen.getByRole('alertdialog'))).toContain(
-            'data-[size=default]:max-w-xs',
-        );
-        expect(screen.getByRole('alertdialog')).toHaveAttribute(
-            'data-size',
-            'default',
-        );
     });
 });
