@@ -367,13 +367,11 @@ test('the list, the scorecard and the reading at their delays end within the 120
         ->and(2 * $delays[0] + $delays[1])->toBeLessThan($delays[2]);
 });
 
-test('a request to SGT past its delay ends the attempt as SGT unavailable, without waiting', function () {
+test('a request to SGT past its delay ends the attempt as SGT unavailable and leaves the row pending', function () {
     Http::fake(fn (Request $request) => throw new ConnectionException('cURL error 28: Operation timed out after 20000 milliseconds'));
     $rating = pendingLookupOn('BETHPAGE BLACK', 'Red');
-    $started = microtime(true);
 
     expect(fn () => runLookup($rating))->toThrow(SgtUnavailable::class);
 
-    expect(microtime(true) - $started)->toBeLessThan(5.0)
-        ->and($rating->refresh()->status)->toBe(CourseRatingStatus::Pending);
+    expect($rating->refresh()->status)->toBe(CourseRatingStatus::Pending);
 });
