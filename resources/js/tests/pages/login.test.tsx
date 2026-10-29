@@ -14,6 +14,11 @@ import Login from '@/pages/login';
 // test goes red; label « Connexion » without « … » → the processing test goes
 // red; the page left in AppLayout (no own layout) → the « no section link »
 // test goes red; `aria-describedby` dropped → the error test goes red.
+// Visual-redesign (decision Q9, DO12): the page is recomposed with the
+// elements of the design, labels unchanged. Mutations: the drawn BrandMark
+// kept beside « Golf » (E3) → the design test finds an svg and goes red; the
+// button left in outline → the design test goes red; the narrow column of
+// the former layout (`max-w-sm px-4`) → the column test goes red.
 
 const formState = vi.hoisted(() => ({
     errors: {} as Record<string, string>,
@@ -82,6 +87,34 @@ describe('Login page', () => {
         expect(screen.getByRole('button', { name: 'Entrer' })).toBeEnabled();
     });
 
+    it('opens on the row « Golf » in text, the title at 28 px, the field of 48 px and the filled « Entrer »', () => {
+        renderPage();
+
+        const golf = screen.getByText('Golf');
+
+        expect(golf.className).toContain('text-label');
+        expect(golf.querySelector('svg')).toBeNull();
+        expect(golf.parentElement?.querySelector('svg')).toBeNull();
+        expect(screen.getByRole('heading', { level: 1 }).className).toContain(
+            'text-title',
+        );
+        expect(screen.getByLabelText("Code d'accès").className).toContain(
+            'h-12',
+        );
+        expect(
+            screen.getByRole('button', { name: 'Entrer' }).className,
+        ).toContain('bg-ink');
+    });
+
+    it('lays the page in the column of 390 px with the gutters of 20 px', () => {
+        renderPage();
+
+        const main = screen.getByRole('main');
+
+        expect(main.className).toContain('max-w-(--column)');
+        expect(main.className).toContain('px-(--gutter)');
+    });
+
     it('posts the form to /login', () => {
         renderPage();
 
@@ -110,6 +143,7 @@ describe('Login page', () => {
         const field = screen.getByLabelText("Code d'accès");
 
         expect(alert.textContent).toBe('Code incorrect');
+        expect(alert.className).toContain('text-body-12');
         expect(field.getAttribute('aria-invalid')).toBe('true');
         expect(field.getAttribute('aria-describedby')).toBe(alert.id);
         expect(alert.id).not.toBe('');
