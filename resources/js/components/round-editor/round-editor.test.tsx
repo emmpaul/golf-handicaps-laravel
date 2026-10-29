@@ -595,9 +595,7 @@ describe('RoundEditor, grid layouts', () => {
     it('keeps the name, the value and the check of « Ligne 1 trou 9 » from the narrow to the wide grid', async () => {
         const { container } = render(editor());
 
-        expect(
-            container.querySelector('[data-slot="scroll-frame"]'),
-        ).toBeNull();
+        expect(container.querySelector('[data-slot="wide-grid"]')).toBeNull();
 
         await userEvent.type(cell('Ligne 1 trou 9'), '16');
 
@@ -611,7 +609,7 @@ describe('RoundEditor, grid layouts', () => {
         });
 
         expect(
-            container.querySelector('[data-slot="scroll-frame"]'),
+            container.querySelector('[data-slot="wide-grid"]'),
         ).not.toBeNull();
         expect(
             screen.getAllByRole('textbox', { name: 'Ligne 1 trou 9' }),

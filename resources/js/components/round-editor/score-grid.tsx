@@ -1,5 +1,4 @@
 import { useSyncExternalStore } from 'react';
-import { ScrollFrame } from '@/components/scroll-frame';
 import type { CellValue } from '@/lib/round-checks';
 import { cn } from '@/lib/utils';
 import { parseCell } from './form-state';
@@ -178,7 +177,14 @@ function CellInput({
 /** Grille large : une rangée par ligne de la carte, colonnes 1-9, OUT, 10-18, IN, TOT. */
 function WideGrid({ rows, ...cell }: GridProps) {
     return (
-        <ScrollFrame label="Carte à corriger" labelWidth="6rem">
+        // Focusable so that keyboard users can scroll the table, until the
+        // single-column grid of the redesign replaces it (task 6.1).
+        <section
+            data-slot="wide-grid"
+            aria-label="Carte à corriger"
+            tabIndex={0}
+            className="max-w-full min-w-0 overflow-x-auto"
+        >
             <table className="text-sm border-separate border-spacing-0.5 p-1 tabular-nums lg:w-full">
                 <thead>
                     <tr>
@@ -227,7 +233,7 @@ function WideGrid({ rows, ...cell }: GridProps) {
                     ))}
                 </tbody>
             </table>
-        </ScrollFrame>
+        </section>
     );
 }
 
