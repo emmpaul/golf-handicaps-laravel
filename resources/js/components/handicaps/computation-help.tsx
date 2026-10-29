@@ -17,15 +17,17 @@ const LINES = [
  * Explication repliée du calcul de l'index (spec `handicap-index`,
  * « Explication du calcul »), fermée à l'ouverture de la page. `<details>`
  * natif : le titre s'ouvre au clic, à Entrée et à Espace. Texte seul, sans
- * valeur calculée ; les lignes passent à la ligne à 320 px.
+ * valeur calculée ; les lignes passent à la ligne à 320 px. Tailles de
+ * l'échelle du design (DO26) : titre en Geist 500, 13 px, lignes en 12 px,
+ * gris `ink-2`.
  */
 export function ComputationHelp() {
     return (
-        <details className="group text-sm max-w-2xl border-t pt-3">
-            <summary className="w-fit cursor-pointer font-medium underline-offset-3 hover:underline max-md:min-h-11 max-md:content-center">
+        <details className="group border-t border-rule pt-1">
+            <summary className="flex min-h-11 w-fit cursor-pointer items-center text-link-13 text-ink-2 underline-offset-3 hover:underline">
                 Comment l’index est calculé
             </summary>
-            <ul className="mt-2 flex list-disc flex-col gap-1 pl-5 [overflow-wrap:anywhere] text-muted-foreground">
+            <ul className="mt-1 flex list-disc flex-col gap-1 pl-5 text-body-12 [overflow-wrap:anywhere] text-ink-2">
                 {LINES.map((line) => (
                     <li key={line}>{line}</li>
                 ))}
