@@ -4,6 +4,8 @@ All notable changes to this application, version by version. The format follows 
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-10-29
+
 First release of the Laravel port of the golf handicap app. It takes over from the Next.js app with the same data and the same WHS computation, a redesigned interface, and a single Docker image deployed on Dokploy.
 
 ### Added
