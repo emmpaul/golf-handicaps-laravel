@@ -114,15 +114,15 @@ Une migration modifie la table :
 
 | Action | Écrit | Recalcul | Refus |
 | --- | --- | --- | --- |
-| `ConfirmCourseRatingProposal::handle(CourseRating)` | `rating_t`, `slope` du tee proposé, `source = sgt`, `status = confirmed`, `note = null` | oui | `NoProposalToConfirm` « Aucune proposition à confirmer » |
+| `ConfirmCourseRatingProposal::handle(CourseRating)` | `rating_t`, `slope` du tee proposé, `source = sgt`, `status = confirmed` (`note` gardée, Q18) | oui | `NoProposalToConfirm` « Aucune proposition à confirmer » |
 | `ChooseCourseRatingTee::handle(CourseRating, string $tee)` | idem, `proposed_tee = $tee` | oui | `TeeNotRead` « Tee absent de la carte SGT » |
 | `ChooseSgtCandidate::handle(CourseRating, int $sgtCourseId)` | `sgt_course_*` du candidat, `status = pending`, `note = null`, job mis en file | non | `CandidateNotListed` « Parcours SGT absent des candidats » |
 | `RelaunchCourseRatingLookup::handle(CourseRating)` | `sgt_course_*` à `null`, `status = pending`, `note = null`, job mis en file | non | — |
 
 - Toutes ouvrent leur transaction et verrouillent la ligne (`lockForUpdate`). Les deux premières appellent `RecomputePlayerStats` avec `CourseRounds::playerIds()` de la paire, comme `SaveCourseRating`. Les jobs partent `afterCommit`.
-- `SaveCourseRating` : l'`insert` pose `status = confirmed`, `source = manual` ; le `do update` aussi, sans toucher aux colonnes de la recherche.
+- `SaveCourseRating` : l'`insert` pose `status = confirmed`, `source = manual` ; le `do update` aussi, sans toucher aux colonnes de la recherche ni à `note` (Q18).
 - `RemoveCourseRating` : au lieu d'effacer la ligne, met `rating_t`, `slope`, `source` et `note` à `null` et le statut à `proposed` si `proposed_tee` est dans `tees_read`, sinon `choose_tee` si `tees_read` n'est pas vide, sinon `choose_course` si `candidates` n'est pas vide, sinon `manual`. `CourseHasNoRating` quand la ligne manque ou que `rating_t` est déjà nul.
-- Routes, `{courseRating}` par `whereUuid()` (404 sinon), dans le groupe `web` (session exigée) :
+- Routes, dans le groupe `web` (session exigée). `{courseRating}` sans `whereUuid()` (corrigé à l'apply, tâche 7.4, relu dans `Router::fallback()`) : la route de repli ne répond qu'à `GET`, un `POST` sur « 12 » refusé par `whereUuid()` recevrait 405 ; sans contrainte, le contrôle d'uuid de `HasUuids` (`HasUniqueStringIds::resolveRouteBindingQuery`) rend 404 avant toute requête :
 
 | Méthode | Adresse | Nom | Toast |
 | --- | --- | --- | --- |
@@ -135,7 +135,7 @@ Une migration modifie la table :
 
 ### D8. Vue de la page Parcours
 
-- `CourseOverview` garde sa requête unique et ajoute de la ligne jointe : `id`, `status`, `label`, `note`, `source`, `sgtCourseName`, `sgtCourseLocation`, `proposal` (`{name, ratingT, slope}` du tee proposé, ou `null`), `teesRead`, `candidates` (chacun avec son `scorecardUrl`), `scorecardUrl` et `courseViewUrl` (D2), ou `null` sans parcours SGT retenu. Une paire sans ligne (balayage pas encore passé) a `id` et `status` à `null` : la saisie à la main reste, sans action de recherche.
+- `CourseOverview` garde sa requête unique et ajoute de la ligne jointe : `id`, `status`, `label`, `note` (`null` pour une ligne `confirmed`, Q18), `source`, `sgtCourseName`, `sgtCourseLocation`, `proposal` (`{name, ratingT, slope}` du tee proposé, ou `null`), `teesRead`, `candidates` (chacun avec son `scorecardUrl`), `scorecardUrl` et `courseViewUrl` (D2), ou `null` sans parcours SGT retenu. Une paire sans ligne (balayage pas encore passé) a `id` et `status` à `null` : la saisie à la main reste, sans action de recherche.
 - La page reçoit aussi `lookupPending` (au moins une ligne `pending`).
 
 ### D9. Interface, dans le thème actuel
@@ -193,6 +193,7 @@ Le mainteneur n'était pas joignable. Chaque question ouverte a reçu l'option r
 | Q15 | Image envoyée à l'IA | Le JPEG de SGT tel que servi, sans réduction (D4). | Passage par la préparation d'image de 8 (réduction à 1568 px, inutile à 905 px). |
 | Q16 | ADR | Oui : source tierce, requêtes sortantes, budget partagé (D13). | Section d'`ARCHITECTURE.md` seule. |
 | Q17 | Lecture `found` vrai sans aucun tee (décision de l'orchestrateur à l'apply, 2026-10-29) | Inexploitable : `SgtCardReading` à `card` nulle, usage facturé et compté, la recherche finit en « Saisie manuelle », « Lecture IA impossible » (D4, D5). | Carte sans tee acceptée, qui finirait en « Tee à choisir » sans aucun tee à retenir. |
+| Q18 | Note d'une ligne confirmée (décision de l'orchestrateur à l'apply, 2026-10-29) | Une saisie manuelle ou une confirmation (proposition ou tee retenu) ne touche pas à `note` ; la prop `courses` de la page n'expose la note que pour les statuts autres que `confirmed` (`note` à `null` sur une ligne `confirmed`). La spec « Rating confirmée » (« sans note ») est tenue par la vue, la note de la recherche reste en base. | Effacer `note` à la confirmation, comme Next. |
 
 ## Risks / Trade-offs
 

@@ -11,13 +11,18 @@
  * - an insert without on conflict: the second rating typed for « bethpage black / red » is
  *   refused by the unique index (UniqueConstraintViolationException);
  * - a do update that leaves source and status (design D7 of course-rating-sgt): the row of the
- *   lookup, without source, refuses the rating (course_ratings_rating_source_check).
+ *   lookup, without source, refuses the rating (course_ratings_rating_source_check);
+ * - the insert of a pair without row written as pending (status 'pending' in its values): the
+ *   row reads pending instead of confirmed;
+ * - the note cleared by the do update (decision Q18 of course-rating-sgt): the note of the
+ *   lookup is lost.
  */
 
 use App\Domain\Courses\Actions\SaveCourseRating;
 use App\Domain\Courses\CourseRatingStatus;
 use App\Domain\Courses\Exceptions\UnknownCourse;
 use App\Models\CourseRating;
+use Illuminate\Support\Facades\Queue;
 
 beforeEach(function () {
     createPlayersOnTest('Gab', 'Manu', 'Sean');
@@ -56,6 +61,25 @@ test('a rating typed on a proposal confirms it by hand and keeps what SGT read',
     expect([$rating->rating_t, $rating->slope, $rating->source, $rating->status, $rating->proposed_tee])
         ->toBe([700, 130, 'manual', CourseRatingStatus::Confirmed, 'Red'])
         ->and(array_column($rating->tees_read ?? [], 'name'))->toBe(['Blue', 'White', 'Red', 'Junior', 'PAR3']);
+});
+
+test('a rating typed on a row of the lookup keeps its note', function () {
+    // The row of the lookup of the card ends on the note of SGT_LOOKUP off.
+    app(SaveCourseRating::class)->handle('BETHPAGE BLACK', 'Red', 714, 144);
+
+    expect(CourseRating::query()->sole()->note)->toBe('Recherche SGT désactivée');
+});
+
+test('a rating typed on a pair without row creates it confirmed and queues no lookup', function () {
+    CourseRating::query()->delete();
+    Queue::fake();
+
+    app(SaveCourseRating::class)->handle('BETHPAGE BLACK', 'Red', 714, 144);
+
+    $rating = CourseRating::query()->sole();
+    expect([$rating->rating_t, $rating->slope, $rating->source, $rating->status])
+        ->toBe([714, 144, 'manual', CourseRatingStatus::Confirmed]);
+    Queue::assertNothingPushed();
 });
 
 test('a correction in another case updates the same row', function () {
