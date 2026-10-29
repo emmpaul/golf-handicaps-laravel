@@ -11,8 +11,8 @@ context: |
   Stack: Laravel, Inertia, React, TypeScript (strict), PostgreSQL, UUID primary and foreign keys,
   Tailwind, PNPM, Laravel Sail, Laravel AI SDK, database queue with a worker.
   Laravel Boost MCP supports the agents.
-  Keep the frontend visually distinctive; port the existing scoreboard theme rather than the
-  stock shadcn/ui appearance.
+  Keep the frontend visually distinctive; follow DESIGN.md (the dark « Golf handicap app
+  redesign », closed palette of tokens) rather than the stock shadcn/ui appearance.
 
   Access: one shared passcode (APP_PASSCODE) and a Laravel session. No user accounts, no roles,
   no Fortify, no audit trail, no outgoing mail.

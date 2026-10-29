@@ -66,7 +66,7 @@ Ces règles priment sur les consignes génériques de Boost.
 
 ## Interface
 
-- Le port reprend le thème scoreboard de l'application Next.js : tokens clairs et sombres, primitives possédées par le projet dans `components/ui`.
+- L'interface suit `DESIGN.md` (design « Golf handicap app redesign ») : thème sombre seul, palette fermée de `resources/css/tokens.css`, primitives possédées par le projet dans `components/ui`. Chaque couleur, taille de texte, rayon ou ombre vient d'un token.
 
 ## Boost et fichiers générés
 
