@@ -107,7 +107,7 @@ Le rang de création est calculé en SQL dans les Query qui rendent des joueurs 
 
 ### D7. Compte d'imports à vérifier
 
-Le badge du bouton Importer est sur toutes les pages : `HandleInertiaRequests` partage `pendingImports` (imports prêts à vérifier sans round), une requête `count` par visite, en prop différée par `Inertia::defer` pour ne pas retarder la page. L'accueil lit la même valeur.
+Le badge du bouton Importer est sur toutes les pages : `HandleInertiaRequests` partage `pendingImports` (imports prêts à vérifier sans round), une requête `count` par visite, lue avec la page (prop ordinaire, DO35) et seulement avec une session ouverte. L'accueil lit la même valeur.
 
 ### D8. Mouvement
 
@@ -199,6 +199,7 @@ Arbitrages pris pendant la tâche 1.2 et l'unité 1, mainteneur absent ; chacun 
 | DO32 | Avertissements de clé de React en test (L18) | `resources/js/tests/key-warnings.ts` retient les `console.error` « Encountered two children with the same key » et « Each child in a list should have a unique "key" prop » ; `setup.ts` fait échouer le test qui les a causés dans son `afterEach` (React en émet une partie hors de l'appel de rendu, en rendu concurrent : un `throw` dans `console.error` ne remontait pas au test). Les autres messages passent tels quels. `console-guard.test.tsx` le vérifie (mutation : garde non installée). La suite entière n'en révélait aucun autre une fois B1 corrigé. |
 | DO33 | Focus initial d'une feuille destructive (B3) | `AlertDialogContent` donne par défaut à base-ui un `initialFocus` qui vise `[data-slot="alert-dialog-cancel"]` de la feuille (repli : comportement de base-ui) ; un `initialFocus` passé par l'appelant reste prioritaire. Sans cela base-ui prenait le premier bouton, « Supprimer », et Entrée puis Entrée supprimait le round. Vaut pour la feuille d'un round et celle d'un import. Delta `app-shell` « Feuille de confirmation » : phrase et scénario « Focus initial sur « Annuler » » ajoutés. Testé dans `alert-dialog.test.tsx`, `delete-round.test.tsx`, `import-index.test.tsx` (mutation : focus initial visant l'action). |
 | DO34 | Barre d'onglets à 320 px (B2) | Aux mesures du design (écart 10, pilule 7, onglets 12 et courant 14 px de marge, libellé à 8 px de l'icône), la barre fait 340 px avec « Handicaps » ouvert, au-delà des 288 px d'un écran de 320 px moins 2 × 16 px : Importer dépassait de 17 à 36 px. Sous 375 px de large (`max-[375px]:`), l'écart passe à 8, la pilule à 4, l'onglet fermé à 6 px de marge et 32 px de large au moins, l'onglet courant à 10, le libellé à 4 px de l'icône : 276 px avec « Handicaps » (libellés mesurés dans Chrome en Geist 600, 13 px : Rounds 47, Handicaps 66, Coups 40, Joueurs 51 px). La hauteur de 44 px ne change pas (la spec demande 44 px de haut, pas de large). À 375 px et plus, les mesures du design tiennent (340 ≤ 343) et restent. `app-nav.test.tsx` somme les classes rendues et ces largeurs (≤ 288 px à 320 px, 340 px aux mesures du design) ; la passe navigateur mesure le bord droit d'Importer à 304 px (320) et 374 px (390) sur `/rounds`, `/handicaps`, `/strokes`, `/players`, `/courses`, libellé courant entier. |
+| DO35 | `pendingImports` lue avec la page (M3, M4) | La prop partagée n'est plus différée : différée, la pastille d'Importer apparaissait après la page (clignotement) et le bloc « à vérifier » de l'accueil décalait la page. Une requête `count` de plus par visite (accueil : 7 requêtes au lieu de 6). Toujours absente sans session ouverte (`/login`, même sur un rechargement partiel qui la demande). Le poll de `/import` recharge `only: ['imports', 'pendingImports']`, pour que la pastille suive la fin d'une lecture. D7 corrigé. Testé dans `PendingImportsShareTest`, `HomePageTest` (mutation : `Inertia::defer` remis) et `import-index.test.tsx` (mutation : `pendingImports` hors de `only`). |
 
 ## Risks / Trade-offs
 
@@ -209,7 +210,7 @@ Arbitrages pris pendant la tâche 1.2 et l'unité 1, mainteneur absent ; chacun 
 - [Contraste des couleurs de joueur en texte (violet 4,10:1)] → le nom accompagne toujours la couleur ; accepté et noté (E28).
 - [Changement large] → tâches en groupes revus l'un après l'autre ; une seule PR de code, comme les autres entrées.
 - [Specs de 7 et 9 réconciliées après coup] → D12 et DO2 à DO12 ; aucun conflit de fond trouvé.
-- [Prop partagée `pendingImports` sur chaque visite] → une requête `count` indexée, différée.
+- [Prop partagée `pendingImports` sur chaque visite] → une requête `count` sur `imports`, lue avec la page (DO35) ; le poll de `/import` la relit avec la liste.
 
 ## Migration Plan
 

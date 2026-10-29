@@ -633,14 +633,16 @@ describe('List of imports', () => {
         expect(within(retried).getByRole('status').textContent).toBe('');
     });
 
-    it('reloads only the imports every 2 s while one waits, and stops once none waits', async () => {
+    // M3, DO35: the badge of Importer follows a reading that ends.
+    // Mutation: `pendingImports` left out of `only` → red.
+    it('reloads the imports and their count every 2 s while one waits, and stops once none waits', async () => {
         vi.useFakeTimers();
 
         const { rerender } = render(
             <ImportIndex imports={[queued, ready]} readingEnabled />,
         );
 
-        await expectReloadsEvery2s(reload, ['imports']);
+        await expectReloadsEvery2s(reload, ['imports', 'pendingImports']);
 
         rerender(
             <ImportIndex

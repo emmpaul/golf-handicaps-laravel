@@ -6,7 +6,6 @@ use App\Domain\Imports\Queries\PendingImports;
 use App\Support\AppBuild;
 use App\Support\Passcode;
 use Illuminate\Http\Request;
-use Inertia\Inertia;
 use Inertia\Middleware;
 
 class HandleInertiaRequests extends Middleware
@@ -46,10 +45,11 @@ class HandleInertiaRequests extends Middleware
                 'version' => AppBuild::version(),
                 'commit' => AppBuild::commit(),
             ],
-            // The badge of the Importer button (design D7): deferred, so the count never delays
-            // a page, and only behind the passcode, so /login tells nothing about the imports.
+            // The badge of the Importer button (design D7, DO35): read with the page, one count, so
+            // the badge and the home page do not shift when it arrives; only behind the passcode,
+            // so /login tells nothing about the imports.
             ...$this->opened($request) ? [
-                'pendingImports' => Inertia::defer(fn (): int => app(PendingImports::class)->count()),
+                'pendingImports' => fn (): int => app(PendingImports::class)->count(),
             ] : [],
         ];
     }

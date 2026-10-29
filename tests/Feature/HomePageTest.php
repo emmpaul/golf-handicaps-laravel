@@ -19,8 +19,8 @@
  * - the players without index sorted first (null as 0): alice and Sean before Bob;
  * - the latest round without its net leaderboard (RoundList again): no playingHandicap, net nor
  *   rank on Gab and Manu;
- * - the home page that still sends its own pendingImports: the prop is present on the first load
- *   (the shared one is deferred).
+ * - the shared pendingImports deferred again (DO35): the count of the imports to check is
+ *   missing from the first load.
  */
 
 use App\Models\Import;
@@ -102,7 +102,7 @@ describe('with a session', function () {
                         ['playerId' => $this->manu->id, 'name' => 'Manu', 'colorSlot' => 1, 'gross' => 88, 'indexBeforeT' => 170, 'playingHandicap' => 17, 'net' => 71, 'rank' => 1],
                     ],
                 ])
-                ->missing('pendingImports'));
+                ->where('pendingImports', 1));
     });
 
     test('the players come by index, by name whatever the case at an equal index, those without index last', function () {
@@ -142,8 +142,8 @@ describe('with a session', function () {
             ->assertInertia(fn (Assert $page) => $page->has('latestRound')));
 
         // The players with their colour slot and their current statistics (2), the latest round,
-        // its rating, its lines with their gross and index before, and its holes (4). The imports
-        // to check are a deferred shared prop, not read on this first load.
-        expect($queries)->toBe(6);
+        // its rating, its lines with their gross and index before, and its holes (4), and the
+        // count of the imports to check, shared with every page (1, DO35).
+        expect($queries)->toBe(7);
     })->with([10, 30]);
 });
