@@ -17,9 +17,9 @@ Avant de commencer : relire l'issue #14, `proposal.md`, `design.md` (D1 à D4 et
 
 ## 3. Vérification finale
 
-- [ ] 3.1 Lancer `make check` et le voir vert ; en cas d'échec, lire `reports/check/<étape>.log` et corriger
+- [x] 3.1 Lancer `make check` et le voir vert ; en cas d'échec, lire `reports/check/<étape>.log` et corriger
 - [x] 3.2 Passe navigateur réduite (décisions par défaut, point 8) : `make up`, `make dev` en arrière-plan, `make browser`, puis le skill `browser-use` sur `http://localhost/login` ; vérifier que la page s'affiche et que la console est sans erreur ; `make dev-stop`
-- [ ] 3.3 Ouvrir la PR de code ; vérifier le job `image` vert, puis le relancer deux fois (« Re-run jobs ») et vérifier trois exécutions vertes, liens notés dans la PR
+- [x] 3.3 Ouvrir la PR de code ; vérifier le job `image` vert, puis le relancer deux fois (« Re-run jobs ») et vérifier trois exécutions vertes, liens notés dans la PR
 - [x] 3.4 Relire les deux nouveaux scénarios du delta `deployment` et noter pour chacun la tâche qui le prouve (2.3, 2.4) ; finir par `make openspec ARGS="validate --all --strict"` vert
 
 ## Workflow follow-up
