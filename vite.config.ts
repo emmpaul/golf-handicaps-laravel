@@ -13,15 +13,15 @@ export default defineConfig({
             input: ['resources/css/app.css', 'resources/js/app.tsx'],
             refresh: true,
             fonts: [
-                fontsource('Sofia Sans Condensed', {
-                    weights: [400, 600, 800],
-                    subsets: ['latin', 'latin-ext'],
-                    variable: '--font-sofia-sans-condensed',
-                }),
-                fontsource('IBM Plex Sans', {
+                fontsource('Geist', {
                     weights: [400, 500, 600],
                     subsets: ['latin', 'latin-ext'],
-                    variable: '--font-ibm-plex-sans',
+                    variable: '--font-geist',
+                }),
+                fontsource('Geist Mono', {
+                    weights: [500, 600],
+                    subsets: ['latin', 'latin-ext'],
+                    variable: '--font-geist-mono',
                 }),
             ],
         }),

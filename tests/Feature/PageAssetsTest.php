@@ -1,8 +1,10 @@
 <?php
 
 /*
- * Mutation that turns these tests red: add
+ * Mutations that turn these tests red: add
  * <link rel="stylesheet" href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600">
+ * or, as the Golf App.dc.html of the redesign does,
+ * <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&display=swap">
  * to resources/views/app.blade.php.
  */
 
@@ -44,5 +46,6 @@ test('the home page names no third-party font service', function () {
 
     $response->assertOk()
         ->assertDontSee('bunny.net')
-        ->assertDontSee('fonts.googleapis.com');
+        ->assertDontSee('fonts.googleapis.com')
+        ->assertDontSee('fonts.gstatic.com');
 });
