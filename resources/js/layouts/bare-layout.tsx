@@ -4,9 +4,9 @@ import { AppVersion } from '@/components/app-version';
 
 /**
  * Page nue, hors du cadre commun : ni navigation ni barre d'onglets. Colonne
- * de 390 px et marges de 20 px du design (D3) ; le contenu prend la hauteur
- * restante et la ligne de version, dernier enfant de `main`, reste en bas de
- * page. Sert à `/login`.
+ * de 390 px et marges de 16 px, celles de la barre flottante (D3) ; le
+ * contenu prend la hauteur restante et la ligne de version, dernier enfant de
+ * `main`, reste en bas de page. Sert à `/login`.
  */
 export default function BareLayout({ children }: { children: ReactNode }) {
     const { app } = usePage().props;

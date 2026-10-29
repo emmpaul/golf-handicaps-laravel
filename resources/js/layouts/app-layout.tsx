@@ -10,14 +10,15 @@ import { pageEnterStyle, useEntered, useReducedMotion } from '@/lib/motion';
 /**
  * Cadre commun de toutes les pages, posé par défaut dans `app.tsx` (D3, D4).
  * La colonne de 390 px, centrée à toute largeur (décision Q3), marges de
- * 20 px. Pas d'en-tête collé : chaque page commence par sa `PageTopRow`, et
- * une bande fixe de la hauteur de la zone sûre, au fond de la page, garde la
- * barre d'état nette. Le bas de `main` laisse 108 px plus la zone sûre à la
- * barre flottante : la ligne de version, dernier enfant de `main`, reste
- * visible au-dessus. `chrome="editor"` (éditeur de round) retire la barre
- * d'onglets et le bouton Importer. Le toast, monté une fois, affiche la donnée
- * flash `toast` de chaque réponse. `main` joue l'entrée de page (D8) à chaque
- * changement d'adresse hors requête : changer de joueur ne la rejoue pas.
+ * 16 px, celles de la barre flottante. Pas d'en-tête collé : chaque page
+ * commence par sa `PageTopRow`, et une bande fixe de la hauteur de la zone
+ * sûre, au fond de la page, garde la barre d'état nette. Le bas de `main`
+ * laisse 108 px plus la zone sûre à la barre flottante : la ligne de version,
+ * dernier enfant de `main`, reste visible au-dessus. `chrome="editor"`
+ * (éditeur de round) retire la barre d'onglets et le bouton Importer. Le
+ * toast, monté une fois, affiche la donnée flash `toast` de chaque réponse.
+ * `main` joue l'entrée de page (D8) à chaque changement d'adresse hors
+ * requête : changer de joueur ne la rejoue pas.
  */
 export default function AppLayout({
     children,

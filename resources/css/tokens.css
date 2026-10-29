@@ -179,7 +179,7 @@
     --dur-enter: 420ms;
     --dur-bar: 600ms;
     /* Marges latérales (D3). */
-    --gutter: 20px;
+    --gutter: 16px;
     --gutter-nav: 16px;
     /* Colonne du téléphone à toute largeur (D3, décision Q3). */
     --column: 390px;

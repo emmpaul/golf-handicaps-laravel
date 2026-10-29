@@ -10,8 +10,10 @@ import { home } from '@/routes';
  * l'accueil sauf sur l'accueil. Sous-page : le lien de retour `back` (chevron
  * de 18 px, libellé gris). Les actions sont à droite ; `meta`, une valeur qui
  * n'est pas une action (« 8 ROUNDS »), s'y place en Geist Mono 11 px gris. Le
- * haut suit le design au-dessus de la zone sûre : 44 px pour une rangée à lien
- * de retour ou à actions, 54 px pour « Golf » seul ou suivi de `meta`.
+ * haut suit le design : 44 px pour une rangée à lien de retour ou à actions,
+ * 54 px pour « Golf » seul ou suivi de `meta`. Quand la zone sûre du haut
+ * dépasse cette mesure, la rangée commence au bas de la zone sûre, sans marge
+ * ajoutée.
  */
 export function PageTopRow({
     back,
@@ -32,7 +34,7 @@ export function PageTopRow({
                 'flex min-h-11 items-center justify-between gap-3',
                 back || actions
                     ? 'pt-[max(44px,var(--safe-top))]'
-                    : 'pt-[max(54px,calc(var(--safe-top)+10px))]',
+                    : 'pt-[max(54px,var(--safe-top))]',
                 back ? 'mb-3.5' : 'mb-[22px]',
             )}
         >
