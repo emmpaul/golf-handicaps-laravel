@@ -127,7 +127,7 @@ describe('with a session', function () {
             ->assertInertia(fn (Assert $page) => $page->has('courses', 1)));
 
         // The players and their current statistics (2), the latest round of each course with its
-        // rating, and their holes (2).
-        expect($queries)->toBe(4);
+        // rating, and their holes (2), the count of the imports to check (1, DO35).
+        expect($queries)->toBe(5);
     })->with([10, 30]);
 });

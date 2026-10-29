@@ -31,7 +31,9 @@ final class CourseOverview
     {
         // One query: the latest round of each course and tees (the key and order of
         // KnownCourses) with the row of course_ratings of its pair, matched in SQL, never by a
-        // lower case of PHP. The columns of the row are aliased: rounds has an id too.
+        // lower case of PHP. The columns of the row are aliased: rounds has an id too. The rounds
+        // of the pair are counted by a window over the same key, computed before distinct on keeps
+        // one row per pair (DO39).
         $key = 'lower(trim(rounds.course_name)), lower(trim(rounds.tees))';
 
         return array_values(Round::query()
@@ -42,9 +44,7 @@ final class CourseOverview
                 course_ratings.slope, course_ratings.source as rating_source, course_ratings.status as rating_status,
                 course_ratings.note as rating_note, course_ratings.sgt_course_id, course_ratings.sgt_course_name,
                 course_ratings.sgt_course_location, course_ratings.candidates, course_ratings.tees_read,
-                course_ratings.proposed_tee,
-                (select count(*) from rounds as played where lower(trim(played.course_name)) = lower(trim(rounds.course_name))
-                    and lower(trim(played.tees)) = lower(trim(rounds.tees))) as round_count")
+                course_ratings.proposed_tee, count(*) over (partition by {$key}) as round_count")
             ->with('holes')
             ->orderByRaw($key)
             ->orderByDesc('rounds.played_on')

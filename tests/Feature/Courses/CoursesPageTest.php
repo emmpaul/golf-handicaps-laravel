@@ -185,6 +185,22 @@ describe('with a session', function () {
         ]);
     });
 
+    test('the page makes the same number of queries whatever the number of courses and rounds', function (int $courses) {
+        foreach (range(1, $courses) as $course) {
+            createRoundCard(referenceCardOnCourse($this->gab->id, "COURSE {$course}", 'Red', '2026-10-01'));
+            createRoundCard(referenceCardOnCourse($this->gab->id, "course {$course}", 'red', '2026-10-02'));
+        }
+
+        $queries = queriesDuring(fn () => $this->get('/courses')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page->has('courses', $courses)->where('courses.0.roundCount', 2)));
+
+        // M6, DO39: the latest round of each course with its rating and its number of rounds (1),
+        // their holes (1), the count of the imports to check (1, DO35). Mutation: the rounds
+        // counted per course in PHP → grows with the courses.
+        expect($queries)->toBe(3);
+    })->with([1, 4]);
+
     test('the courses are ordered by name whatever the case', function () {
         createRoundCard(referenceCardOnCourse($this->gab->id, 'CALA NOVA', 'White', '2026-10-01'));
         createRoundCard(referenceCardOnCourse($this->gab->id, 'bethpage black', 'Red', '2026-10-02'));
