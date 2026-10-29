@@ -1,46 +1,60 @@
 import { Badge } from '@/components/ui/badge';
 import { PendingOrb } from '@/components/ui/pending';
-import type { CourseWithLookup } from '@/pages/courses/index';
+import type {
+    CourseRatingStatus,
+    CourseWithLookup,
+} from '@/pages/courses/index';
+
+/** Pastille de chaque statut (spec « Recherche SGT dans le bloc d'un parcours »). */
+const STATUS_VARIANT: Record<
+    Exclude<CourseRatingStatus, 'confirmed'>,
+    'info' | 'accent' | 'destructive' | 'secondary'
+> = {
+    pending: 'info',
+    proposed: 'accent',
+    choose_course: 'accent',
+    choose_tee: 'accent',
+    failed: 'destructive',
+    manual: 'secondary',
+    not_found: 'secondary',
+};
+
+/** Pastille du bloc d'un parcours : Geist Mono 500, 12 px, rayon 999 px. */
+export const COURSE_PILL = 'h-auto py-[5px] text-meta-12 tracking-normal';
 
 /**
  * État de la recherche d'un parcours (spec `course-ratings`, « Statuts de la
- * recherche ») : son libellé en `Badge`, sa note dessous quand elle en a une
- * (jamais sur une ligne confirmée, décision Q18). L'orbe tourne sur une ligne
- * en recherche seulement, sans `role="status"` : le badge change déjà à chaque
- * rafraîchissement. Rien pour une paire sans ligne.
+ * recherche ») : son libellé en pastille d'état, cyan en recherche, ambre pour
+ * un choix à faire, rouge en échec, neutre sinon. Une ligne confirmée n'en a
+ * pas : sa pastille de rating porte « · CONFIRMÉ » (DO10). L'orbe tourne sur
+ * une ligne en recherche seulement, sans `role="status"` : la pastille change
+ * déjà à chaque rafraîchissement. Rien pour une paire sans ligne.
  */
 export function LookupStatus({
     course,
 }: {
-    course: Pick<CourseWithLookup, 'status' | 'label' | 'note'>;
+    course: Pick<CourseWithLookup, 'status' | 'label'>;
 }) {
-    if (course.status === null || course.label === null) {
+    if (
+        course.status === null ||
+        course.status === 'confirmed' ||
+        course.label === null
+    ) {
         return null;
     }
 
     return (
-        <>
-            <span className="inline-flex items-center gap-2">
-                <Badge
-                    data-testid="course-status"
-                    variant={
-                        course.status === 'failed' ? 'destructive' : 'secondary'
-                    }
-                >
-                    {course.label}
-                </Badge>
-                {course.status === 'pending' ? (
-                    <PendingOrb state="searching" />
-                ) : null}
-            </span>
-            {course.note !== null ? (
-                <p
-                    data-testid="course-note"
-                    className="text-sm basis-full text-muted-foreground"
-                >
-                    {course.note}
-                </p>
+        <span className="inline-flex items-center gap-2">
+            <Badge
+                data-testid="course-status"
+                variant={STATUS_VARIANT[course.status]}
+                className={COURSE_PILL}
+            >
+                {course.label}
+            </Badge>
+            {course.status === 'pending' ? (
+                <PendingOrb state="searching" />
             ) : null}
-        </>
+        </span>
     );
 }

@@ -12,14 +12,15 @@ use Illuminate\Database\Query\JoinClause;
  * The courses of the Courses page (spec course-ratings, « Page Parcours »): the known courses,
  * by name then tees whatever the case, each with the par total of its latest round, its
  * confirmed rating, or null, the state of its lookup on Simulator Golf Tour (design D8 of
- * course-rating-sgt), and the stroke indexes of that latest round, hole 1 to 18 (the Strokes
- * page, spec match-strokes, « Répartition des coups par trou »). Port of courseRatingOverview of
+ * course-rating-sgt), the stroke indexes of that latest round, hole 1 to 18 (the Strokes
+ * page, spec match-strokes, « Répartition des coups par trou »), and the number of rounds played
+ * on the pair, grouped as the rating (« 3 rounds », design D14 of visual-redesign). Port of courseRatingOverview of
  * the Next.js application.
  *
  * @phpstan-type Tee array{name: string, ratingT: int, slope: int}
  * @phpstan-type Candidate array{id: int, name: string, location: string, par: int, scorecardUrl: string}
  * @phpstan-type Lookup array{id: string|null, status: string|null, label: string|null, note: string|null, source: string|null, sgtCourseName: string|null, sgtCourseLocation: string|null, proposal: Tee|null, teesRead: list<Tee>, candidates: list<Candidate>, scorecardUrl: string|null, courseViewUrl: string|null}
- * @phpstan-type Course array{courseName: string, tees: string, par: int, ratingT: int|null, slope: int|null, strokeIndexes: list<int>, id: string|null, status: string|null, label: string|null, note: string|null, source: string|null, sgtCourseName: string|null, sgtCourseLocation: string|null, proposal: Tee|null, teesRead: list<Tee>, candidates: list<Candidate>, scorecardUrl: string|null, courseViewUrl: string|null}
+ * @phpstan-type Course array{courseName: string, tees: string, par: int, ratingT: int|null, slope: int|null, strokeIndexes: list<int>, roundCount: int, id: string|null, status: string|null, label: string|null, note: string|null, source: string|null, sgtCourseName: string|null, sgtCourseLocation: string|null, proposal: Tee|null, teesRead: list<Tee>, candidates: list<Candidate>, scorecardUrl: string|null, courseViewUrl: string|null}
  */
 final class CourseOverview
 {
@@ -41,7 +42,9 @@ final class CourseOverview
                 course_ratings.slope, course_ratings.source as rating_source, course_ratings.status as rating_status,
                 course_ratings.note as rating_note, course_ratings.sgt_course_id, course_ratings.sgt_course_name,
                 course_ratings.sgt_course_location, course_ratings.candidates, course_ratings.tees_read,
-                course_ratings.proposed_tee")
+                course_ratings.proposed_tee,
+                (select count(*) from rounds as played where lower(trim(played.course_name)) = lower(trim(rounds.course_name))
+                    and lower(trim(played.tees)) = lower(trim(rounds.tees))) as round_count")
             ->with('holes')
             ->orderByRaw($key)
             ->orderByDesc('rounds.played_on')
@@ -55,6 +58,7 @@ final class CourseOverview
                 'ratingT' => self::nullableInt($round->getAttribute('rating_t')),
                 'slope' => self::nullableInt($round->getAttribute('slope')),
                 'strokeIndexes' => array_values($round->holes->map(fn (RoundHole $hole): int => $hole->stroke_index)->all()),
+                'roundCount' => (int) $round->getAttribute('round_count'),
                 ...self::lookup($round),
             ])
             ->all());

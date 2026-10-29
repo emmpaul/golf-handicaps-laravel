@@ -3,23 +3,21 @@ import {
     chooseTee,
     confirm,
 } from '@/actions/App/Http/Controllers/CourseRatingLookupController';
-import { CourseAction } from '@/components/courses/course-action';
+import { COURSE_LINK, CourseAction } from '@/components/courses/course-action';
 import { formatTenths } from '@/lib/format';
-import { ACTION_LINK, cn } from '@/lib/utils';
 import type { CourseWithLookup } from '@/pages/courses/index';
 
 const ratingText = (ratingT: number, slope: number) =>
     `${formatTenths(ratingT)} / ${slope}`;
 
+/** Ligne d'un tee lu ou d'un candidat : 52 px, filet `rule-soft` (spec « Lignes de choix »). */
+const CHOICE_LINE =
+    'flex min-h-13 flex-wrap items-center justify-between gap-2 border-t border-rule-soft py-1';
+
 /** Lien d'aide vers SGT ou The Course View, ouvert dans un nouvel onglet. */
 function ExternalLink({ href, children }: { href: string; children: string }) {
     return (
-        <a
-            href={href}
-            target="_blank"
-            rel="noreferrer"
-            className={cn(ACTION_LINK, 'text-sm')}
-        >
+        <a href={href} target="_blank" rel="noreferrer" className={COURSE_LINK}>
             {children}
         </a>
     );
@@ -35,13 +33,15 @@ function SgtCourse({ course }: { course: CourseWithLookup }) {
     }
 
     return (
-        <div className="text-sm flex flex-col gap-1">
+        <div className="flex flex-col">
             {sgtCourseName === null ? null : (
-                // Nom et lieu du parcours SGT en deux éléments, sans point médian.
-                <span className="flex min-w-0 flex-wrap gap-x-3 [overflow-wrap:anywhere] text-muted-foreground">
-                    <span>SGT : {sgtCourseName}</span>
+                // Nom en Geist 500, 14 px, lieu en gris, en deux éléments, sans point médian.
+                <span className="flex min-w-0 flex-wrap items-baseline gap-x-3 gap-y-1 [overflow-wrap:anywhere]">
+                    <span className="text-link">SGT : {sgtCourseName}</span>
                     {sgtCourseLocation !== null ? (
-                        <span>{sgtCourseLocation}</span>
+                        <span className="text-body-13 text-ink-2">
+                            {sgtCourseLocation}
+                        </span>
                     ) : null}
                 </span>
             )}
@@ -65,8 +65,8 @@ function Outcome({ course, id }: { course: CourseWithLookup; id: string }) {
         const { name, ratingT, slope } = course.proposal;
 
         return (
-            <div className="flex flex-wrap items-center gap-2">
-                <p data-testid="course-proposal" className="text-sm">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+                <p data-testid="course-proposal" className="text-body-13">
                     Proposition : tee {name}, {ratingText(ratingT, slope)}
                 </p>
                 <CourseAction
@@ -74,7 +74,6 @@ function Outcome({ course, id }: { course: CourseWithLookup; id: string }) {
                     kind="confirm"
                     label="Confirmer"
                     accessibleName={`Confirmer ${ratingText(ratingT, slope)} pour ${label}`}
-                    variant="default"
                 />
             </div>
         );
@@ -84,13 +83,10 @@ function Outcome({ course, id }: { course: CourseWithLookup; id: string }) {
         return (
             <ul aria-label={`Tees lus pour ${label}`} className="flex flex-col">
                 {course.teesRead.map((tee) => (
-                    <li
-                        key={tee.name}
-                        className="flex flex-wrap items-center justify-between gap-2 border-t py-1.5"
-                    >
-                        <span className="text-sm flex gap-x-3">
+                    <li key={tee.name} className={CHOICE_LINE}>
+                        <span className="flex gap-x-3 text-body-13">
                             <span className="font-medium">{tee.name}</span>
-                            <span className="tabular-nums">
+                            <span className="font-mono text-meta tabular-nums">
                                 {ratingText(tee.ratingT, tee.slope)}
                             </span>
                         </span>
@@ -114,15 +110,12 @@ function Outcome({ course, id }: { course: CourseWithLookup; id: string }) {
                 className="flex flex-col"
             >
                 {course.candidates.map((candidate) => (
-                    <li
-                        key={candidate.id}
-                        className="flex flex-wrap items-center justify-between gap-2 border-t py-1.5"
-                    >
-                        <span className="text-sm flex min-w-0 flex-col">
+                    <li key={candidate.id} className={CHOICE_LINE}>
+                        <span className="flex min-w-0 flex-col gap-1 text-body-13">
                             <span className="font-medium [overflow-wrap:anywhere]">
                                 {candidate.name}
                             </span>
-                            <span className="flex flex-wrap gap-x-3 text-muted-foreground">
+                            <span className="flex flex-wrap gap-x-3 text-ink-2">
                                 <span>{candidate.location}</span>
                                 <span>Par {candidate.par}</span>
                             </span>

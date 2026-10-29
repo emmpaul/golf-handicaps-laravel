@@ -12,6 +12,14 @@ export const COURSE_ACTION_PENDING = {
 export type CourseActionKind = keyof typeof COURSE_ACTION_PENDING;
 
 /**
+ * Lien d'action du bloc d'un parcours (« Relancer la recherche », « Retirer la
+ * rating », « Carte SGT ») : souligné, Geist 500, 13 px, gris, 40 px de haut
+ * (spec « Mise en page de la page Parcours »).
+ */
+export const COURSE_LINK =
+    'flex min-h-10 w-fit items-center text-link-13 text-ink-2 underline underline-offset-3 disabled:cursor-not-allowed disabled:text-ink-3';
+
+/**
  * État d'envoi d'une ligne de `/courses` : l'action en cours, ou `null`. Une
  * ligne en fournit un par `CourseActionScope` : l'attente d'une ligne ne
  * touche pas les autres (spec `loading-feedback`).
@@ -41,31 +49,35 @@ export function CourseAction({
     kind,
     label,
     accessibleName,
-    variant = 'outline',
+    appearance = 'button',
 }: {
     action: RouteDefinition<'post'>;
     data?: Record<string, string | number>;
     kind: CourseActionKind;
     label: string;
     accessibleName: string;
-    variant?: 'default' | 'outline';
+    /** Bouton à contour de 44 px, ou lien souligné du bloc (`COURSE_LINK`). */
+    appearance?: 'button' | 'link';
 }) {
     const { sending, setSending } = useContext(CourseActionContext);
+    const props = {
+        type: 'button' as const,
+        disabled: sending !== null,
+        'aria-label': accessibleName,
+        onClick: () =>
+            router.post(action, data, {
+                preserveScroll: true,
+                onStart: () => setSending(kind),
+                onFinish: () => setSending(null),
+            }),
+    };
 
-    return (
-        <Button
-            type="button"
-            variant={variant}
-            disabled={sending !== null}
-            aria-label={accessibleName}
-            onClick={() =>
-                router.post(action, data, {
-                    preserveScroll: true,
-                    onStart: () => setSending(kind),
-                    onFinish: () => setSending(null),
-                })
-            }
-        >
+    return appearance === 'link' ? (
+        <button {...props} className={COURSE_LINK}>
+            {label}
+        </button>
+    ) : (
+        <Button {...props} variant="outline" size="sm">
             {label}
         </Button>
     );

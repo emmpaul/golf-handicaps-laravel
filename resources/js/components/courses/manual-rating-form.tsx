@@ -1,12 +1,13 @@
 import { useForm } from '@inertiajs/react';
 import { useId, useState } from 'react';
-import type { FormEvent } from 'react';
+import type { FormEvent, ReactNode } from 'react';
 import {
     destroy,
     update,
 } from '@/actions/App/Http/Controllers/CourseRatingController';
 import {
     COURSE_ACTION_PENDING,
+    COURSE_LINK,
     useCourseActionSending,
 } from '@/components/courses/course-action';
 import { Button } from '@/components/ui/button';
@@ -30,18 +31,23 @@ const PENDING_LABEL = {
  * cause. « Retirer la rating » n'apparaît que sur une ligne qui a une rating,
  * sans confirmation : une nouvelle saisie défait le retrait. Sa région
  * d'attente est celle de la ligne : elle dit aussi l'attente d'une action de
- * la recherche (`CourseAction`), qui désactive ses boutons.
+ * la recherche (`CourseAction`), qui désactive ses boutons. Mise en page du
+ * design : « RATING », « SLOPE » et « Enregistrer » sur une rangée de 48 px,
+ * puis les liens d'action soulignés (`links`, puis « Retirer la rating »).
  */
 export function ManualRatingForm({
     courseName,
     tees,
     ratingT,
     slope,
+    links,
 }: {
     courseName: string;
     tees: string;
     ratingT: number | null;
     slope: number | null;
+    /** Liens d'action placés avant « Retirer la rating » (« Relancer la recherche »). */
+    links?: ReactNode;
 }) {
     // « BETHPAGE BLACK / Red » : nomme les champs d'un parcours parmi les autres.
     const course = `${courseName} / ${tees}`;
@@ -87,10 +93,10 @@ export function ManualRatingForm({
     }
 
     return (
-        <form onSubmit={save} className="flex flex-col gap-1">
-            <div className="flex flex-wrap items-end gap-2">
+        <form onSubmit={save} className="mt-3.5 flex flex-col gap-1.5">
+            <div className="grid grid-cols-[1fr_1fr_auto] items-end gap-2">
                 <Field
-                    className="w-24"
+                    className="min-w-0 gap-1.5"
                     data-invalid={form.errors.rating ? true : undefined}
                 >
                     <FieldLabel htmlFor={ratingId}>Rating</FieldLabel>
@@ -99,6 +105,7 @@ export function ManualRatingForm({
                         name="rating"
                         inputMode="decimal"
                         autoComplete="off"
+                        className="px-3 font-mono"
                         aria-label={`Rating de ${course}`}
                         aria-invalid={form.errors.rating ? true : undefined}
                         aria-describedby={
@@ -112,7 +119,7 @@ export function ManualRatingForm({
                     />
                 </Field>
                 <Field
-                    className="w-24"
+                    className="min-w-0 gap-1.5"
                     data-invalid={form.errors.slope ? true : undefined}
                 >
                     <FieldLabel htmlFor={slopeId}>Slope</FieldLabel>
@@ -121,6 +128,7 @@ export function ManualRatingForm({
                         name="slope"
                         inputMode="numeric"
                         autoComplete="off"
+                        className="px-3 font-mono"
                         aria-label={`Slope de ${course}`}
                         aria-invalid={form.errors.slope ? true : undefined}
                         aria-describedby={
@@ -133,27 +141,20 @@ export function ManualRatingForm({
                         placeholder="ex. 144"
                     />
                 </Field>
-                <Button type="submit" variant="outline" disabled={busy}>
+                <Button
+                    type="submit"
+                    className="px-3.5 text-label-14"
+                    disabled={busy}
+                >
                     Enregistrer
                 </Button>
-                {rated ? (
-                    <Button
-                        type="button"
-                        variant="secondary"
-                        disabled={busy}
-                        aria-label={`Retirer la rating de ${course}`}
-                        onClick={remove}
-                    >
-                        Retirer la rating
-                    </Button>
-                ) : null}
             </div>
             <Pending label={pendingLabel} orb="save" />
             {form.errors.rating ? (
                 <p
                     id={ratingErrorId}
                     role="alert"
-                    className="text-sm text-destructive"
+                    className="text-body-12 text-signal"
                 >
                     {form.errors.rating}
                 </p>
@@ -162,10 +163,26 @@ export function ManualRatingForm({
                 <p
                     id={slopeErrorId}
                     role="alert"
-                    className="text-sm text-destructive"
+                    className="text-body-12 text-signal"
                 >
                     {form.errors.slope}
                 </p>
+            ) : null}
+            {links || rated ? (
+                <div className="flex flex-wrap gap-x-5">
+                    {links}
+                    {rated ? (
+                        <button
+                            type="button"
+                            disabled={busy}
+                            aria-label={`Retirer la rating de ${course}`}
+                            onClick={remove}
+                            className={COURSE_LINK}
+                        >
+                            Retirer la rating
+                        </button>
+                    ) : null}
+                </div>
             ) : null}
         </form>
     );
