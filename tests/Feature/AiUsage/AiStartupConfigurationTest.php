@@ -14,10 +14,13 @@
  *
  * Course-rating-sgt, design D10: SGT_LOOKUP other than on or off stops every process the same
  * way. Mutation that turns these tests red: the SGT_LOOKUP check run only for HTTP requests
- * (skipped when running in console): `artisan about` boots with SGT_LOOKUP=yes.
+ * (skipped when running in console): `artisan about` boots with SGT_LOOKUP=yes. Spec
+ * « Variable absente »: without SGT_LOOKUP the lookup is on. Mutation that turns that test red:
+ * the default of golf.sgt.lookup at off.
  */
 
 use Illuminate\Container\Container;
+use Illuminate\Contracts\Console\Kernel as ConsoleKernel;
 use Illuminate\Contracts\Http\Kernel as HttpKernel;
 use Illuminate\Foundation\Application;
 use Illuminate\Http\Request;
@@ -165,3 +168,23 @@ test('artisan boots with SGT_LOOKUP on, off or absent', function (?string $value
 
     expect($exitCode)->toBe(0);
 })->with('valid SGT_LOOKUP values');
+
+test('without SGT_LOOKUP a fresh boot reads the lookup on', function () {
+    $testApp = Container::getInstance();
+
+    try {
+        $lookup = underEnvironment(['SGT_LOOKUP' => null], function (): mixed {
+            /** @var Application $app */
+            $app = require base_path('bootstrap/app.php');
+            $app->make(ConsoleKernel::class)->bootstrap();
+
+            return $app->make('config')->get('golf.sgt.lookup');
+        });
+    } finally {
+        Container::setInstance($testApp);
+        Facade::clearResolvedInstances();
+        Facade::setFacadeApplication($testApp);
+    }
+
+    expect($lookup)->toBe('on');
+});
