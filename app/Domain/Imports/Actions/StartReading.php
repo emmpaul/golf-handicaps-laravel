@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\DB;
 /**
  * Marks an import as being read, under a lock (design D4). An import that no longer exists, or
  * that is neither queued nor reading (deleted, or already read by an earlier run of the job),
- * is left alone and never sent to the AI.
+ * or that is already linked to a round, is left alone and never sent to the AI.
  */
 final class StartReading
 {
@@ -21,7 +21,9 @@ final class StartReading
         return DB::transaction(function () use ($importId): ?Import {
             $import = Import::query()->lockForUpdate()->find($importId);
 
-            if ($import === null || ! in_array($import->status, [ImportStatus::Queued, ImportStatus::Reading], true)) {
+            if ($import === null
+                || $import->round_id !== null
+                || ! in_array($import->status, [ImportStatus::Queued, ImportStatus::Reading], true)) {
                 return null;
             }
 

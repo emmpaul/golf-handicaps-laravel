@@ -11,6 +11,8 @@
  *   leaves no ai_usage row;
  * - the budget checked after the call: the reading at the ceiling is prompted;
  * - StartReading without the status check: the job run twice on a ready import prompts twice;
+ * - StartReading without the round_id check: a queued import already linked to a round is
+ *   prompted, counted and turned ready;
  * - the model written in the agent instead of config('golf.ai.model'): claude-opus-5-5 is not
  *   the model asked;
  * - the date text not read by SimulatorDate: playedOn stays null in the draft.
@@ -22,6 +24,7 @@ use App\Jobs\ReadScorecardImport;
 use App\Models\AiUsage;
 use App\Models\Import;
 use App\Models\Player;
+use App\Models\Round;
 use Carbon\CarbonImmutable;
 use Database\Factories\ImportFactory;
 use Illuminate\Support\Collection;
@@ -136,6 +139,18 @@ test('an import deleted before its reading is never sent', function () {
 
     ScorecardPhotoReader::assertNeverPrompted();
     expect(AiUsage::query()->count())->toBe(0);
+});
+
+test('a queued import already linked to a round is never sent', function () {
+    $round = Round::factory()->create();
+    $this->import->update(['round_id' => $round->id]);
+    ScorecardPhotoReader::fake([billedAnswer(referenceReading())]);
+
+    ReadScorecardImport::dispatch($this->import->id);
+
+    ScorecardPhotoReader::assertNeverPrompted();
+    expect($this->import->fresh()->status)->toBe(ImportStatus::Queued)
+        ->and(AiUsage::query()->count())->toBe(0);
 });
 
 test('a job run again on a ready import makes no second call', function () {

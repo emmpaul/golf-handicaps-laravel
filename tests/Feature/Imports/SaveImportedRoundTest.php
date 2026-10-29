@@ -15,11 +15,14 @@
  * - the round_id check removed from SaveImportedRound: saving the same import again creates a
  *   second round and links the import to it;
  * - the check of ImportRoundController placed after FindDuplicateRound: the second save finds
- *   the round of the import and comes back with the duplicate flash instead of the refusal.
+ *   the round of the import and comes back with the duplicate flash instead of the refusal;
+ * - the status check removed from SaveImportedRound: a queued or reading import is saved as a
+ *   round, which the job would then read and turn ready.
  */
 
 use App\Domain\Imports\Actions\SaveImportedRound;
 use App\Domain\Imports\Exceptions\ImportAlreadySaved;
+use App\Domain\Imports\Exceptions\ImportBeingRead;
 use App\Domain\Rounds\Exceptions\IncoherentRoundCard;
 use App\Domain\Rounds\RoundCard;
 use App\Models\Import;
@@ -195,4 +198,27 @@ describe('an import already saved', function () {
 
         expect(Round::query()->count())->toBe(1);
     });
+});
+
+test('an import queued or being read is not saved as a round', function (string $state) {
+    $import = Import::factory()->{$state}()->withPhoto()->create();
+
+    expect(fn () => app(SaveImportedRound::class)->handle(
+        $import,
+        RoundCard::fromArray(importedReferenceCard($this->gab->id, $this->sean->id)),
+    ))->toThrow(ImportBeingRead::class, 'Lecture en cours');
+
+    expect(Round::query()->count())->toBe(0)
+        ->and($import->fresh()->round_id)->toBeNull()
+        ->and(playersWithAliases()['Sean'])->toBe(['SEAN']);
+})->with(['queued', 'reading']);
+
+test('an import being read sent to the server comes back with the refusal', function () {
+    $import = Import::factory()->reading()->withPhoto()->create();
+
+    $this->withHeader('X-Inertia', 'true')
+        ->post("/imports/{$import->id}/round", importedReferenceCard($this->gab->id, $this->sean->id))
+        ->assertInertiaFlash('toast', ['type' => 'error', 'message' => 'Lecture en cours']);
+
+    expect(Round::query()->count())->toBe(0);
 });
