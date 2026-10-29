@@ -16,7 +16,9 @@
  *   reads null / null instead of 714 / 144;
  * - CourseOverview that zips KnownCourses with a second query of the ratings by position: the
  *   round saved on « AAA COURSE » between the two reads gives a third rating row, the courses
- *   take the rating of the row before them (TypeError on the row without course).
+ *   take the rating of the row before them (TypeError on the row without course);
+ * - the stroke indexes taken from the oldest round of the pair (a second query of the holes of
+ *   the first round played on it): BETHPAGE BLACK / Red reads 16, 8, … instead of 8, 16, ….
  */
 
 use App\Domain\Courses\Queries\CourseOverview;
@@ -26,6 +28,8 @@ use App\Models\Round;
 use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Support\Facades\DB;
 use Inertia\Testing\AssertableInertia as Assert;
+
+const BETHPAGE_RED_STROKE_INDEXES = [8, 16, 18, 2, 4, 10, 6, 14, 12, 9, 11, 7, 3, 17, 1, 5, 13, 15];
 
 /**
  * The reference card on another course and tees, its first hole a par $par1.
@@ -80,8 +84,8 @@ describe('with a session', function () {
                 ->assertInertia(fn (Assert $page) => $page
                     ->component('courses/index')
                     ->where('courses', [
-                        ['courseName' => 'BETHPAGE BLACK', 'tees' => 'Red', 'par' => 71, 'ratingT' => 714, 'slope' => 144],
-                        ['courseName' => 'PAYNES VALLEY', 'tees' => 'Blue', 'par' => 72, 'ratingT' => null, 'slope' => null],
+                        ['courseName' => 'BETHPAGE BLACK', 'tees' => 'Red', 'par' => 71, 'ratingT' => 714, 'slope' => 144, 'strokeIndexes' => BETHPAGE_RED_STROKE_INDEXES],
+                        ['courseName' => 'PAYNES VALLEY', 'tees' => 'Blue', 'par' => 72, 'ratingT' => null, 'slope' => null, 'strokeIndexes' => BETHPAGE_RED_STROKE_INDEXES],
                     ]));
         });
 
@@ -97,10 +101,21 @@ describe('with a session', function () {
             });
 
             expect(app(CourseOverview::class)->get())->toBe([
-                ['courseName' => 'BETHPAGE BLACK', 'tees' => 'Red', 'par' => 71, 'ratingT' => 714, 'slope' => 144],
-                ['courseName' => 'PAYNES VALLEY', 'tees' => 'Blue', 'par' => 72, 'ratingT' => null, 'slope' => null],
+                ['courseName' => 'BETHPAGE BLACK', 'tees' => 'Red', 'par' => 71, 'ratingT' => 714, 'slope' => 144, 'strokeIndexes' => BETHPAGE_RED_STROKE_INDEXES],
+                ['courseName' => 'PAYNES VALLEY', 'tees' => 'Blue', 'par' => 72, 'ratingT' => null, 'slope' => null, 'strokeIndexes' => BETHPAGE_RED_STROKE_INDEXES],
             ]);
         });
+    });
+
+    test('the stroke indexes of a course are those of its latest round', function () {
+        $older = referenceCardOn('2026-10-10', [[$this->gab->id, strokesOverPar(10)]]);
+        $older['holes'][0]['strokeIndex'] = 16;
+        $older['holes'][1]['strokeIndex'] = 8;
+        createRoundCard($older);
+        createRoundCard(referenceCardData($this->gab->id, $this->manu->id));
+
+        $this->get('/courses')->assertInertia(fn (Assert $page) => $page
+            ->where('courses.0.strokeIndexes', [8, 16, 18, 2, 4, 10, 6, 14, 12, 9, 11, 7, 3, 17, 1, 5, 13, 15]));
     });
 
     test('the courses are ordered by name whatever the case', function () {
