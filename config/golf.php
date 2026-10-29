@@ -34,7 +34,7 @@ return [
         'model' => env('AI_MODEL', 'claude-sonnet-5-5'),
         'monthly_budget_usd' => (float) env('AI_MONTHLY_BUDGET_USD', 5),
         'budget_time_zone' => env('AI_BUDGET_TIME_ZONE', 'America/Montreal'),
-        'max_input_tokens' => 4000,
+        'max_input_tokens' => 6000,
         'max_output_tokens' => 4000,
         'prices' => [
             'claude-sonnet-5-5' => ['input' => 2, 'output' => 10],

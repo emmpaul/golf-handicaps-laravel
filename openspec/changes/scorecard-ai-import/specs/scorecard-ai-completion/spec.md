@@ -87,12 +87,12 @@ Le système SHALL calculer le coût de chaque appel à l'IA à partir des tokens
 Avant chaque appel, si le cumul du mois plus le coût maximal d'un appel dépasse le plafond `AI_MONTHLY_BUDGET_USD` (5 $ par défaut), le système MUST NOT appeler l'IA et SHALL passer l'import en « Échec » avec « Budget IA du mois atteint ». Le coût maximal d'un appel est celui des bornes de tokens d'entrée et de sortie configurées.
 
 #### Scenario: Plafond atteint
-- **GIVEN** un plafond de 5 $, un coût maximal d'appel de 48 000 micro-dollars et un cumul du mois de 4 960 000 micro-dollars
+- **GIVEN** un plafond de 5 $, un coût maximal d'appel de 52 000 micro-dollars et un cumul du mois de 4 950 000 micro-dollars
 - **WHEN** un import est lu
 - **THEN** aucun appel n'est fait et l'import est en « Échec » avec « Budget IA du mois atteint »
 
 #### Scenario: Plafond tout juste tenu
-- **GIVEN** un plafond de 5 $, un coût maximal d'appel de 48 000 micro-dollars et un cumul du mois de 4 952 000 micro-dollars
+- **GIVEN** un plafond de 5 $, un coût maximal d'appel de 52 000 micro-dollars et un cumul du mois de 4 948 000 micro-dollars
 - **WHEN** un import est lu
 - **THEN** l'appel est fait
 
