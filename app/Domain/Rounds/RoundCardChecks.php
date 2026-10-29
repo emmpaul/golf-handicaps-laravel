@@ -29,6 +29,7 @@ final class RoundCardChecks
         return [
             ...self::fieldProblems(['courseName' => $card->courseName, 'tees' => $card->tees]),
             ...self::cellProblems('par', array_column($card->holes, 'par'), 3, 5, 'Par'),
+            ...self::readTotalProblems('par', array_column($card->holes, 'par'), $card->parTotals),
             ...self::strokeIndexProblems(array_column($card->holes, 'strokeIndex')),
             ...self::distanceProblems(array_column($card->holes, 'distance')),
             ...self::playerCountProblems(count($card->lines)),
@@ -149,6 +150,57 @@ final class RoundCardChecks
     }
 
     /**
+     * The totals read on the card: an empty total is an empty cell, and the sum of holes 1 to 9
+     * must equal OUT, that of holes 10 to 18 IN, and OUT + IN must equal TOT (sumProblems of the
+     * Next application). A sum with an empty cell is not compared. No totals read: no problem.
+     *
+     * @param  array<int, int|null>  $holes
+     * @param  array{out: int|null, in: int|null, total: int|null}|null  $totals
+     * @return list<Problem>
+     */
+    private static function readTotalProblems(string $row, array $holes, ?array $totals): array
+    {
+        if ($totals === null) {
+            return [];
+        }
+
+        $problems = [];
+        foreach (['out', 'in', 'total'] as $total) {
+            if ($totals[$total] === null) {
+                $problems[] = new Problem(self::EMPTY, ["{$row}:{$total}"]);
+            }
+        }
+
+        $holes = array_values($holes);
+        foreach ([['Somme aller', 0, 'out', 'OUT'], ['Somme retour', 9, 'in', 'IN']] as [$label, $from, $total, $printed]) {
+            $range = array_slice($holes, $from, 9, preserve_keys: true);
+            $computed = self::sum($range);
+            $read = $totals[$total];
+            if ($computed !== null && $read !== null && $computed !== $read) {
+                $problems[] = new Problem("{$label} {$computed} ≠ {$printed} {$read}", [
+                    ...array_map(fn (int $hole): string => self::holeKey($row, $hole), array_keys($range)),
+                    "{$row}:{$total}",
+                ]);
+            }
+        }
+
+        $outIn = self::sum([$totals['out'], $totals['in']]);
+        if ($outIn !== null && $totals['total'] !== null && $outIn !== $totals['total']) {
+            $problems[] = new Problem("OUT + IN {$outIn} ≠ TOT {$totals['total']}", ["{$row}:out", "{$row}:in", "{$row}:total"]);
+        }
+
+        return $problems;
+    }
+
+    /**
+     * @param  array<int, int|null>  $values
+     */
+    private static function sum(array $values): ?int
+    {
+        return in_array(null, $values, true) ? null : (int) array_sum($values);
+    }
+
+    /**
      * @return list<Problem>
      */
     private static function playerCountProblems(int $count): array
@@ -161,14 +213,18 @@ final class RoundCardChecks
     }
 
     /**
-     * @param  list<array{playerId: string|null, strokes: list<int|null>}>  $lines
+     * @param  list<array{playerId: string|null, strokes: list<int|null>, totals?: array{out: int|null, in: int|null, total: int|null}}>  $lines
      * @return list<Problem>
      */
     private static function scoreProblems(array $lines): array
     {
         $problems = [];
         foreach ($lines as $position => $line) {
-            array_push($problems, ...self::cellProblems("player{$position}", $line['strokes'], 1, 15, 'Score'));
+            array_push(
+                $problems,
+                ...self::cellProblems("player{$position}", $line['strokes'], 1, 15, 'Score'),
+                ...self::readTotalProblems("player{$position}", $line['strokes'], $line['totals'] ?? null),
+            );
         }
 
         return $problems;

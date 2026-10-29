@@ -17,6 +17,9 @@ import fixture from '../../../tests/fixtures/round-checks.json';
 // - the duplicate index not detected: the « index 1 en double » case finds no problem;
 // - OUT summed over holes 1 to 8: OUT 33 instead of 38;
 // - an empty hole counted as 0: OUT 33 and TOT 67 instead of null.
+// - the back sum compared over holes 10 to 17: « Somme retour 31 ≠ IN 35 » instead of « 34 »,
+//   and the cards whose totals are right get a back sum problem;
+// - an empty read total ignored: the « total lu vide » case finds no problem.
 const cases = fixture.cases as {
     name: string;
     card: RoundCard;
@@ -41,6 +44,12 @@ describe('checkRoundCard', () => {
             'parcours vide',
             'tees absents',
             'date vide',
+            'somme aller fausse',
+            'OUT + IN faux',
+            'somme retour fausse',
+            'total lu vide',
+            'par OUT 37',
+            'carte sans totaux lus',
         ]);
     });
 
