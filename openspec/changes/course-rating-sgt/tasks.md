@@ -6,7 +6,7 @@ Avant de commencer : l'apply attend que `scorecard-ai-import` (entrée 8) soit f
 
 - [x] 1.1 Vérifier que l'entrée 8 est archivée : `openspec/specs/scorecard-ai-completion/spec.md` existe, ainsi que `App\Domain\AiUsage\AiBudget`, `AiPricing`, la table `ai_usage`, `App\Integrations\Ai\ScorecardPhotoReader` et le `beforeEach` des faux dans `tests/Pest.php` ; sinon s'arrêter et le signaler au mainteneur
 - [x] 1.2 Relire le code livré par 8 et noter les écarts avec `design.md` : signature de `AiBudget::canSpend` et de `record`, forme de `ReadingResult` et de l'usage, construction d'un faux avec usage, clé de config de la clé d'API, contrôles de `AppServiceProvider::boot()` ; corriger D4, D5, D10 et D11 par `/opsx:update` là où le code diffère, puis vérifier `make openspec ARGS="validate course-rating-sgt --strict"` vert
-- [ ] 1.3 Copier de Next `tests/fixtures/sgt/courses.html`, `scorecard_30.jpg` et `README.md` sous `tests/fixtures/sgt/` ; adapter le `README.md` (origine Next, `User-Agent` de Q12 pour une nouvelle prise, rôle de chaque parcours) ; vérifier que `scorecard_30.jpg` fait 103 915 octets et 905×527 (`file`)
+- [x] 1.3 Copier de Next `tests/fixtures/sgt/courses.html`, `scorecard_30.jpg` et `README.md` sous `tests/fixtures/sgt/` ; adapter le `README.md` (origine Next, `User-Agent` de Q12 pour une nouvelle prise, rôle de chaque parcours) ; vérifier que `scorecard_30.jpg` fait 103 915 octets et 905×527 (`file`)
 
 ## 2. Schéma de `course_ratings`
 
