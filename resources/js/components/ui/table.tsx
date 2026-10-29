@@ -11,7 +11,7 @@ function Table({ className, ...props }: React.ComponentProps<"table">) {
     >
       <table
         data-slot="table"
-        className={cn("w-full caption-bottom text-sm tabular-nums", className)}
+        className={cn("w-full caption-bottom text-body-13 tabular-nums", className)}
         {...props}
       />
     </div>
@@ -56,7 +56,7 @@ function TableRow({ className, ...props }: React.ComponentProps<"tr">) {
     <tr
       data-slot="table-row"
       className={cn(
-        "border-b transition-[background-color] duration-(--dur-micro) ease-out hover:bg-muted has-aria-expanded:bg-muted data-[state=selected]:bg-accent",
+        "border-b transition-[background-color] duration-(--dur-press) ease-out hover:bg-muted has-aria-expanded:bg-muted data-[state=selected]:bg-accent",
         className
       )}
       {...props}
@@ -97,7 +97,7 @@ function TableCaption({
   return (
     <caption
       data-slot="table-caption"
-      className={cn("mt-4 text-sm text-muted-foreground", className)}
+      className={cn("mt-4 text-body-12 text-ink-2", className)}
       {...props}
     />
   )

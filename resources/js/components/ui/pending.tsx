@@ -21,9 +21,10 @@ export type PendingKind = keyof typeof ORB_FOR;
 
 /**
  * Orbe seule, décorative : `aria-hidden` écarte son libellé anglais par défaut.
- * `theme="auto"` : elle suit le mode sombre du système, comme le reste de
- * l'application. Elle s'anime en JavaScript, hors de la règle CSS globale de
- * mouvement réduit : `paused` la fige quand le système le demande.
+ * `theme="dark"` : sa variante sombre quel que soit le réglage de l'appareil,
+ * comme l'application, sombre seule (spec loading-feedback, DO24). Elle
+ * s'anime en JavaScript, hors de la règle CSS globale de mouvement réduit :
+ * `paused` la fige quand le système le demande.
  */
 export function PendingOrb({ state }: { state: OrbState }) {
     const reducedMotion = useReducedMotion();
@@ -32,7 +33,7 @@ export function PendingOrb({ state }: { state: OrbState }) {
         <ThinkingOrb
             state={state}
             size={20}
-            theme="auto"
+            theme="dark"
             paused={reducedMotion}
             aria-hidden
             role="presentation"
@@ -45,7 +46,8 @@ export function PendingOrb({ state }: { state: OrbState }) {
  * l'attente (`label`), vide au repos (`null`). Un lecteur d'écran n'annonce
  * pas toujours une région insérée déjà remplie (VoiceOver) : on la monte avant
  * l'attente et on n'en change que le contenu. Vide, elle est `sr-only` : hors
- * du flux, elle n'ajoute ni espace ni décalage.
+ * du flux, elle n'ajoute ni espace ni décalage. Le texte prend le style des
+ * métas du design : Geist Mono 500, 12 px, `ink-2`.
  */
 export function Pending({
     label,
@@ -60,7 +62,7 @@ export function Pending({
             className={
                 label === null
                     ? 'sr-only'
-                    : 'inline-flex items-center gap-2 text-sm text-muted-foreground'
+                    : 'inline-flex items-center gap-2 font-mono text-meta-12 text-ink-2'
             }
         >
             {label === null ? null : (
