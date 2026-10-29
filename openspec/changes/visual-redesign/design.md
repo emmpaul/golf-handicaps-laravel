@@ -189,3 +189,22 @@ Arbitrages pris pendant la tâche 1.2 et l'unité 1, mainteneur absent ; chacun 
 | DO22 | Marque doublée d'un texte (amende DO15) | Une marque graphique dont l'information est aussi donnée en texte est un usage permis de `ink-4` et `bar` : le segment « Double bogey + » de la répartition en `ink-4`, dont le compte et la part sont écrits sur sa ligne, et la barre d'un différentiel qui ne compte pas en `bar`, l'historique portant « Compte ». `theme-contrast.test.ts` le dit dans l'usage de ces deux tokens de sa liste « hors paires » ; le delta `visual-theme` l'écrit dans « Couleurs hors des paires de contraste » (scénario « Marque doublée d'un texte »). |
 | DO23 | Cases par et index de l'éditeur | Elles prennent le contour `rule`, celui des champs (exception Q4, 1,34:1), et non `rule-soft` du design : ce sont des champs modifiables, pas un trait de décor. |
 | DO24 | Indicateur d'attente (delta `loading-feedback`) | Appliqué à l'unité 3 (tâche 6.4) : `ui/pending.tsx` écrit son texte en Geist Mono 500, 12 px, `ink-2` (`text-meta-12`) et dessine l'orbe en variante sombre (`theme="dark"`) quel que soit le réglage de l'appareil. `ui/alert.tsx` et `ui/table.tsx` reprennent des tailles de l'échelle (`text-body-13`, `text-body-12`, titre `text-label-14`) : `text-sm` ne produisait plus aucun style sur l'échelle fermée. |
+
+## Risks / Trade-offs
+
+- [Le design ne montre qu'un téléphone de 390 px] → colonne de 390 px à toute largeur (décision Q3) ; la passe vérifie 320 px.
+- [Trois paires sous les seuils de contraste (D9)] → décision du mainteneur, consignée dans l'ADR ; le test empêche toute quatrième exception.
+- [Pas de captures de la cible dans l'archive] → confirmé à la tâche 1.3 (DO1) : la passe 12.2 ne compare qu'aux valeurs de la spec et le dit.
+- [Couleurs de joueur hors gamut sRGB] → rendu différent selon l'écran (P3 ou sRGB) ; les tests comparent la chaîne OKLCH, pas un hex.
+- [Contraste des couleurs de joueur en texte (violet 4,10:1)] → le nom accompagne toujours la couleur ; accepté et noté (E28).
+- [Changement large] → tâches en groupes revus l'un après l'autre ; une seule PR de code, comme les autres entrées.
+- [Specs de 7 et 9 réconciliées après coup] → D12 et DO2 à DO12 ; aucun conflit de fond trouvé.
+- [Prop partagée `pendingImports` sur chaque visite] → une requête `count` indexée, différée.
+
+## Migration Plan
+
+Aucune donnée ni migration. Déploiement par l'image habituelle ; les icônes PNG régénérées sont versionnées. Retour arrière : revert de la PR de code et nouvelle image.
+
+## Open Questions
+
+Aucune question ne change la spec : les décisions du mainteneur sont consignées dans la proposition. Les paquets sont `@fontsource/geist` et `@fontsource/geist-mono` (5.3.0, OFL-1.1), vérifiés dans le registre à la tâche 2.2.
