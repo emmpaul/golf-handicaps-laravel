@@ -65,6 +65,12 @@ services:
         depends_on:
             pgsql:
                 condition: service_healthy
+        # migrate n'écrit aucun fichier : ce montage remplit seulement un volume storage neuf
+        # (copie du contenu de l'image) à la création de migrate, avant celle de web et worker.
+        # Sans lui, web et worker créés en même temps font chacun la copie et la seconde échoue
+        # (file exists, issue #14). Lecture et écriture : la copie sur :ro n'est pas documentée.
+        volumes:
+            - storage:/app/storage/app
 
     web:
         <<: *app

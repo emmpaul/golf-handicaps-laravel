@@ -109,3 +109,7 @@ All notable changes to this application, version by version. The format follows 
 - The kit's `ExampleTest` files and the authentication types in `resources/js` (`auth.ts`, shared `auth` prop).
 - `rounds/round-gross` component, replaced by the net leaderboard.
 - The starter kit welcome page (`welcome.tsx`) and the kit's `favicon.ico`.
+
+### Fixed
+
+- The production stack no longer fails at random on a fresh `storage` volume: the `migrate` service mounts it too, so Docker fills it once, when `migrate` is created, instead of twice at the same time for `web` and `worker` (`file exists`, issue #14).
