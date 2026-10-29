@@ -117,7 +117,7 @@ Sauvegarde `backups/golf-handicaps-next-20261028-182752.db` (copie `VACUUM INTO`
 | `round_players` | `round_players` | FK remappées, `position` telle quelle. |
 | `scores` | `scores` | FK remappées. |
 | `player_round_stats` | `player_round_stats` | Non copiée : recalculée puis comparée (D11). |
-| `course_ratings` | `course_ratings` | Toutes les colonnes ; `candidates` et `tees_read` décodés (`json_decode`, erreur → échec) puis écrits en `jsonb`. |
+| `course_ratings` | `course_ratings` | Toutes les colonnes ; `candidates` et `tees_read` décodés (`json_decode`, erreur → échec « Valeur illisible : course_ratings.candidates ») puis écrits en `jsonb`. |
 | `imports` | `imports` | D10. |
 | `ai_usage` | `ai_usage` | Toutes les colonnes. |
 | `jobs` | — | Ignorée, comptée dans le rapport. |
@@ -134,6 +134,7 @@ Sauvegarde `backups/golf-handicaps-next-20261028-182752.db` (copie `VACUUM INTO`
 - Chemins référencés : l'union des `photo_path` de `rounds` et `imports`. Chaque chemin doit valoir `uploads/<nom>` où `<nom>` passe `^[A-Za-z0-9._-]+$` et n'est ni `.` ni `..` ; sinon « Chemin de photo refusé : <chemin> ». Le fichier lu est `<--uploads>/<nom>`, jamais un chemin construit autrement.
 - Destination : disque `photos`, `imports/<nom sans extension>.webp`, le dossier que 8 donne à un import et à son round. 8 nomme le fichier d'après l'UUID du nouvel import (`CreateImport`) ; ici le nom vient de Next (un UUID dans la base réelle), ce que rien dans 8 ne suppose : la photo n'est lue et effacée que par `photo_path`. Un même chemin source donne une seule copie ; tous les rounds et imports qui le référencent reçoivent le nouveau chemin.
 - Format : signature `RIFF????WEBP` dans les 12 premiers octets → copie octet pour octet ; sinon `WebpPhoto::fromPath()` de 8 (orientation EXIF, réduction à 3 000 px, qualité 90, sans métadonnées). Une image illisible (`UnreadablePhoto` de `WebpPhoto`) fait échouer l'import (« Photo illisible : <chemin> »).
+- Deux chemins source différents qui donnent le même fichier de destination (`uploads/a.webp` et `uploads/a.jpg` → `imports/a.webp`) font échouer l'import avant toute écriture : « Photos de même destination : » suivi d'une ligne par destination, « uploads/a.jpg et uploads/a.webp → imports/a.webp » (décision de l'orchestrateur, 2026-10-29 : refus strict plutôt qu'un renommage, aucun cas réel). Sans ce refus, la seconde copie écraserait la première et un round pointerait vers la photo d'un autre.
 - Un fichier du dossier `--uploads` qu'aucune ligne ne référence est ignoré et compté.
 - Essai à blanc : chaque fichier est lu et, s'il n'est pas en WebP, converti en mémoire ; rien n'est écrit.
 
@@ -148,7 +149,7 @@ Sauvegarde `backups/golf-handicaps-next-20261028-182752.db` (copie `VACUUM INTO`
 ### D11. Comparaison des statistiques
 
 - Après `RecomputePlayerStats`, lire les lignes recalculées et celles de SQLite, indexées par `(UUID du round, UUID du joueur)` via `IdMap`. Comparer `gross`, `adjusted`, `differential_t`, `index_before_t`, `index_after_t`, `counts_in_current` par égalité stricte d'entiers (ou de `null`).
-- Différence → une ligne « <parcours> / <tees>, <date>, <joueur> : <colonne> SQLite <v>, recalculé <v> » ; ligne d'un seul côté → « <…> : absente de SQLite » ou « absente du recalcul ». Toutes les différences sont listées (la base réelle a 22 lignes), puis « Import annulé : rien n'a été écrit. ».
+- Différence → une ligne « <parcours> / <tees>, <date>, <joueur> : <colonne> SQLite <v>, recalculé <v> » ; ligne d'un seul côté → « <…> : absente de SQLite » ou « absente du recalcul ». Toutes les différences sont listées (la base réelle a 22 lignes), puis « Import annulé : rien n'a été écrit. ». Ordre : les lignes SQLite par `(round_id, player_id)`, une ligne par colonne qui diffère, puis les lignes recalculées absentes de SQLite. Un index vide s'écrit « aucun », « compte dans l'index » « oui » ou « non » (les mots du scénario « Statistiques identiques »).
 - Le rapport compte « Statistiques identiques : N / N ».
 
 ### D12. Refus, `--force`, remise en file
@@ -161,17 +162,17 @@ Sauvegarde `backups/golf-handicaps-next-20261028-182752.db` (copie `VACUUM INTO`
 ### D13. Rapport
 
 ```
-Table                SQLite  PostgreSQL
-players                   3           3
-player_aliases            7           7
-rounds                    9           9
-round_holes             162         162
-round_players            22          22
-scores                  396         396
-player_round_stats       22          22
-course_ratings            9           9
-imports                   9           9
-ai_usage                 19          19
+Table              SQLite PostgreSQL
+players                 3          3
+player_aliases          7          7
+rounds                  9          9
+round_holes           162        162
+round_players          22         22
+scores                396        396
+player_round_stats     22         22
+course_ratings          9          9
+imports                 9          9
+ai_usage               19         19
 Photos copiées : 9
 Fichiers non référencés ignorés : 0
 Statistiques identiques : 22 / 22
@@ -182,7 +183,7 @@ Jobs Next ignorés : 24
 Import terminé.
 ```
 
-- Tableau par `$this->table()`. En essai à blanc : « Photos lues : N », « Recherches de rating à remettre en file : N », puis « Essai à blanc : import annulé, rien n'a été écrit. ».
+- Tableau par `$this->table()`, style `compact`, comptes alignés à droite (le style de colonne est une copie du style `compact` avec `STR_PAD_LEFT` : un `TableStyle` neuf garderait l'en-tête en décalage). En essai à blanc : « Photos lues : N », « Recherches de rating à remettre en file : N », puis « Essai à blanc : import annulé, rien n'a été écrit. ».
 - Valeurs ci-dessus : celles attendues sur la sauvegarde réelle du 2026-10-28 (comptes relevés), la cible de la tâche 7.2.
 - Aucun appel à `Log::` dans le domaine ; une `QueryException` attrapée est transformée sans être rapportée (le gestionnaire d'exceptions de la console ne la voit pas). Le test de la spec vérifie le fichier de journal.
 

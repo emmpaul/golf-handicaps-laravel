@@ -69,7 +69,36 @@ final class LegacyPhotos
             throw new LegacyImportFailed('Photos manquantes :', $missing);
         }
 
+        self::checkDestinations($paths);
+
         return new self($paths, $uploads);
+    }
+
+    /**
+     * Two sources that would give the same file (uploads/a.webp and uploads/a.jpg →
+     * imports/a.webp) are refused: the second copy would overwrite the first (design D9).
+     *
+     * @param  list<string>  $paths  the distinct paths referenced, sorted
+     *
+     * @throws LegacyImportFailed
+     */
+    private static function checkDestinations(array $paths): void
+    {
+        $sources = [];
+        foreach ($paths as $path) {
+            $sources[(string) self::destination($path)][] = $path;
+        }
+
+        $collisions = [];
+        foreach ($sources as $destination => $group) {
+            if (count($group) > 1) {
+                $collisions[] = implode(' et ', $group)." → {$destination}";
+            }
+        }
+
+        if ($collisions !== []) {
+            throw new LegacyImportFailed('Photos de même destination :', $collisions);
+        }
     }
 
     /**

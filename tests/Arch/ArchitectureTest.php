@@ -59,3 +59,15 @@ arch('the domain layer does not reach Simulator Golf Tour')
 
 arch('only the jobs use the Simulator Golf Tour integration')
     ->expect('App\Integrations\Sgt')->toOnlyBeUsedIn(['App\Jobs', 'App\Integrations\Sgt']);
+
+// Design D1 of sqlite-import-command: the import of the Next base is run by its command only.
+// Mutation that turns it red: `use App\Domain\LegacyImport\TargetTables` in a controller, called
+// in a method.
+arch('only the import command uses the legacy import domain')
+    ->expect('App\Domain\LegacyImport')
+    ->toOnlyBeUsedIn(['App\Console\Commands\ImportSqliteCommand', 'App\Domain\LegacyImport']);
+
+// Design D13: nothing of the import goes to the application log.
+// Mutation that turns it red: `Log::error()` of a difference in StatsComparison.
+arch('the legacy import neither logs nor depends on http')
+    ->expect('App\Domain\LegacyImport')->not->toUse(['App\Http', 'Illuminate\Support\Facades\Log']);

@@ -8,6 +8,7 @@ use App\Domain\LegacyImport\TargetTables;
 use Illuminate\Console\Attributes\Description;
 use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
+use Symfony\Component\Console\Helper\Table;
 
 /**
  * Run once by the operator at the cutover, and before on a local copy and on the staging: the
@@ -46,6 +47,9 @@ class ImportSqliteCommand extends Command
             return self::FAILURE;
         }
 
+        // The counts aligned on the right, in the compact style of the table.
+        $count = (clone Table::getStyleDefinition('compact'))->setPadType(STR_PAD_LEFT);
+        $this->table(['Table', 'SQLite', 'PostgreSQL'], $report->tableRows(), 'compact', [1 => $count, 2 => $count]);
         foreach ($report->lines() as $line) {
             $this->line($line);
         }
