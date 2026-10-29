@@ -221,6 +221,29 @@ describe('Round page', () => {
         ]);
     });
 
+    // V2, DO47: at 320 px with four players, « RETOUR · PAR 35 » widens the
+    // first two columns and the score columns fell to 41 px. They keep 44 px
+    // at least, the card scrolls inside its own frame (focusable), never the
+    // page, and a name too long for its column ends with « … ». jsdom lays out
+    // nothing: the classes are the contract, measured in the browser pass.
+    // Mutations: `min-w-8` back on the score cells → red; the frame without
+    // `overflow-x-auto` → red; the header without `truncate` → red.
+    it('keeps the score columns at 44 px at least, the card scrolling in its own frame', () => {
+        render(<RoundsShow round={round} />);
+
+        const table = screen.getByRole('table', { name: 'Carte de score' });
+        const frame = table.parentElement as HTMLElement;
+        const gab = within(table).getByRole('columnheader', { name: 'GAB' });
+
+        expect(frame).toHaveClass('overflow-x-auto');
+        expect(frame.tabIndex).toBe(0);
+        expect(gab).toHaveClass('min-w-11', 'max-w-[52px]', 'truncate');
+        expect(gab).not.toHaveClass('min-w-8');
+        expect(
+            within(table).getAllByRole('cell', { name: '5, bogey' })[0],
+        ).toHaveClass('min-w-11');
+    });
+
     it('marks Gab’s 4 at hole 7 (par 5) birdie and his 5 at hole 1 bogey', () => {
         render(<RoundsShow round={round} />);
 
