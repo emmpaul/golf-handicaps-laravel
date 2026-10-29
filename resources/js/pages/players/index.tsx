@@ -9,7 +9,7 @@ import {
     store as storePlayer,
     update as updatePlayer,
 } from '@/actions/App/Http/Controllers/PlayerController';
-import { ComputationHelp } from '@/components/handicaps/computation-help';
+import { ComputationLink } from '@/components/handicaps/computation-help';
 import { PageTopRow } from '@/components/page-top-row';
 import { PlayerSwatch } from '@/components/player-swatch';
 import { InlineForm } from '@/components/players/inline-form';
@@ -202,7 +202,7 @@ export default function PlayersIndex({
                 ))}
             </ul>
             <div className="mt-7">
-                <ComputationHelp />
+                <ComputationLink />
             </div>
         </>
     );

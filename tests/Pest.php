@@ -281,6 +281,32 @@ function createDailyRoundsOfThree(int $count): void
 }
 
 /**
+ * Creates Gab, Manu and Sean on the running test, then saves the reference card IMG_3064 with
+ * Gab and Manu: the base of the Handicaps pages.
+ */
+function createReferenceRoundOfThree(): Round
+{
+    createPlayersOnTest('Gab', 'Manu', 'Sean');
+
+    return createRoundCard(referenceCardData(test()->gab->id, test()->manu->id));
+}
+
+/**
+ * Saves the reference card alone for $playerId on 2026-10-01 (+20), 2026-10-10 (+17) and
+ * 2026-10-17 (+12): the rounds of « Lignes de Gab », the oldest first.
+ *
+ * @return list<Round>
+ */
+function createRoundsOfOctober(string $playerId): array
+{
+    return array_map(
+        fn (string $playedOn, int $over): Round => createRoundCard(referenceCardOn($playedOn, [[$playerId, strokesOverPar($over)]])),
+        ['2026-10-01', '2026-10-10', '2026-10-17'],
+        [20, 17, 12],
+    );
+}
+
+/**
  * The number of queries run by $callback.
  */
 function queriesDuring(Closure $callback): int

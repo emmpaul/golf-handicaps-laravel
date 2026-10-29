@@ -1,5 +1,6 @@
 import { Head } from '@inertiajs/react';
-import { ComputationHelp } from '@/components/handicaps/computation-help';
+import { index as handicapsIndex } from '@/actions/App/Http/Controllers/HandicapController';
+import { ComputationLink } from '@/components/handicaps/computation-help';
 import { DifferentialBars } from '@/components/handicaps/differential-bars';
 import { PlayerTabs } from '@/components/handicaps/player-tabs';
 import {
@@ -103,6 +104,10 @@ export default function HandicapsIndex({
                     <PlayerTabs
                         players={players}
                         selectedPlayerId={selected.id}
+                        hrefFor={(playerId) =>
+                            handicapsIndex({ query: { joueur: playerId } })
+                        }
+                        only={['selectedPlayerId', 'history', 'scoringStats']}
                     />
                     <PlayerSection
                         player={selected}
@@ -112,7 +117,7 @@ export default function HandicapsIndex({
                 </>
             )}
             <div className="mt-7">
-                <ComputationHelp />
+                <ComputationLink playerId={selected?.id} />
             </div>
         </>
     );

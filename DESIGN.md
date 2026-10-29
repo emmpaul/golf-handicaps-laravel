@@ -28,6 +28,7 @@ Une app de téléphone sombre et typographique : des chiffres en très grand, pe
 | `ink-2`                 | `0.68 0.01 260`                                                                                     | `#95989F`       | texte secondaire, libellés, métas, indications de champ                                        |
 | `ink-3`                 | `0.5 0.01 260`                                                                                      | `#606369`       | contrôle désactivé et décor, jamais de texte lisible                                           |
 | `ink-4`                 | `0.4 0.01 260`                                                                                      | `#45484D`       | point d'un trou sans coup, bordure de case décochée (exception), segment « Double bogey + »    |
+| `ink-soft`              | `0.88 0.005 260`                                                                                    | `#D5D7DB`       | lignes de règle et texte des cas particuliers de la page « Calcul de l'index »                 |
 | `over`                  | `0.6 0.01 260`                                                                                      | `#7D8086`       | marques bogey et double bogey                                                                  |
 | `accent`                | `0.78 0.16 60`                                                                                      | `#FF9C3B`       | Importer, à vérifier, « 1ER », provisoire, problèmes, case vide ou en erreur                   |
 | `signal`                | `0.7 0.17 25`                                                                                       | `#F66D67`       | sous le par, « Supprimer », message d'erreur                                                   |
@@ -49,17 +50,20 @@ Chaque texte prend un style `text-*` de l'échelle, qui fixe taille, interlignag
 
 | Classe                                   | Famille   | Valeur                                  | Usage                                                                   |
 | ---------------------------------------- | --------- | --------------------------------------- | ----------------------------------------------------------------------- |
-| `text-display-xl`                        | Mono 500  | 88 / 1 / −0,06 em                       | index de la page Handicaps, « — » sans index                            |
+| `text-display-xl`                        | Mono 500  | 88 / 1 / −0,06 em                       | index des pages Handicaps et « Calcul de l'index », « — » sans index    |
 | `text-display-l`                         | Mono 500  | 48 / 0,9 / −0,04 em                     | coups reçus                                                             |
 | `text-display`                           | Mono 500  | 44 / 1 / −0,04 em                       | index de l'accueil, net d'un round                                      |
 | `text-kpi`                               | Mono 500  | 30 / 1 / −0,04 em                       | valeurs du bloc STATS                                                   |
 | `text-title`                             | Geist 600 | 28 / 1,05 / −0,03 em                    | titre de page                                                           |
+| `text-num-36`                            | Mono 500  | 36 / 1 / −0,04 em                       | différentiel de l'étape 02 du calcul de l'index                         |
 | `text-num-l`                             | Mono 500  | 22 / 1                                  | jour d'un round, index de la page Joueurs, moyenne par par              |
 | `text-name-l`, `text-name-l-course`      | Geist 600 | 22 / 1 / −0,01 em ; 22 / 1,1 / −0,02 em | nom du classement d'un round ; parcours du dernier round                |
 | `text-name-m`, `text-name-m-17`          | Geist 600 | 20 / 1 / −0,01 em ; 17 / 1              | nom de la page Joueurs ; nom de l'accueil, parcours de la page Parcours |
 | `text-num-m`, `-18`, `-17`, `-16`, `-15` | Mono 500  | 24, 18, 17, 16, 15 / 1                  | net du dernier round, rang, numéro de trou, case, brut                  |
+| `text-num-20`                            | Mono 500  | 20 / 1 / −0,03 em                       | différentiels de la liste et cases d'ajustement du calcul de l'index    |
 | `text-body-l`                            | Geist 500 | 16 / 1                                  | champs et listes déroulantes                                            |
 | `text-label`, `-14`, `-13`               | Geist 600 | 15, 14, 13 / 1                          | boutons et noms de ligne ; onglets de joueur ; libellé d'onglet         |
+| `text-prose`                             | Geist 400 | 15 / 1,45                               | lignes de règle du calcul de l'index                                    |
 | `text-body`, `-13`, `-12`                | Geist 400 | 14, 13, 12 / 1,5                        | messages vides ; texte courant ; explications                           |
 | `text-link`, `-13`                       | Geist 500 | 14, 13 / 1                              | liens de rangée ; liens d'action                                        |
 | `text-meta`, `-12`, `text-meta-round`    | Mono 500  | 13, 12 / 1 ; 12 / 1,4                   | index d'un joueur, métas ; méta d'un round                              |
@@ -108,11 +112,20 @@ Composants des pages :
 
 - Rounds : `rounds/net-leaderboard` (classement net, « 1ER » en pastille ambre), `rounds/round-scorecard` (une rangée par trou, scores marqués par `ScoreMark`), `rounds/delete-round` (feuille de suppression).
 - Éditeur (`round-editor/*`) : `round-editor` tient l'état et compte les problèmes ; `score-grid` (une rangée par trou, cases de 44 px en Geist Mono 16 px, OUT, IN et TOT calculés, case en erreur en ambre) ; `line-players` ; `date-field` ; `distances-block` (bloc « Distances » replié, `details` natif) ; `editor-save-bar` (bouton « Enregistrer » collé en bas, bloqué en `surface-3` / `ink-3` tant qu'il reste des problèmes) ; `autosave` sur l'écran d'un import.
-- Handicaps : `player-tabs` (onglets de joueur), `differential-bars` (barres CSS, la barre qui compte dans la couleur du joueur, celle qui ne compte pas en `bar`), `scoring-stats` (bloc STATS), `round-history`, `computation-help`.
+- Handicaps : `player-tabs` (onglets de joueur), `differential-bars` (barres CSS, la barre qui compte dans la couleur du joueur, celle qui ne compte pas en `bar`), `scoring-stats` (bloc STATS), `round-history`, `ComputationLink` (`computation-help.tsx`, lien « Comment l’index est calculé » vers `/handicaps/calcul` en `text-link-13` gris, souligné au survol, 44 px de haut, avec `?joueur=` depuis la page Handicaps ; le fichier exporte aussi `RULE_LINES`, les sept lignes de règle, seule source de leur texte).
+- Calcul de l'index (`handicaps/computation/*`) : `step-heading` (libellé d'étape en `text-section`, numéro à la couleur du joueur, libellé en `ink-2`, filet `rule`) ; `adjusted-score-step` (dernier trou plafonné, coups barrés, « MAX » et par + 4, puis « DERNIER ROUND » en `text-kpi`) ; `differential-step` (formule en `text-num-m-17`, différentiel en `text-num-36` à la couleur du joueur) ; `retained-step` (escalier de 20 marches, la marche du joueur à sa couleur, puis la liste des 20 derniers rounds, différentiels en `text-num-20`) ; `adjustment-step` (quatre cases, différences en `text-num-20`, celle du joueur bordée à sa couleur) ; `index-step` (moyenne et ajustement en `text-num-m-17`, index en `text-display-xl`) ; `special-cases` (pastilles « PROVISOIRE » et « SANS RATING », lignes en `ink-soft`). Les lignes de règle sont en `text-prose` `ink-soft`.
 - Coups : `strokes/strokes-planner`, `segmented-control` (« Écart » / « Complet »), `stroke-hole-grid` (cases de coups, point `ink-4` d'un trou sans coup, caché aux lecteurs d'écran).
 - Import : `import-tile`, `import-upload`, `import-list`, `delete-import`, `decode-photo`, `unreadable-photo`.
 - Parcours : `courses/lookup-status`, `sgt-outcome`, `course-action`, `manual-rating-form`.
 - `players/inline-form` : un champ et un bouton, le refus du serveur sous le champ relié par `aria-describedby`.
+
+Écarts assumés à l'écran « Calcul de l'index » de l'archive :
+
+- Rounds non retenus de la liste : l'archive les passe à l'opacité 0,42, ce qui met le texte sous 4,5:1. Ils prennent `ink-2`, sans pastille ; un round retenu garde `ink` et la pastille de 8 px du joueur, au nom accessible « Retenu ».
+- Pastille « SANS RATING » : la variante neutre de `badge` (`ink-2` sur `surface-3`), au lieu du fond `rule` de l'archive.
+- Case d'ajustement appliquée : `aria-current="true"` et un texte masqué « appliqué », en plus de la bordure à la couleur du joueur.
+- Mois abrégés (« OCT », « AOÛT », « SEPT ») écrits tels quels dans le DOM, comme les mots que le design change ; le nom du parcours passe par `uppercase`.
+- Texte des cas particuliers en `text-body` (14 / 1,5) au lieu de 14 / 1,45 ; onglets de joueur non choisis en gris, comme sur la page Handicaps, alors que l'archive les dessine en encre.
 
 ## Mouvement
 

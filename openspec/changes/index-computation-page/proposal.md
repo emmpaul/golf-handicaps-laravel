@@ -46,4 +46,4 @@ Aucune : la page explique l'index, que la capacité `handicap-index` possède d�
 - Données, migrations, dépendances, CI, déploiement : rien.
 - Confidentialité : la page montre les rounds d'un joueur du groupe, comme la page Handicaps, derrière la même session du code d'accès ; sans session, aucun nom ni score dans la réponse.
 - Retour arrière : revenir au commit précédent ; aucune donnée n'est écrite.
-- `ROADMAP.md` reçoit l'entrée 12 `index-computation-page` ; `CHANGELOG.md` une ligne dans la PR de code.
+- `ROADMAP.md` reçoit l'entrée 13 `index-computation-page` ; `CHANGELOG.md` une ligne dans la PR de code.
