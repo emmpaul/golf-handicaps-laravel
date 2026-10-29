@@ -45,7 +45,7 @@ describe('civil day conversions', () => {
 
 // Spec players « Index sur la page Joueurs » and handicap-index: tenths of the
 // server written with a decimal comma, as formatTenths of the Next.js
-// application (toFixed, hence a hyphen-minus for a negative value).
+// application, a negative value with the minus sign U+2212 (DO44).
 // Mutation: « . » kept instead of « , » → every test of this block goes red.
 // Mutation: « (provisoire) » dropped from formatIndex → the provisional test
 // goes red.
@@ -54,8 +54,15 @@ describe('formatTenths', () => {
         expect(formatTenths(174)).toBe('17,4');
     });
 
-    it('writes -30 tenths as « -3,0 », with a hyphen-minus', () => {
-        expect(formatTenths(-30)).toBe('-3,0');
+    // V4, DO44: a negative index (a plus handicap) is written with the
+    // typographic minus U+2212, like the deltas. Mutation: toFixed's
+    // hyphen-minus kept → these two tests go red.
+    it('writes -30 tenths as « −3,0 », with the minus sign U+2212', () => {
+        expect(formatTenths(-30)).toBe('\u22123,0');
+    });
+
+    it('writes an index of -5 tenths as « −0,5 »', () => {
+        expect(formatTenths(-5)).toBe('\u22120,5');
     });
 });
 

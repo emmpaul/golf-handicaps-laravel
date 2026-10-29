@@ -93,9 +93,14 @@ export const NO_VALUE = '—';
 /** The mention of a player without index before a round (spec `rounds`). */
 export const NO_INDEX = "pas encore d'index";
 
-/** Integer tenths to « 17,4 » (design D2): the server sends tenths, the page formats them. */
+/**
+ * Integer tenths to « 17,4 » (design D2): the server sends tenths, the page
+ * formats them. A negative value takes the minus sign U+2212, « −0,5 » (DO44).
+ */
 export function formatTenths(tenths: number): string {
-    return (tenths / 10).toFixed(1).replace('.', ',');
+    const digits = (Math.abs(tenths) / 10).toFixed(1).replace('.', ',');
+
+    return tenths < 0 ? `\u2212${digits}` : digits;
 }
 
 /** Index shown: « 10,0 », « 14,5 (provisoire) », or « — » without round. */
