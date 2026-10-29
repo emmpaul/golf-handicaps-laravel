@@ -124,6 +124,19 @@ describe('Strokes page', () => {
         );
     });
 
+    // Mutation: the space between the name and the index removed → the box
+    // is named « GabIndex 1,0 » and this test goes red.
+    it('names each box by the player and his index, read apart', () => {
+        render(<StrokesIndex players={players} courses={courses} />);
+
+        expect(
+            screen.getByRole('checkbox', { name: 'Gab Index 1,0' }),
+        ).toBe(checkbox('Gab'));
+        expect(
+            screen.getByRole('checkbox', { name: "Sean pas encore d'index" }),
+        ).toBe(checkbox('Sean'));
+    });
+
     it('greys Sean out with « pas encore d’index », his box disabled', () => {
         render(<StrokesIndex players={players} courses={courses} />);
 
