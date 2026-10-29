@@ -11,7 +11,9 @@
  * - the image re-encoded (decoded and encoded again as a JPEG): the bytes sent are not those of
  *   the fixture;
  * - the rating kept in units instead of tenths: 71 instead of 714;
- * - the usage dropped on an unusable reading: 0 / 0 instead of 1 500 / 300.
+ * - the usage dropped on an unusable reading: 0 / 0 instead of 1 500 / 300;
+ * - an empty list of tees accepted: found true without tees gives a card without tee
+ *   (decision Q17).
  */
 
 use App\Domain\Courses\Sgt\SgtTee;
@@ -57,6 +59,7 @@ test('an unusable reading gives no card and keeps its billed usage', function (a
     'slope of 144.5' => [['found' => true, 'par' => 71, 'tees' => [['name' => 'Red', 'rating' => 71.4, 'slope' => 144.5]]]],
     'rating of 39.9' => [['found' => true, 'par' => 71, 'tees' => [['name' => 'Red', 'rating' => 39.9, 'slope' => 144]]]],
     'refusal or truncated output' => [[]],
+    'found without any tee' => [['found' => true, 'par' => 71, 'tees' => []]],
     'out of the schema' => [['found' => true, 'par' => 71, 'tees' => [['name' => 'Red', 'rating' => 71.4]]]],
 ]);
 

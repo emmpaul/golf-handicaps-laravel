@@ -83,7 +83,7 @@ Une migration modifie la table :
 
 - `App\Integrations\Ai\SgtScorecardReader`, sur le modèle de `ScorecardPhotoReader` (8) : agent `Agent, HasProviderOptions, HasStructuredOutput` avec `Promptable`, fournisseur `Lab::Anthropic`, modèle `config('golf.ai.model')`, `maxTokens()` = `golf.ai.rating_max_output_tokens`, effort `low`, `timeout` 90 s comme en 8. `instructions()` : la consigne de `src/ai/rating-reader.ts` (ligne « Slope/Rating » au-dessus des colonnes de tees, format `rating/slope`, une entrée par colonne dans l'ordre, nom tel qu'écrit, par total, `found = false` si l'image n'est pas une carte SGT). Schéma : `found` booléen, `par` entier, `tees[{name, rating, slope}]`, sans bornes (le contrôle est en PHP).
 - L'image est le JPEG de SGT tel que servi (905×527), joint sans réencodage ni réduction par `Image::fromBase64(base64_encode($octets), 'image/jpeg')` (`Base64Image` de `laravel/ai`, aucun fichier temporaire) : il est déjà petit, et rien n'y est à retirer.
-- Résultat : `SgtCardReading { ?SgtCard $card, TextUsage $usage }`, sur le modèle de `ReadingResult` (8) : l'usage est toujours présent, `card` nul quand la lecture est inutilisable (« `Unusable` » dans la suite) : refus, sortie tronquée ou hors schéma (`toArray()` vide ou de mauvaise forme), `found` faux, rating hors 40–90, slope hors 55–155 ou non entier. Rating convertie en dixièmes par `(int) round($rating * 10)`.
+- Résultat : `SgtCardReading { ?SgtCard $card, TextUsage $usage }`, sur le modèle de `ReadingResult` (8) : l'usage est toujours présent, `card` nul quand la lecture est inutilisable (« `Unusable` » dans la suite) : refus, sortie tronquée ou hors schéma (`toArray()` vide ou de mauvaise forme), `found` faux, liste de tees vide (Q17), rating hors 40–90, slope hors 55–155 ou non entier. Rating convertie en dixièmes par `(int) round($rating * 10)`.
 - Budget : `golf.ai.rating_max_input_tokens` = 2 000 et `golf.ai.rating_max_output_tokens` = 1 500, bornes de Next. `AiBudget::canSpend(CarbonImmutable $now, ?int $maxCallCostMicroUsd = null)` : le paramètre ajouté vaut par défaut `AiPricing::maxCallCost()`, le coût maximal de la lecture d'une photo (8), 52 000 micro-dollars au modèle par défaut ; la recherche passe `AiPricing::cost(model, 2000, 1500)`, soit 19 000 micro-dollars au modèle par défaut (2 / 10 micro-dollars par token). `record()` ne change pas.
 
 ### D5. Job `LookUpCourseRating`
@@ -192,6 +192,7 @@ Le mainteneur n'était pas joignable. Chaque question ouverte a reçu l'option r
 | Q14 | `SGT_LOOKUP` invalide | Démarrage refusé, message qui nomme la variable (D10), comme `AI_MODEL` en 8. | Valeur inconnue traitée comme `on`. |
 | Q15 | Image envoyée à l'IA | Le JPEG de SGT tel que servi, sans réduction (D4). | Passage par la préparation d'image de 8 (réduction à 1568 px, inutile à 905 px). |
 | Q16 | ADR | Oui : source tierce, requêtes sortantes, budget partagé (D13). | Section d'`ARCHITECTURE.md` seule. |
+| Q17 | Lecture `found` vrai sans aucun tee (décision de l'orchestrateur à l'apply, 2026-10-29) | Inexploitable : `SgtCardReading` à `card` nulle, usage facturé et compté, la recherche finit en « Saisie manuelle », « Lecture IA impossible » (D4, D5). | Carte sans tee acceptée, qui finirait en « Tee à choisir » sans aucun tee à retenir. |
 
 ## Risks / Trade-offs
 
