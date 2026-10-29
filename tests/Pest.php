@@ -6,8 +6,12 @@ use App\Integrations\Ai\ScorecardPhotoReader;
 use App\Models\Player;
 use App\Models\PlayerRoundStat;
 use App\Models\Round;
+use Database\Factories\ImportFactory;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
+use Laravel\Ai\Responses\Data\Meta;
+use Laravel\Ai\Responses\Data\TextUsage;
+use Laravel\Ai\Responses\StructuredTextResponse;
 use Tests\TestCase;
 
 pest()->extend(TestCase::class)
@@ -161,4 +165,28 @@ function differentialsByName(): array
         ->orderBy('players.name')
         ->pluck('player_round_stats.differential_t', 'players.name')
         ->all();
+}
+
+/**
+ * The card the AI reads on the reference photo IMG_3064: the reference draft with the date as
+ * printed instead of playedOn.
+ *
+ * @return array<string, mixed>
+ */
+function referenceReading(): array
+{
+    $card = ImportFactory::referenceDraft();
+    unset($card['playedOn']);
+
+    return [...$card, 'dateText' => 'DATE: 10/17/2026'];
+}
+
+/**
+ * An answer of the agent billed 3 000 input tokens and 1 200 output tokens.
+ *
+ * @param  array<string, mixed>  $card
+ */
+function billedAnswer(array $card): StructuredTextResponse
+{
+    return new StructuredTextResponse($card, (string) json_encode($card), new TextUsage(3000, 1200), new Meta);
 }
