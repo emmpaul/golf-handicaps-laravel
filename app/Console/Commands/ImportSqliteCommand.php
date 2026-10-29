@@ -20,7 +20,6 @@ class ImportSqliteCommand extends Command
 {
     public function handle(ImportLegacyDatabase $importLegacyDatabase): int
     {
-        $uploads = $this->option('uploads');
         $force = (bool) $this->option('force');
 
         // Without a terminal (--no-interaction), the answer is the default: no.
@@ -31,11 +30,31 @@ class ImportSqliteCommand extends Command
             return self::FAILURE;
         }
 
+        // SIGINT and SIGTERM wait for the end of the import (design D3): a signal between the copy
+        // of the photos and the commit would leave photos no row references, or lose the bytes
+        // of a photo written over. Delivered once the mask is given back, after the output.
+        $previousMask = [];
+        pcntl_sigprocmask(SIG_BLOCK, [SIGINT, SIGTERM], $previousMask);
+
+        try {
+            return $this->import($importLegacyDatabase, $force ? $nonEmpty : null);
+        } finally {
+            pcntl_sigprocmask(SIG_SETMASK, $previousMask);
+        }
+    }
+
+    /**
+     * @param  array<string, int>|null  $confirmedCounts
+     */
+    private function import(ImportLegacyDatabase $importLegacyDatabase, ?array $confirmedCounts): int
+    {
+        $uploads = $this->option('uploads');
+
         try {
             $report = $importLegacyDatabase->handle(
                 (string) $this->argument('db'),
                 is_string($uploads) ? $uploads : null,
-                $force ? $nonEmpty : null,
+                $confirmedCounts,
                 (bool) $this->option('dry-run'),
             );
         } catch (LegacyImportFailed $failure) {
