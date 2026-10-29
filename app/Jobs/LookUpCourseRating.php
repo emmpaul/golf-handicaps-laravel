@@ -17,6 +17,7 @@ use App\Integrations\Sgt\SgtUnavailable;
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
+use Illuminate\Support\Facades\Log;
 use Throwable;
 
 /**
@@ -70,6 +71,8 @@ class LookUpCourseRating implements ShouldQueue
      */
     public function failed(?Throwable $exception): void
     {
+        Log::warning('SGT rating lookup failed', ['course_rating_id' => $this->courseRatingId, 'exception' => $exception]);
+
         // The target is read again: failed() runs on a fresh copy of the job, without the target
         // of its last attempt. A row no longer pending keeps what the user did.
         $target = app(StartCourseRatingLookup::class)->handle($this->courseRatingId);
