@@ -83,6 +83,15 @@ All notable changes to this application, version by version. The format follows 
 - `golf:recompute-stats` artisan command: recomputes the index history of every player who has a round, idempotent.
 - Demonstration data: `DemoCourseRatingsSeeder` types 71,4 / 144 on BETHPAGE BLACK / Red, so `make demo` shows a course with and without rating.
 - ADR 0010 (index in integer tenths and derived table) and an Index and ratings section in `ARCHITECTURE.md`.
+- Scorecard import by AI at `/import`: a photo is decoded and re-encoded in the browser, kept as a WebP of 3000 px at most without EXIF or XMP on the `photos` disk, and read by a queued job (`ReadScorecardImport`) through the Laravel AI SDK with structured output; the import list follows each import ("En attente", "Lecture en cours", "Prêt à vérifier", "Échec") every 2 s while one is waiting, with "Vérifier", "Supprimer", "Voir le round" and "Relancer la lecture".
+- `imports` and `ai_usage` tables in UUID v7, with their models and factories.
+- Correction screen `/imports/{id}`: the round editor beside the photo, "Carte lue par l’IA, vérifie chaque case", the names read ("lu « GAB »"), the totals read (OUT, IN, TOT) checked against the holes ("Somme aller 36 ≠ OUT 38", "OUT + IN 72 ≠ TOT 73"), the empty cells of the reading highlighted, and an autosave of the correction one second after the last change.
+- Saving an import creates its round with the photo, through the same coherence checks, and learns as aliases the names read that did not match their player exactly; deleting that round deletes the import.
+- Monthly AI budget (`AI_MONTHLY_BUDGET_USD`, 5 USD by default) checked before each call and each retry, every billed call counted in micro-dollars in `ai_usage`, in the month of `AI_BUDGET_TIME_ZONE`; the application refuses to boot when `AI_MODEL` has no price in `config/golf.php` or the time zone is unknown.
+- Dependencies `laravel/ai` and `intervention/image`; the production image installs `imagick` and accepts photos up to 20 MB (`docker/php/uploads.ini`).
+- Test guard: `phpunit.xml` empties `ANTHROPIC_API_KEY` and every test that boots the application fakes the AI agent and refuses stray prompts and HTTP requests.
+- Demonstration data: `DemoImportsSeeder` adds a ready import with the read line JULIEN, a failed one on the budget, a waiting one, each with its photo, and three AI usage rows of the current month.
+- ADR 0011 (scorecard reading by AI and WebP photos) and an Import des cartes section in `ARCHITECTURE.md`.
 
 ### Changed
 
@@ -101,6 +110,10 @@ All notable changes to this application, version by version. The format follows 
 - The `migrate` service of `docker-compose.yml` runs `golf:initial-players` after the migrations; `.env.example` and `docs/deployment.md` document `INITIAL_PLAYERS`.
 - `/rounds` and `/players` serve their own pages instead of "Section à venir"; an unknown sub-address under them answers 404.
 - The `migrate` service of `docker-compose.yml` runs `golf:recompute-stats` after `golf:initial-players`; a failed recompute keeps `web` and `worker` stopped. `docs/deployment.md` documents it.
+- `/import` serves the import screen instead of "Section à venir"; an unknown sub-address under it answers 404.
+- `docker-compose.yml` passes `ANTHROPIC_API_KEY`, `AI_MODEL`, `AI_MONTHLY_BUDGET_USD` and `AI_BUDGET_TIME_ZONE` to `migrate`, `web` and `worker`; `.env.example` and `docs/deployment.md` document them.
+- The round editor accepts the totals and names read on a card; the shared case table `tests/fixtures/round-checks.json` gains the checks of the totals read.
+- `--color-ai` marks "Carte lue par l’IA, vérifie chaque case" on the correction screen instead of a cell filled by the AI.
 
 ### Removed
 
