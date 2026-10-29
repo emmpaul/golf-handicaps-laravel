@@ -1,7 +1,7 @@
 import { router } from '@inertiajs/react';
 import type { VisitOptions } from '@inertiajs/core';
 import type { MockInstance } from 'vite-plus/test';
-import { act, render, screen, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import {
     afterEach,
@@ -17,7 +17,7 @@ import type { ImportListItem } from '@/components/import/import-list';
 import { ROUND } from '@/tests/reference-round';
 
 // Spec scorecard-import « Envoi d'une photo », « Prise de photo depuis
-// l'app », « Une action principale à l'import », « Lecture en tâche de fond »,
+// l'app » (with « Prise de vue annulée »), « Une action principale à l'import », « Lecture en tâche de fond »,
 // « Liste des imports », « Relance refusée », « Suppression d'un import »;
 // scorecard-ai-completion « Lecture désactivée sans clé d'API »;
 // loading-feedback « Attentes de l'envoi d'une photo », « Imports en attente
@@ -176,6 +176,31 @@ describe('Sending a photo', () => {
         expect(chooseButton.className).toContain('border-foreground');
         expect(takeButton.nextElementSibling).toBe(chooseButton);
         expect(screen.queryByText('Photo de la carte')).toBeNull();
+    });
+
+    // Spec « Prise de vue annulée ». The camera closed without a photo fires a
+    // change with no file. Mutation: the empty selection not ignored (`if
+    // (!file) return` removed in import-upload.tsx) → the empty choice goes to
+    // the decoding, « Préparation de la photo… » shows and the buttons are
+    // disabled: the test goes red.
+    it('leaves the screen as it was when the camera is closed without a photo', () => {
+        coarse = true;
+        render(<ImportIndex imports={[]} readingEnabled />);
+
+        fireEvent.change(screen.getByLabelText('Prendre une photo'), {
+            target: { files: [] },
+        });
+
+        expect(post).not.toHaveBeenCalled();
+        expect(status()).toBe('');
+        expect(screen.queryByRole('alert')).toBeNull();
+        expect(
+            screen.queryByText(
+                'Format de photo non lisible, exporte-la en JPEG',
+            ),
+        ).toBeNull();
+        expect(screen.getByLabelText('Prendre une photo')).not.toBeDisabled();
+        expect(photoInput()).not.toBeDisabled();
     });
 
     it('on a computer, shows no « Prendre une photo » and keeps « Photo de la carte »', () => {

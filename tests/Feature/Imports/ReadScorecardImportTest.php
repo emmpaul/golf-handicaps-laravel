@@ -11,6 +11,8 @@
  *   leaves no ai_usage row;
  * - the budget checked after the call: the reading at the ceiling is prompted;
  * - StartReading without the status check: the job run twice on a ready import prompts twice;
+ * - $tries = 1 on the job: the first transient error through the queue already fails the
+ *   import; $tries = 3: the second error leaves it being read;
  * - StartReading without the round_id check: a queued import already linked to a round is
  *   prompted, counted and turned ready;
  * - the model written in the agent instead of config('golf.ai.model'): claude-opus-5-5 is not
@@ -42,6 +44,16 @@ function aiUsageRows(): array
     return AiUsage::query()->orderBy('created_at')
         ->get(['month', 'model', 'input_tokens', 'output_tokens', 'cost_micro_usd'])
         ->toArray();
+}
+
+/**
+ * The import failed with « Lecture IA indisponible », no call counted.
+ */
+function expectUnavailableWithoutCost(Import $import): void
+{
+    expect($import->fresh()->status)->toBe(ImportStatus::Failed)
+        ->and($import->fresh()->failure)->toBe('Lecture IA indisponible')
+        ->and(AiUsage::query()->count())->toBe(0);
 }
 
 function runReadingJob(ReadScorecardImport $job): void
@@ -223,7 +235,23 @@ test('a transient error on the last attempt fails the import', function () {
         $job->failed($exception);
     }
 
-    expect($this->import->fresh()->status)->toBe(ImportStatus::Failed)
-        ->and($this->import->fresh()->failure)->toBe('Lecture IA indisponible')
-        ->and(AiUsage::query()->count())->toBe(0);
+    expectUnavailableWithoutCost($this->import);
+});
+
+test('through the queue, a reading is tried twice, then the import fails', function () {
+    config(['queue.default' => 'database']);
+    ScorecardPhotoReader::fake(fn () => throw ProviderOverloadedException::forProvider('anthropic'));
+    ReadScorecardImport::dispatch($this->import->id);
+
+    $this->artisan('queue:work', ['--stop-when-empty' => true, '--sleep' => 0])->assertSuccessful();
+
+    ScorecardPhotoReader::assertPromptedTimes(1);
+    expect($this->import->fresh()->status)->toBe(ImportStatus::Reading);
+
+    // Released for its 30 s backoff.
+    $this->travel(31)->seconds();
+    $this->artisan('queue:work', ['--stop-when-empty' => true, '--sleep' => 0])->assertSuccessful();
+
+    ScorecardPhotoReader::assertPromptedTimes(2);
+    expectUnavailableWithoutCost($this->import);
 });

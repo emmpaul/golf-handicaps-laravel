@@ -17,7 +17,9 @@
  * - the check of ImportRoundController placed after FindDuplicateRound: the second save finds
  *   the round of the import and comes back with the duplicate flash instead of the refusal;
  * - the status check removed from SaveImportedRound: a queued or reading import is saved as a
- *   round, which the job would then read and turn ready.
+ *   round, which the job would then read and turn ready;
+ * - only ready imports saved (failed refused like queued and reading): the card typed by hand
+ *   on a failed import past the monthly ceiling is refused with « Lecture en cours ».
  */
 
 use App\Domain\Imports\Actions\SaveImportedRound;
@@ -66,6 +68,23 @@ function grossByName(Round $round): array
         ->all();
 }
 
+/**
+ * Sends the reference card of an import to POST /imports/{id}/round, checks the success and
+ * the gross of the round saved, and returns that round.
+ */
+function saveReferenceRoundOverHttp(Import $import, Player $gab, Player $sean): Round
+{
+    test()->withHeader('X-Inertia', 'true')
+        ->post("/imports/{$import->id}/round", importedReferenceCard($gab->id, $sean->id))
+        ->assertRedirect('/rounds')
+        ->assertInertiaFlash('toast', ['type' => 'success', 'message' => 'Round enregistré.']);
+
+    $round = Round::query()->sole();
+    expect(grossByName($round))->toBe(['Gab' => 72, 'Sean' => 88]);
+
+    return $round;
+}
+
 beforeEach(function () {
     Storage::fake('photos');
     $this->withPasscodeSession();
@@ -79,14 +98,8 @@ beforeEach(function () {
 test('the reference card saves its round with the photo of the import and learns the moved alias', function () {
     $gabAlias = PlayerAlias::query()->where('alias', 'GAB')->sole();
 
-    $this->withHeader('X-Inertia', 'true')
-        ->post("/imports/{$this->import->id}/round", importedReferenceCard($this->gab->id, $this->sean->id))
-        ->assertRedirect('/rounds')
-        ->assertInertiaFlash('toast', ['type' => 'success', 'message' => 'Round enregistré.']);
-
-    $round = Round::query()->sole();
-    expect(grossByName($round))->toBe(['Gab' => 72, 'Sean' => 88])
-        ->and($round->photo_path)->toBe($this->import->photo_path)
+    $round = saveReferenceRoundOverHttp($this->import, $this->gab, $this->sean);
+    expect($round->photo_path)->toBe($this->import->photo_path)
         ->and($this->import->fresh()->round_id)->toBe($round->id)
         ->and(playersWithAliases())->toBe([
             'Gab' => ['GAB'],
@@ -198,6 +211,14 @@ describe('an import already saved', function () {
 
         expect(Round::query()->count())->toBe(1);
     });
+});
+
+// Spec scorecard-ai-completion « Saisie manuelle au-delà du plafond ».
+test('a card typed by hand on an import failed at the monthly ceiling is saved as its round', function () {
+    $import = Import::factory()->failed('Budget IA du mois atteint')->withPhoto()->create();
+
+    $round = saveReferenceRoundOverHttp($import, $this->gab, $this->sean);
+    expect($import->fresh()->round_id)->toBe($round->id);
 });
 
 test('an import queued or being read is not saved as a round', function (string $state) {
