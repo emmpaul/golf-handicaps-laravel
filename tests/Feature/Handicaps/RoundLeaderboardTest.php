@@ -52,9 +52,9 @@ test('the reference card is ranked with the index of each player just before it'
     $round = createRoundCard($card);
 
     expect(app(RoundLeaderboard::class)->for($round))->toBe([
-        ['playerId' => $this->gab->id, 'name' => 'Gab', 'gross' => 72, 'indexBeforeT' => 10, 'playingHandicap' => 1, 'net' => 71, 'rank' => 1],
-        ['playerId' => $this->manu->id, 'name' => 'Manu', 'gross' => 88, 'indexBeforeT' => 170, 'playingHandicap' => 17, 'net' => 71, 'rank' => 1],
-        ['playerId' => $sean->id, 'name' => 'Sean', 'gross' => 81, 'indexBeforeT' => null, 'playingHandicap' => null, 'net' => null, 'rank' => null],
+        ['playerId' => $this->gab->id, 'name' => 'Gab', 'colorSlot' => 0, 'gross' => 72, 'indexBeforeT' => 10, 'playingHandicap' => 1, 'net' => 71, 'rank' => 1],
+        ['playerId' => $this->manu->id, 'name' => 'Manu', 'colorSlot' => 1, 'gross' => 88, 'indexBeforeT' => 170, 'playingHandicap' => 17, 'net' => 71, 'rank' => 1],
+        ['playerId' => $sean->id, 'name' => 'Sean', 'colorSlot' => 2, 'gross' => 81, 'indexBeforeT' => null, 'playingHandicap' => null, 'net' => null, 'rank' => null],
     ]);
 });
 

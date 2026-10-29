@@ -247,8 +247,8 @@ describe('with a session', function () {
             ->and(array_column($card['holes'], 'strokeIndex'))->toBe([8, 16, 18, 2, 4, 10, 6, 14, 12, 9, 11, 7, 3, 17, 1, 5, 13, 15])
             ->and($card['holes'][0]['distance'])->toBe(420)
             ->and($card['lines'])->toBe([
-                ['playerId' => $this->gab->id, 'name' => 'Gab', 'strokes' => [5, 5, 3, 5, 4, 4, 4, 3, 5, 4, 4, 4, 4, 3, 4, 5, 3, 3]],
-                ['playerId' => $this->manu->id, 'name' => 'Manu', 'strokes' => [7, 5, 3, 7, 6, 5, 5, 3, 5, 3, 6, 5, 7, 4, 5, 4, 3, 5]],
+                ['playerId' => $this->gab->id, 'name' => 'Gab', 'colorSlot' => 0, 'strokes' => [5, 5, 3, 5, 4, 4, 4, 3, 5, 4, 4, 4, 4, 3, 4, 5, 3, 3]],
+                ['playerId' => $this->manu->id, 'name' => 'Manu', 'colorSlot' => 1, 'strokes' => [7, 5, 3, 7, 6, 5, 5, 3, 5, 3, 6, 5, 7, 4, 5, 4, 3, 5]],
             ]);
     });
 
@@ -262,8 +262,8 @@ describe('with a session', function () {
         $this->get("/rounds/{$round->id}")->assertInertia(fn (Assert $page) => $page
             ->where('round.rating', ['rated' => false, 'ratingT' => 710, 'slope' => 113])
             ->where('round.leaderboard', [
-                ['playerId' => $this->gab->id, 'name' => 'Gab', 'gross' => 72, 'indexBeforeT' => 10, 'playingHandicap' => 1, 'net' => 71, 'rank' => 1],
-                ['playerId' => $this->manu->id, 'name' => 'Manu', 'gross' => 88, 'indexBeforeT' => 170, 'playingHandicap' => 17, 'net' => 71, 'rank' => 1],
+                ['playerId' => $this->gab->id, 'name' => 'Gab', 'colorSlot' => 0, 'gross' => 72, 'indexBeforeT' => 10, 'playingHandicap' => 1, 'net' => 71, 'rank' => 1],
+                ['playerId' => $this->manu->id, 'name' => 'Manu', 'colorSlot' => 1, 'gross' => 88, 'indexBeforeT' => 170, 'playingHandicap' => 17, 'net' => 71, 'rank' => 1],
             ]));
     });
 
@@ -274,8 +274,8 @@ describe('with a session', function () {
         $this->get("/rounds/{$round->id}")->assertInertia(fn (Assert $page) => $page
             ->where('round.rating', ['rated' => true, 'ratingT' => 714, 'slope' => 144])
             ->where('round.leaderboard', [
-                ['playerId' => $this->gab->id, 'name' => 'Gab', 'gross' => 72, 'indexBeforeT' => null, 'playingHandicap' => null, 'net' => null, 'rank' => null],
-                ['playerId' => $this->manu->id, 'name' => 'Manu', 'gross' => 88, 'indexBeforeT' => null, 'playingHandicap' => null, 'net' => null, 'rank' => null],
+                ['playerId' => $this->gab->id, 'name' => 'Gab', 'colorSlot' => 0, 'gross' => 72, 'indexBeforeT' => null, 'playingHandicap' => null, 'net' => null, 'rank' => null],
+                ['playerId' => $this->manu->id, 'name' => 'Manu', 'colorSlot' => 1, 'gross' => 88, 'indexBeforeT' => null, 'playingHandicap' => null, 'net' => null, 'rank' => null],
             ]));
     });
 
