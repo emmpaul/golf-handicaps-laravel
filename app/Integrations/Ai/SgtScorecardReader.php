@@ -35,6 +35,9 @@ class SgtScorecardReader implements Agent, HasProviderOptions, HasStructuredOutp
         Si l'image n'est pas une carte de score SGT, mets found à false.
         TEXT;
 
+    /** Seconds of the call; with the two SGT requests it stays under the job timeout. */
+    public const int TIMEOUT_SECONDS = 60;
+
     private const string PROMPT = 'Donne le par et la rating et le slope de chaque tee de la carte.';
 
     public function instructions(): string
@@ -89,7 +92,7 @@ class SgtScorecardReader implements Agent, HasProviderOptions, HasStructuredOutp
             attachments: [Image::fromBase64(base64_encode($jpeg), 'image/jpeg')],
             provider: Lab::Anthropic,
             model: config()->string('golf.ai.model'),
-            timeout: 90,
+            timeout: self::TIMEOUT_SECONDS,
         );
 
         return new SgtCardReading(self::card($response->toArray()), $response->usage);

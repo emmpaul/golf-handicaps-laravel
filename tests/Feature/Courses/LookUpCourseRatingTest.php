@@ -22,6 +22,7 @@
 
 use App\Domain\Courses\CourseRatingStatus;
 use App\Integrations\Ai\SgtScorecardReader;
+use App\Integrations\Sgt\SgtClient;
 use App\Integrations\Sgt\SgtUnavailable;
 use App\Jobs\LookUpCourseRating;
 use App\Models\AiUsage;
@@ -337,6 +338,17 @@ test('the job is bounded to 120 s, tried twice 30 s apart', function () {
     $job = new LookUpCourseRating('0199f0c8-0000-7000-8000-000000000000');
 
     expect([$job->timeout, $job->tries, $job->backoff])->toBe([120, 2, 30]);
+});
+
+test('the list, the scorecard and the reading at their delays end within the 120 s of the job', function () {
+    // A lookup sends at most the list and the scorecard to SGT, then one reading to the AI: past
+    // the job timeout, a reading billed but not yet counted would be lost and billed again by
+    // the retry. Mutation: the reading bounded to 90 s, as the photo: 20 + 20 + 90 = 130.
+    $job = new LookUpCourseRating('0199f0c8-0000-7000-8000-000000000000');
+    $delays = [SgtClient::TIMEOUT_SECONDS, SgtScorecardReader::TIMEOUT_SECONDS, $job->timeout];
+
+    expect($delays)->toBe([20, 60, 120])
+        ->and(2 * $delays[0] + $delays[1])->toBeLessThan($delays[2]);
 });
 
 test('a request to SGT past its delay ends the attempt as SGT unavailable, without waiting', function () {

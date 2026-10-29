@@ -13,7 +13,8 @@
  * - the rating kept in units instead of tenths: 71 instead of 714;
  * - the usage dropped on an unusable reading: 0 / 0 instead of 1 500 / 300;
  * - an empty list of tees accepted: found true without tees gives a card without tee
- *   (decision Q17).
+ *   (decision Q17);
+ * - the call bounded to 90 s, as the reading of a photo: the prompt carries 90 instead of 60.
  */
 
 use App\Domain\Courses\Sgt\SgtTee;
@@ -87,4 +88,13 @@ test('the reading sends the scorecard as served by SGT and nothing of the applic
             ->and($sent->agent->instructions())->not->toContain($text);
     }
     SgtScorecardReader::assertPromptedTimes(1);
+});
+
+// Under the 120 s of the job with the two SGT requests of 20 s (design D4, decision Q13).
+test('the reading is bounded to 60 s', function () {
+    SgtScorecardReader::fake([billedSgtReading(bethpageSgtReading())]);
+
+    app(SgtScorecardReader::class)->read(sgtScorecard30());
+
+    SgtScorecardReader::assertPrompted(fn (AgentPrompt $prompt): bool => $prompt->timeout === 60);
 });

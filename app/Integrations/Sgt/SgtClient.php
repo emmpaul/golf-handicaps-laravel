@@ -19,6 +19,9 @@ final class SgtClient
 {
     private const string COURSES_URL = 'https://simulatorgolftour.com/courses';
 
+    /** Seconds per request; twice this plus the AI reading stays under the job timeout. */
+    public const int TIMEOUT_SECONDS = 20;
+
     private const string USER_AGENT = 'golf-handicaps-laravel (+https://github.com/emmpaul/golf-handicaps-laravel)';
 
     private const string CACHE_KEY = 'sgt:courses';
@@ -66,6 +69,6 @@ final class SgtClient
 
     private function http(): PendingRequest
     {
-        return Http::withUserAgent(self::USER_AGENT)->connectTimeout(10)->timeout(20)->throw();
+        return Http::withUserAgent(self::USER_AGENT)->connectTimeout(10)->timeout(self::TIMEOUT_SECONDS)->throw();
     }
 }
