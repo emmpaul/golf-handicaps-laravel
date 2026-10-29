@@ -23,13 +23,11 @@
 
 use App\Domain\Courses\Queries\CourseOverview;
 use App\Domain\Handicaps\Queries\PlayerStandings;
-use App\Domain\Imports\ImportStatus;
 use App\Domain\Imports\Queries\PendingImports;
 use App\Domain\Rounds\Queries\RoundList;
 use App\Domain\Rounds\RoundCard;
 use App\Domain\Rounds\RoundCardChecks;
 use App\Models\CourseRating;
-use App\Models\Import;
 use App\Models\Player;
 use App\Models\PlayerRoundStat;
 use App\Models\Round;
@@ -190,7 +188,7 @@ test('the demonstration confirms BETHPAGE BLACK / Red from SGT, proposes PAYNES 
         ->toBe(['Gab' => 5, 'Manu' => 130]);
 });
 
-// Mutation: DemoImportsSeeder removed from DemoDatabaseSeeder: PendingImports counts 0 and has no latest id.
+// Mutation: DemoImportsSeeder removed from DemoDatabaseSeeder: PendingImports counts 0.
 test('the demonstration fills the home, the strokes page and the imports to check', function () {
     $this->seed(DemoDatabaseSeeder::class);
 
@@ -199,8 +197,7 @@ test('the demonstration fills the home, the strokes page and the imports to chec
         ->all();
     expect($standings)->toBe([['Gab', true], ['Manu', true], ['Sean', true]]);
 
-    $readyId = Import::query()->where('status', ImportStatus::Ready->value)->value('id');
-    expect(app(PendingImports::class)->get())->toBe(['count' => 1, 'latestId' => $readyId]);
+    expect(app(PendingImports::class)->count())->toBe(1);
 
     $latest = app(RoundList::class)->get(1);
     expect($latest)->toHaveCount(1)

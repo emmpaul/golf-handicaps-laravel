@@ -10,7 +10,9 @@
  *   ordered by rounds.created_at first): Gab reads 155 and −15 instead of 158 and 3;
  * - deltaT 0 instead of null on a first round (index_before_t null read as 0 by
  *   `(int) $row->index_after_t - (int) $row->index_before_t`): Gab with one round reads a
- *   delta of 100 instead of null.
+ *   delta of 100 instead of null;
+ * - the number of rounds left at 0 (`'rounds' => 0`, « 8 ROUNDS » of the home page): Gab reads 0
+ *   instead of 3.
  */
 
 use App\Domain\Handicaps\Queries\PlayerStandings;
@@ -60,6 +62,8 @@ test('the index and delta come from the latest round played, not the latest save
         'indexT' => 158,
         'provisional' => false,
         'deltaT' => 3,
+        'rounds' => 3,
+        'colorSlot' => 0,
     ]);
 });
 
@@ -72,6 +76,8 @@ test('a player without round has no index and no delta', function () {
         'indexT' => null,
         'provisional' => false,
         'deltaT' => null,
+        'rounds' => 0,
+        'colorSlot' => 2,
     ]);
 });
 
