@@ -18,6 +18,8 @@
  * - the guard of the pending status removed (StartCourseRatingLookup): the job run twice on the
  *   same row prompts twice;
  * - failed() that writes nothing: after two 503 the row stays pending;
+ * - the proposal applied by the job (rating of the tee written, players recomputed): Gab and
+ *   Manu go to 0,5 and 13,0 before any confirmation;
  * - failed() that logs nothing, or without the id of the row: no warning names the row;
  * - $timeout at 420: the bounds of the job are 420 / 2 / 30;
  * - the ConnectionException of SgtClient let through: the delay passed is not SgtUnavailable.
@@ -144,6 +146,9 @@ test('Bethpage Black / Red gets the proposal of the tee Red read on the SGT card
     runLookup($rating);
 
     expect(lookupOutcomeOf($rating))->toBe([CourseRatingStatus::Proposed, null, 30, 'Bethpage Black', 'Farmingdale, NY', 'Red', null])
+        // The index does not change: Gab and Manu stay at 1,0 and 17,0, on the par and 113.
+        ->and(statsByDateOf($this->gab, ['differential_t', 'index_after_t']))->toBe([[10, 10]])
+        ->and(statsByDateOf($this->manu, ['differential_t', 'index_after_t']))->toBe([[170, 170]])
         ->and(teesReadOf($rating))->toBe([['Blue', 775, 155], ['White', 742, 148], ['Red', 714, 144], ['Junior', 710, 120], ['PAR3', 540, 120]])
         ->and(lookupUsageRows())->toBe([['claude-sonnet-5-5', 1500, 300, 6000]])
         // Nothing of the group goes to SGT: the whole list, then the card by its id.
