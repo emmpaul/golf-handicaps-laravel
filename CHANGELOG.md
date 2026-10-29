@@ -7,6 +7,7 @@ All notable changes to this application, version by version. The format follows 
 ### Changed
 
 - `docs/deployment.md` records the first install on Dokploy: `APP_NAME` is required, the domain needs a deploy to take effect, Dokploy adds `dokploy-network` itself, Autodeploy stays off, and the login limiter sees the client IP behind Cloudflare.
+- `ROADMAP.md` records the move from the Next.js app to the Laravel stack on `golf.emmanuelpaul.com` on 2026-10-29.
 
 ## [0.1.0] - 2026-10-29
 
