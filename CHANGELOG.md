@@ -8,6 +8,8 @@ All notable changes to this application, version by version. The format follows 
 
 - `docs/deployment.md` records the first install on Dokploy: `APP_NAME` is required, the domain needs a deploy to take effect, Dokploy adds `dokploy-network` itself, Autodeploy stays off, and the login limiter sees the client IP behind Cloudflare.
 - `ROADMAP.md` records the move from the Next.js app to the Laravel stack on `golf.emmanuelpaul.com` on 2026-10-29.
+- On phones, the « Golf » row at the top of each page, login included, starts at the bottom of the safe area instead of 10 px below it (`max(54px, safe-top)`): as a home screen app on iPhone it sits at 59 px instead of 69 px.
+- The side margins of the content are 16 px instead of 20 px on every page, login included, aligned with the floating tab bar.
 
 ## [0.1.0] - 2026-10-29
 
