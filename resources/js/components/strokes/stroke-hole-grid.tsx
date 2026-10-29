@@ -28,7 +28,7 @@ function holeCount(count: number): string {
  * even at 320 px (spec `match-strokes`, « Grille des coups par trou », « Bloc
  * de résultat des coups »): cells of 44 px, the hole number in Geist Mono
  * 9 px grey, the strokes in Geist Mono 600 15 px in the colour of the player
- * on `surface-3`; a hole without stroke shows « · » in `ink-4` on a
+ * on `surface-3`; a hole without stroke shows « · », a dot of `ink-4` on a
  * transparent background, the cell named « Trou 3 : aucun coup ».
  */
 export function StrokeHoleGrid({
@@ -62,17 +62,27 @@ export function StrokeHoleGrid({
                         >
                             {hole}
                         </span>
-                        <span
-                            aria-hidden="true"
-                            className={cn(
-                                'font-mono text-num-m-15 font-semibold',
-                                count === 0
-                                    ? 'text-ink-4'
-                                    : PLAYER_TEXT[colorSlot],
-                            )}
-                        >
-                            {holeCount(count)}
-                        </span>
+                        {count === 0 ? (
+                            // « · » drawn as a dot of `ink-4`: decor hidden from screen
+                            // readers, never a readable text in ink-4 (DO15, DO27).
+                            <span
+                                aria-hidden="true"
+                                data-slot="no-stroke"
+                                className="flex h-[15px] items-center"
+                            >
+                                <span className="size-[3px] rounded-full bg-ink-4" />
+                            </span>
+                        ) : (
+                            <span
+                                aria-hidden="true"
+                                className={cn(
+                                    'font-mono text-num-m-15 font-semibold',
+                                    PLAYER_TEXT[colorSlot],
+                                )}
+                            >
+                                {holeCount(count)}
+                            </span>
+                        )}
                     </div>
                 );
             })}

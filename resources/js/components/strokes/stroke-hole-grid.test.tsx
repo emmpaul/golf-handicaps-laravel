@@ -9,8 +9,9 @@ import { StrokeHoleGrid } from '@/components/strokes/stroke-hole-grid';
 // the Next.js tests.
 // Spec « Bloc de résultat des coups » (visual-redesign): cells of 44 px, the
 // hole number in Geist Mono 9 px grey, « 1 » in Geist Mono 600 15 px in the
-// colour of the player on `surface-3`, « · » in `ink-4` on a transparent
-// background for a hole without stroke, hidden from screen readers.
+// colour of the player on `surface-3`, « · » drawn as a dot of `ink-4` on a
+// transparent background for a hole without stroke, hidden from screen
+// readers (DO27: never a readable text in ink-4).
 // Mutations: a hole without stroke showing « 0 » or nothing instead of « · »
 // → the 16 strokes test goes red; « 1 coups » for one stroke → the 16 strokes
 // test goes red; a given-back stroke written « -1 » with a hyphen-minus or
@@ -22,11 +23,15 @@ const SIXTEEN = [1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1];
 const TWENTY = [1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 1, 1, 1];
 const GIVE_TWO = [0, 0, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -1, 0, 0, 0, 0];
 
-/** The visible count of each hole, holes 1 to 18. */
+/** The visible count of each hole, holes 1 to 18; « · » for the drawn dot of a hole without stroke. */
 function counts(): string[] {
     return screen
         .getAllByRole('img')
-        .map((cell) => cell.lastElementChild?.textContent ?? '');
+        .map((cell) =>
+            cell.lastElementChild?.getAttribute('data-slot') === 'no-stroke'
+                ? '·'
+                : (cell.lastElementChild?.textContent ?? ''),
+        );
 }
 
 describe('StrokeHoleGrid', () => {
@@ -121,7 +126,10 @@ describe('StrokeHoleGrid', () => {
         expect(first.lastElementChild?.className).toContain('text-player-2');
         expect(first.lastElementChild?.className).toContain('font-semibold');
         expect(third.className).toContain('bg-transparent');
-        expect(third.lastElementChild?.className).toContain('text-ink-4');
+        expect(third.lastElementChild?.textContent).toBe('');
+        expect(third.lastElementChild?.firstElementChild?.className).toContain(
+            'bg-ink-4',
+        );
         expect(third.lastElementChild?.getAttribute('aria-hidden')).toBe(
             'true',
         );
