@@ -4,8 +4,14 @@ All notable changes to this application, version by version. The format follows 
 
 ## [Unreleased]
 
+### Added
+
+- `/handicaps/calcul`: the « Comment l’index est calculé » page walks through the five steps of the index (adjusted score, differential, retained differentials, adjustment, index) with the rounds of the chosen player, the player's latest capped hole, their 20 latest rounds with the ones that count, then the provisional index and the courses without rating.
+
 ### Changed
 
+- The folded « Comment l’index est calculé » explanation of the players, handicaps, courses and round pages is replaced by a link to `/handicaps/calcul`; from the handicaps page, the link keeps the chosen player.
+- The demonstration base gives Manu a capped hole (8 on the par 3 of hole 2 at PAYNES VALLEY on 2026-09-10), so that `/handicaps/calcul` shows every step.
 - `docs/deployment.md` records the first install on Dokploy: `APP_NAME` is required, the domain needs a deploy to take effect, Dokploy adds `dokploy-network` itself, Autodeploy stays off, and the login limiter sees the client IP behind Cloudflare.
 - `ROADMAP.md` records the move from the Next.js app to the Laravel stack on `golf.emmanuelpaul.com` on 2026-10-29.
 - On phones, the « Golf » row at the top of each page, login included, starts at the bottom of the safe area instead of 10 px below it (`max(54px, safe-top)`): as a home screen app on iPhone it sits at 59 px instead of 69 px.
