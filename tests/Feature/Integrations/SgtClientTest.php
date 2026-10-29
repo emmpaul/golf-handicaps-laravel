@@ -21,11 +21,6 @@ use App\Integrations\Sgt\SgtUnavailable;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
 
-function sgtFixture(string $name): string
-{
-    return (string) file_get_contents(base_path("tests/fixtures/sgt/{$name}"));
-}
-
 /**
  * Serves the courses page and the scorecard of course 30 as SGT does.
  */

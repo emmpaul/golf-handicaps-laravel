@@ -228,6 +228,14 @@ function bethpageSgtReading(): array
 }
 
 /**
+ * The bytes of a copy of tests/fixtures/sgt, as Simulator Golf Tour serves it.
+ */
+function sgtFixture(string $name): string
+{
+    return (string) file_get_contents(base_path("tests/fixtures/sgt/{$name}"));
+}
+
+/**
  * Saves the reference card on $count days from 2026-09-02, played by Gab (+1), Manu (+17) and
  * Sean (+12) of the running test: the base of the query count tests (design D8 of
  * home-and-match-strokes).
