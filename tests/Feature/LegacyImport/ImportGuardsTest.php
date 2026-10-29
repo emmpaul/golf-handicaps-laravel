@@ -5,6 +5,8 @@
  * design D3, D12.
  */
 
+use App\Domain\LegacyImport\Actions\ImportLegacyDatabase;
+use App\Domain\LegacyImport\Exceptions\LegacyImportFailed;
 use App\Models\Import;
 use App\Models\Round;
 use Illuminate\Support\Facades\Artisan;
@@ -185,4 +187,27 @@ test('a failed import gives back its bytes to a photo it wrote over', function (
 
     expect(Storage::disk('photos')->get('imports/nouvelle.webp'))->toBe($old)
         ->and(DB::table('imports')->pluck('photo_path')->all())->toBe(['imports/nouvelle.webp']);
+});
+
+// Design D12: the tables emptied are those the operator confirmed, with their counts.
+// Mutation that turns it red: the counts confirmed not compared with those of the target base
+// (the fourth player, added after the question, is emptied with the others).
+test('an import whose target tables changed after the confirmation is refused', function () {
+    $base = guardsBase();
+    $confirmed = ['players' => 3, 'player_aliases' => 3];
+    DB::table('players')->insert(['id' => '0199f0a0-0000-7000-8000-000000000004', 'name' => 'Lou', 'created_at' => '2026-10-29 08:00:00', 'updated_at' => '2026-10-29 08:00:00']);
+
+    expect(fn () => app(ImportLegacyDatabase::class)->handle($base->path, $base->uploads, $confirmed, false))
+        ->toThrow(LegacyImportFailed::class, 'Tables modifiées depuis la confirmation : players (4), player_aliases (3) au lieu de players (3), player_aliases (3). Relancer l\'import.');
+
+    expect(playerNames())->toBe(['Gab', 'Lou', 'Manu', 'Sean']);
+});
+
+// Mutation that turns it red: the empty confirmation written as the empty list of tables
+// (« au lieu de . »).
+test('an import with --force on a target base that was empty and has rows since is refused', function () {
+    $base = guardsBase();
+
+    expect(fn () => app(ImportLegacyDatabase::class)->handle($base->path, $base->uploads, [], false))
+        ->toThrow(LegacyImportFailed::class, 'Tables modifiées depuis la confirmation : players (3), player_aliases (3) au lieu de tables vides. Relancer l\'import.');
 });

@@ -57,7 +57,7 @@ Sauvegarde `backups/golf-handicaps-next-20261028-182752.db` (copie `VACUUM INTO`
     - `LegacyPhotos` : contrôle, lecture, conversion et copie des photos (D9) ;
     - `LegacyImportCorrection` : traduction d'une correction Next (D10) ;
     - `StatsComparison` : comparaison des statistiques (D11) ;
-    - `Actions/ImportLegacyDatabase::handle(string $dbPath, ?string $uploadsDir, bool $force, bool $dryRun): ImportReport` : le déroulé de D3 ;
+    - `Actions/ImportLegacyDatabase::handle(string $dbPath, ?string $uploadsDir, ?array $confirmedCounts, bool $dryRun): ImportReport` (`$confirmedCounts` : les tables et comptes confirmés avec `--force`, `null` sans `--force` ; correction après revue, L4) : le déroulé de D3 ;
     - `ImportReport` : comptes et lignes du rapport (D13) ;
     - `Exceptions/LegacyImportFailed` (message pour l'opérateur, liste de détails), hors de `DomainException` : aucune requête HTTP ne la rend.
 - Règle d'architecture : seul `App\Console\Commands\ImportSqliteCommand` utilise `App\Domain\LegacyImport` ; `App\Domain\LegacyImport` n'utilise pas `App\Http`.
@@ -157,6 +157,7 @@ Sauvegarde `backups/golf-handicaps-next-20261028-182752.db` (copie `VACUUM INTO`
 
 - Tables contrôlées : les dix tables de la spec. Les tables du framework (`jobs`, `failed_jobs`, `sessions`, `cache`, `migrations`) ne comptent pas.
 - `--force` : la commande compte les lignes, demande « Vider players (3), player_aliases (3) avant l'import ? » (seules les tables non vides), puis passe `force: true` au domaine, qui vide dans la transaction. Une base cible vide ne pose pas de question, avec ou sans `--force`. `--dry-run --force` pose aussi la question : la règle reste simple et rien n'est gardé.
+- Comptes confirmés (correction après revue, L4) : la commande passe au domaine les comptes qu'elle a montrés dans la question (`[]` si la base cible était vide), au lieu d'un booléen. Le domaine relit `TargetTables::nonEmpty()` à ses contrôles et refuse s'ils diffèrent : « Tables modifiées depuis la confirmation : players (4), player_aliases (3) au lieu de players (3), player_aliases (3). Relancer l'import. » (« au lieu de tables vides » quand rien n'était à vider). Ainsi `--force` ne vide jamais une ligne que l'opérateur n'a pas vue comptée.
 - Jobs déjà en file dans Laravel (lecture d'un import, recherche de rating) qui visent une ligne vidée : leur garde (« ligne absente → ne rien faire ») les termine sans effet.
 - Remise en file : `LookUpCourseRating::dispatch($uuid)` pour chaque ligne `pending`, après le commit, hors essai à blanc. Avec `SGT_LOOKUP=off`, le job finit en « Saisie manuelle », comme toute recherche.
 

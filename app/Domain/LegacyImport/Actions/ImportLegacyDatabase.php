@@ -54,18 +54,24 @@ final class ImportLegacyDatabase
     public function __construct(private readonly RecomputePlayerStats $recomputePlayerStats) {}
 
     /**
-     * @param  bool  $force  the operator confirmed the emptying of the target tables
+     * @param  array<string, int>|null  $confirmedCounts  the tables, with their counts, the operator
+     *                                                    confirmed to empty (--force); null without
+     *                                                    --force
      * @param  bool  $dryRun  everything is done, then cancelled: nothing written, nothing queued
      *
      * @throws LegacyImportFailed
      */
-    public function handle(string $dbPath, ?string $uploadsDir, bool $force, bool $dryRun): ImportReport
+    public function handle(string $dbPath, ?string $uploadsDir, ?array $confirmedCounts, bool $dryRun): ImportReport
     {
         $this->legacy = LegacyDatabase::open($dbPath);
         LegacySchema::check($this->legacy);
         $nonEmpty = TargetTables::nonEmpty();
-        if ($nonEmpty !== [] && ! $force) {
+        if ($nonEmpty !== [] && $confirmedCounts === null) {
             throw new LegacyImportFailed('Tables non vides : '.TargetTables::describe($nonEmpty).'. Relancer avec --force pour les vider.');
+        }
+        // Only the rows the operator saw in the question are emptied (design D12).
+        if ($confirmedCounts !== null && $nonEmpty !== $confirmedCounts) {
+            throw new LegacyImportFailed('Tables modifiées depuis la confirmation : '.TargetTables::describe($nonEmpty).' au lieu de '.($confirmedCounts === [] ? 'tables vides' : TargetTables::describe($confirmedCounts)).'. Relancer l\'import.');
         }
         $this->photos = LegacyPhotos::check($this->legacy, $uploadsDir);
 
