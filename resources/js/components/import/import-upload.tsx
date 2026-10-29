@@ -1,21 +1,13 @@
 import { router } from '@inertiajs/react';
 import { CameraIcon, ImageIcon } from 'lucide-react';
 import { useState } from 'react';
-import type { ChangeEvent, ReactNode } from 'react';
+import type { ChangeEvent } from 'react';
 import { store } from '@/actions/App/Http/Controllers/ImportController';
-import { buttonVariants } from '@/components/ui/button';
 import { Pending } from '@/components/ui/pending';
 import { useMediaQuery } from '@/hooks/use-media-query';
-import { cn } from '@/lib/utils';
 import { decodePhoto } from './decode-photo';
+import { ImportTile } from './import-tile';
 import { UnreadablePhoto } from './unreadable-photo';
-
-/**
- * Libellé stylé en bouton autour d'un champ fichier masqué (`sr-only`) : le
- * champ garde le focus clavier, dont le contour s'affiche sur le bouton.
- */
-const PICK_BUTTON =
-    'cursor-pointer focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-solid focus-within:outline-ring has-disabled:cursor-not-allowed has-disabled:opacity-55';
 
 type Step = 'pick' | 'preparing' | 'sending' | 'unreadable';
 
@@ -25,40 +17,13 @@ const PENDING_LABEL: Partial<Record<Step, string>> = {
     sending: 'Envoi de la photo…',
 };
 
-function PickButton({
-    className,
-    icon,
-    children,
-    ...input
-}: {
-    className: string;
-    icon: ReactNode;
-    children: string;
-    disabled: boolean;
-    capture?: 'environment';
-    'aria-label'?: string;
-    onChange: (event: ChangeEvent<HTMLInputElement>) => void;
-}) {
-    return (
-        <label className={cn(className, PICK_BUTTON)}>
-            {icon}
-            {children}
-            <input
-                type="file"
-                accept="image/*"
-                className="sr-only"
-                {...input}
-            />
-        </label>
-    );
-}
-
 /**
  * Envoi d'une photo (design D8) : décodage et réencodage JPEG dans le
  * navigateur, puis `POST /imports`. Le serveur met la lecture en file et
  * revient avec « Lecture en file d'attente… » ; la photo suivante peut partir
- * aussitôt. Sur écran tactile, « Prendre une photo » ouvre l'appareil photo
- * arrière ; « Choisir une photo » reste dessous, sans libellé entre les deux.
+ * aussitôt. Sur écran tactile, « Prendre une photo » (appareil photo arrière)
+ * et « Choisir une photo » sont deux tuiles côte à côte, séparées d'un filet ;
+ * sans écran tactile, « Choisir une photo » seule prend toute la largeur.
  */
 export function ImportUpload() {
     const touch = useMediaQuery('(pointer: coarse)');
@@ -108,35 +73,46 @@ export function ImportUpload() {
 
     return (
         <div className="flex flex-col gap-2">
-            {touch ? (
-                <PickButton
-                    className={cn(buttonVariants({ size: 'lg' }), 'md:w-fit')}
-                    icon={<CameraIcon aria-hidden="true" />}
-                    capture="environment"
+            <p className="mt-6 font-mono text-section text-ink-2 uppercase">
+                Nouvelle carte
+            </p>
+            <div className="flex gap-px overflow-hidden rounded-14 bg-rule">
+                {touch ? (
+                    <ImportTile
+                        icon={
+                            <CameraIcon
+                                aria-hidden="true"
+                                className="size-[22px] text-accent"
+                            />
+                        }
+                        title="Prendre une photo"
+                        source="Caméra"
+                        aria-label="Prendre une photo"
+                        capture="environment"
+                        disabled={busy}
+                        onChange={pickFrom}
+                    />
+                ) : null}
+                <ImportTile
+                    icon={
+                        <ImageIcon
+                            aria-hidden="true"
+                            className="size-[22px] text-ink"
+                        />
+                    }
+                    title="Choisir une photo"
+                    source="Photothèque"
+                    aria-label="Photo de la carte"
                     disabled={busy}
                     onChange={pickFrom}
-                >
-                    Prendre une photo
-                </PickButton>
-            ) : null}
-            <PickButton
-                className={cn(
-                    buttonVariants({ variant: 'outline' }),
-                    'md:w-fit',
-                )}
-                icon={<ImageIcon aria-hidden="true" />}
-                aria-label="Photo de la carte"
-                disabled={busy}
-                onChange={pickFrom}
-            >
-                Choisir une photo
-            </PickButton>
+                />
+            </div>
             <Pending
                 label={PENDING_LABEL[step] ?? null}
                 orb={step === 'sending' ? 'send' : 'prepare'}
             />
             {refusal ? (
-                <p role="alert" className="text-sm text-destructive">
+                <p role="alert" className="text-body-13 text-signal">
                     {refusal}
                 </p>
             ) : null}

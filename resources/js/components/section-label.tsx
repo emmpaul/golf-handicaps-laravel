@@ -9,13 +9,18 @@ import type { ReactNode } from 'react';
 export function SectionLabel({
     children,
     value,
+    id,
 }: {
     children: ReactNode;
     value?: ReactNode;
+    /** Pour une liste qui se nomme par ce libellé (`aria-labelledby`). */
+    id?: string;
 }) {
     return (
         <div className="flex items-baseline justify-between gap-3 border-b border-rule pb-2.5 font-mono text-section text-ink-2 uppercase">
-            <h2 className="font-mono">{children}</h2>
+            <h2 id={id} className="font-mono">
+                {children}
+            </h2>
             {value !== undefined && <span>{value}</span>}
         </div>
     );
