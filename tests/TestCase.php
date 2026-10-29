@@ -33,7 +33,7 @@ abstract class TestCase extends BaseTestCase
      */
     public function withPasscodeSession(): static
     {
-        return $this->withSession(['access.passcode' => Passcode::fingerprint()]);
+        return $this->withSession([Passcode::SESSION_KEY => Passcode::fingerprint()]);
     }
 
     /**

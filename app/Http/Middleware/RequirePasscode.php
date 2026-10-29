@@ -21,7 +21,7 @@ class RequirePasscode
      */
     public function handle(Request $request, Closure $next): Response
     {
-        if (Passcode::isFingerprint($request->session()->get('access.passcode'))) {
+        if (Passcode::opened($request)) {
             return $next($request);
         }
 

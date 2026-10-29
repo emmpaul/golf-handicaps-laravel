@@ -16,7 +16,7 @@ class LoginController extends Controller
      */
     public function create(Request $request): Response|RedirectResponse
     {
-        if (Passcode::isFingerprint($request->session()->get('access.passcode'))) {
+        if (Passcode::opened($request)) {
             return redirect('/');
         }
 
@@ -32,7 +32,7 @@ class LoginController extends Controller
 
         // true deletes the former session row: the identifier sent before login is dead.
         $request->session()->regenerate(true);
-        $request->session()->put('access.passcode', Passcode::fingerprint());
+        Passcode::open($request);
 
         return redirect('/');
     }
