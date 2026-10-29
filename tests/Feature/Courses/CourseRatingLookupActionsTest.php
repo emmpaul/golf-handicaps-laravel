@@ -12,7 +12,9 @@
  *   71,4 / 144;
  * - the most recent round taken by date of saving instead of date of play: the par 72 of the
  *   round of 2026-10-01, saved last, instead of the par 71 of 2026-10-17;
- * - a row taken whatever its status: the proposed row gives a target.
+ * - a row taken whatever its status: the proposed row gives a target;
+ * - the outcome written without comparing the SGT course of the target with the row: a lookup
+ *   relaunched during the reading of a candidate is overwritten by the earlier outcome.
  */
 
 use App\Domain\Courses\Actions\FinishCourseRatingLookup;
@@ -38,6 +40,14 @@ function lookupColumnsOf(CourseRating $rating): array
         $rating->status, $rating->note, $rating->candidates, $rating->tees_read, $rating->proposed_tee,
         $rating->sgt_course_id, $rating->rating_t, $rating->slope, $rating->source,
     ];
+}
+
+/**
+ * The target the job read on the row, before the outcome is written.
+ */
+function lookupTargetOf(CourseRating $rating): CourseRatingLookupTarget
+{
+    return new CourseRatingLookupTarget($rating->id, $rating->course_name, $rating->tees, $rating->sgt_course_id, 71);
 }
 
 describe('StartCourseRatingLookup', function () {
@@ -85,7 +95,7 @@ describe('FinishCourseRatingLookup', function () {
             'proposed_tee' => 'Red',
         ]);
 
-        app(FinishCourseRatingLookup::class)->handle($rating->id, CourseRatingLookupOutcome::notFound());
+        app(FinishCourseRatingLookup::class)->handle(lookupTargetOf($rating), CourseRatingLookupOutcome::notFound());
 
         expect(lookupColumnsOf($rating))->toBe([CourseRatingStatus::NotFound, null, null, null, null, null, null, null, null]);
     });
@@ -98,7 +108,7 @@ describe('FinishCourseRatingLookup', function () {
             'sgt_course_location' => null,
         ]);
 
-        app(FinishCourseRatingLookup::class)->handle($rating->id, CourseRatingLookupOutcome::proposed(
+        app(FinishCourseRatingLookup::class)->handle(lookupTargetOf($rating), CourseRatingLookupOutcome::proposed(
             new SgtCourse(30, 'Bethpage Black', 'Farmingdale, NY', 71),
             [new SgtTee('White', 742, 148), new SgtTee('Red', 714, 144)],
             'Red',
@@ -113,11 +123,34 @@ describe('FinishCourseRatingLookup', function () {
             ->and([$rating->sgt_course_name, $rating->sgt_course_location])->toBe(['Bethpage Black', 'Farmingdale, NY']);
     });
 
+    test('an outcome of a reading of a candidate on a row relaunched meanwhile writes nothing', function () {
+        // The job read the candidate 1951 chosen by the user; the user relaunched the whole
+        // lookup before it ended: the row is pending again, without SGT course, and a new job
+        // is queued. The outcome of the first job (proposed, course kept from the row) is
+        // dropped, and the new job does the whole lookup.
+        // Mutation: the guard on the SGT course of the target removed: the row becomes proposed
+        // without SGT course, and the new job stops at once (row no longer pending).
+        $rating = CourseRating::factory()->pending()->create([
+            'course_name' => 'SANCTUARY COVE', 'tees' => 'Blue',
+            'sgt_course_id' => 1951, 'sgt_course_name' => 'The Pines Sanctuary Cove', 'sgt_course_location' => 'Hope Island, Queensland, Australia',
+        ]);
+        $target = lookupTargetOf($rating);
+        $rating->update(['sgt_course_id' => null, 'sgt_course_name' => null, 'sgt_course_location' => null]);
+
+        app(FinishCourseRatingLookup::class)->handle($target, CourseRatingLookupOutcome::proposed(
+            null,
+            [new SgtTee('Blue', 731, 135)],
+            'Blue',
+        ));
+
+        expect(lookupColumnsOf($rating))->toBe([CourseRatingStatus::Pending, null, null, null, null, null, null, null, null]);
+    });
+
     test('an outcome on a row no longer pending writes nothing', function () {
         $rating = CourseRating::factory()->proposed()->create();
         $before = lookupColumnsOf($rating);
 
-        app(FinishCourseRatingLookup::class)->handle($rating->id, CourseRatingLookupOutcome::notFound());
+        app(FinishCourseRatingLookup::class)->handle(lookupTargetOf($rating), CourseRatingLookupOutcome::notFound());
 
         expect(lookupColumnsOf($rating))->toBe($before)
             ->and($before[0])->toBe(CourseRatingStatus::Proposed);
