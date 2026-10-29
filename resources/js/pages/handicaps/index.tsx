@@ -3,6 +3,10 @@ import { ComputationHelp } from '@/components/handicaps/computation-help';
 import { DifferentialBars } from '@/components/handicaps/differential-bars';
 import { PlayerTabs } from '@/components/handicaps/player-tabs';
 import {
+    ScoringStats,
+    type ScoringStatsData,
+} from '@/components/handicaps/scoring-stats';
+import {
     type HandicapHistoryRow,
     RoundHistory,
 } from '@/components/handicaps/round-history';
@@ -68,17 +72,21 @@ function summary(history: HandicapHistoryRow[]): string {
 /**
  * Handicaps page, one player at a time (spec `handicap-index`, « Mise en page
  * de la page Handicaps »): the player tabs, the chosen player's index, trend
- * and summary, the chart of the differentials, the list of the rounds, then
- * the folded explanation of the computation.
+ * and summary, the chart of the differentials, the STATS block (a deferred
+ * prop, D13), the list of the rounds, then the folded explanation of the
+ * computation.
  */
 export default function HandicapsIndex({
     players,
     selectedPlayerId,
     history,
+    scoringStats,
 }: {
     players: PlayerStanding[];
     selectedPlayerId: string | null;
     history: HandicapHistoryRow[];
+    /** Undefined until the deferred prop arrives; null without round. */
+    scoringStats?: ScoringStatsData | null;
 }) {
     const selected = players.find((player) => player.id === selectedPlayerId);
 
@@ -95,7 +103,11 @@ export default function HandicapsIndex({
                         players={players}
                         selectedPlayerId={selected.id}
                     />
-                    <PlayerSection player={selected} history={history} />
+                    <PlayerSection
+                        player={selected}
+                        history={history}
+                        scoringStats={scoringStats ?? null}
+                    />
                 </>
             )}
             <div className="mt-7">
@@ -105,13 +117,15 @@ export default function HandicapsIndex({
     );
 }
 
-/** The chosen player: index set very large, trend and summary, chart, then rounds. */
+/** The chosen player: index set very large, trend and summary, chart, stats, then rounds. */
 function PlayerSection({
     player,
     history,
+    scoringStats,
 }: {
     player: PlayerStanding;
     history: HandicapHistoryRow[];
+    scoringStats: ScoringStatsData | null;
 }) {
     const playerTrend = trend(player.deltaT);
 
@@ -176,6 +190,7 @@ function PlayerSection({
                         history={history}
                         colorSlot={player.colorSlot}
                     />
+                    <ScoringStats stats={scoringStats} />
                     <RoundHistory
                         name={player.name}
                         history={history}
