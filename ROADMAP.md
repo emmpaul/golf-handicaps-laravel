@@ -54,7 +54,7 @@ Photo, job de file, lecture par l'IA, écran de correction, budget mensuel.
 
 ## 7. `home-and-match-strokes`
 
-**Dépend de** : 6, 8. **Statut** : à proposer.
+**Dépend de** : 6, 8. **Statut** : proposé. L'apply attend l'archivage de 8.
 
 Tableau de bord, dont le bloc « Imports à vérifier » qui lit les imports de 8, page des handicaps, coups rendus en match.
 
