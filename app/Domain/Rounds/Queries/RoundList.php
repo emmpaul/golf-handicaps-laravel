@@ -16,30 +16,38 @@ use stdClass;
  * The rounds of the Rounds page (spec rounds, « Liste des rounds »): from the latest to the
  * oldest by date of play, then by date of saving, each with the gross of its players in the
  * order of the card, and its net winners: every player ranked first, ties included, none when
- * nobody had an index before the round. Five queries whatever the number of rounds.
+ * nobody had an index before the round. Five queries whatever the number of rounds; with a
+ * limit, only the latest rounds and their own gross and statistics (spec home-dashboard,
+ * « Dernier round », design D2).
  */
 final class RoundList
 {
     /**
+     * @param  int|null  $limit  the number of latest rounds to read, all of them when null
      * @return list<array{id: string, playedOn: string, courseName: string, tees: string, players: list<array{name: string, gross: int}>, netWinners: list<string>}>
      */
-    public function get(): array
+    public function get(?int $limit = null): array
     {
         $rounds = Round::query()
             ->with('lines.player:id,name')
             ->orderByDesc('played_on')
             ->orderByDesc('created_at')
             ->orderByDesc('id')
+            ->when($limit, fn ($query, int $limit) => $query->limit($limit))
             ->get();
+
+        // Without a limit, or without round at all, every score and statistic is read.
+        $roundIds = $limit === null ? null : $rounds->modelKeys();
 
         $gross = Score::query()
             ->toBase()
             ->selectRaw('round_id, player_id, sum(strokes) as gross')
+            ->when($roundIds, fn ($query, array $ids) => $query->whereIn('round_id', $ids))
             ->groupBy('round_id', 'player_id')
             ->get()
             ->mapWithKeys(fn (object $row): array => ["{$row->round_id}:{$row->player_id}" => (int) $row->gross]);
 
-        $stats = $this->statsByRound();
+        $stats = $this->statsByRound($roundIds);
 
         return array_values($rounds->map(fn (Round $round): array => [
             'id' => $round->id,
@@ -58,11 +66,12 @@ final class RoundList
      * The course of every round with a line in player_round_stats, keyed by round: its par
      * total, the rating typed for its course and tees (compared in SQL without case nor
      * surrounding spaces, null without) and the gross and index before the round of each
-     * player, keyed by player. One query.
+     * player, keyed by player. One query, restricted to $roundIds when given.
      *
+     * @param  array<int, int|string>|null  $roundIds
      * @return array<string, array{par: int, ratingT: int|null, slope: int|null, entries: array<string, NetEntry>}>
      */
-    private function statsByRound(): array
+    private function statsByRound(?array $roundIds): array
     {
         $rows = PlayerRoundStat::query()
             ->toBase()
@@ -79,6 +88,7 @@ final class RoundList
                 'course_ratings.slope',
             ])
             ->selectRaw('(select sum(round_holes.par) from round_holes where round_holes.round_id = rounds.id) as par')
+            ->when($roundIds, fn ($query, array $ids) => $query->whereIn('player_round_stats.round_id', $ids))
             ->get();
 
         $byRound = [];
