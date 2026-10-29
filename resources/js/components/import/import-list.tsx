@@ -49,15 +49,17 @@ const createdLabel = (createdAt: string) => {
 
 /**
  * Pastille d'état (spec « Ligne d'un import ») : les mots du design pour un
- * import prêt (« À VÉRIFIER », ambre) et en lecture (« LECTURE… », cyan), le
- * libellé du serveur pour les autres, « Échec » en rouge, le reste neutre.
+ * import prêt (« À VÉRIFIER », ambre) et en lecture (« LECTURE… », cyan),
+ * « ENREGISTRÉ » neutre pour un import dont le round est enregistré (son état
+ * reste « prêt », DO28), le libellé du serveur pour les autres, « Échec » en
+ * rouge, le reste neutre.
  */
 function statusPill(item: ImportListItem): {
     text: string;
     variant: 'accent' | 'info' | 'destructive' | 'secondary';
 } {
     if (item.roundId !== null) {
-        return { text: item.label, variant: 'secondary' };
+        return { text: 'ENREGISTRÉ', variant: 'secondary' };
     }
 
     switch (item.status) {

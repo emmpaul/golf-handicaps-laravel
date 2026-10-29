@@ -77,6 +77,10 @@ Chaque import SHALL s'afficher sur une ligne : vignette de sa photo de 56 × 42 
 - **WHEN** un import est en « Échec » faute de budget
 - **THEN** sa ligne montre la pastille rouge « ÉCHEC », la raison « Budget IA du mois atteint » en Geist 400, 13 px, gris, et les boutons « Ouvrir l'écran de correction vide » (plein), « Relancer la lecture » (contour) et « Supprimer » (corbeille)
 
+#### Scenario: Import enregistré
+- **WHEN** la liste contient un import dont le round est enregistré
+- **THEN** sa ligne montre la pastille neutre « ENREGISTRÉ », texte `oklch(0.68 0.01 260)`, jamais « À VÉRIFIER » ni « Prêt à vérifier », et le bouton plein « Voir le round » vers la page du round
+
 ### Requirement: Mise en page de l'écran de vérification
 L'écran de vérification d'un import SHALL suivre la mise en page de l'éditeur (spec `rounds`), avec le titre « Vérifier la carte », le lien de retour « Importer », la photo 18 px sous le titre (proportions 16/10, coins de 12 px), le repère « Carte lue par l’IA, vérifie chaque case » en `oklch(0.8 0.12 200)` et l'indicateur de sauvegarde en Geist Mono 500, 11 px, gris. Le nom lu s'affiche « lu » au-dessus de « « GAB » », Geist Mono 500, 11 px, dans 64 px.
 
