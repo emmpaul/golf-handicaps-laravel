@@ -70,3 +70,9 @@ export function cn(...inputs: ClassValue[]) {
  */
 export const ACTION_LINK =
     'inline-flex items-center underline underline-offset-3 max-md:min-h-11';
+
+/**
+ * Lien de la rangée d'un titre de page (« Parcours », « Saisie manuelle ») : Geist 500, 14 px,
+ * bas aligné sur le titre, 44 px de toucher (design, pages Rounds et Importer).
+ */
+export const TITLE_LINK = 'flex min-h-11 items-end pb-1 text-link';

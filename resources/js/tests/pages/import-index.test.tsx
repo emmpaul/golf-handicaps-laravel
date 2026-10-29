@@ -47,7 +47,15 @@ import { ROUND } from '@/tests/reference-round';
 // - the buttons left enabled while preparing → the pending test goes red;
 // - « Relancer la lecture » left enabled while its reading is retried → the
 //   retry test goes red;
-// - « Annuler » wired to the delete visit → the cancel test goes red.
+// - « Annuler » wired to the delete visit → the cancel test goes red;
+// - « Vérifier » and « Supprimer » rendered for every line whatever its
+//   actions (buttons for an import being read) → the list test expects no
+//   action on the reading line and goes red;
+// - a « Recadrer » button rendered beside « Vérifier » → the ready line test
+//   goes red.
+// Capitals of the design go through `uppercase` (design D2): the DOM keeps
+// « Imports », « Caméra », « Échec »; the words the design changes
+// (« À VÉRIFIER », « LECTURE… ») are written as such.
 
 vi.mock('thinking-orbs', () => ({
     ThinkingOrb: () => <canvas data-testid="orb" />,
@@ -69,6 +77,7 @@ vi.mock('@/components/import/decode-photo', () => ({
 vi.mock('@inertiajs/react', async (importOriginal) => ({
     ...(await importOriginal<typeof import('@inertiajs/react')>()),
     Head: () => null,
+    usePage: () => ({ url: '/import', props: {} }),
 }));
 
 const READY = '0190a6b2-7c3e-7000-8000-0000000000c1';
@@ -156,25 +165,36 @@ const line = (heading: string) =>
         .getByRole('heading', { level: 3, name: heading })
         .closest('li') as HTMLElement;
 
-/** The names of the actions of a line, links and buttons, in their order. */
+/** The names of the actions of a line, links and buttons, in their order (the trash is named by `aria-label`). */
 const actions = (item: HTMLElement) =>
-    [...item.querySelectorAll('a, button')].map((action) => action.textContent);
+    [...item.querySelectorAll('a, button')].map(
+        (action) => action.getAttribute('aria-label') ?? action.textContent,
+    );
 
 describe('Sending a photo', () => {
-    it('on a touch screen, puts « Prendre une photo » first as the filled button, then « Choisir une photo »', () => {
+    // Spec « Une action principale à l'import », « Mise en page de l'écran
+    // Importer ». Mutations: « Prendre une photo » rendered under « Choisir une
+    // photo » instead of beside it (not the same group) → red; the captions
+    // « CAMÉRA » / « PHOTOTHÈQUE » dropped → red.
+    it('on a touch screen, puts the tiles « Prendre une photo » / « CAMÉRA » and « Choisir une photo » / « PHOTOTHÈQUE » side by side', () => {
         coarse = true;
 
         render(<ImportIndex imports={[]} readingEnabled />);
 
         const take = screen.getByLabelText('Prendre une photo');
-        const takeButton = take.closest('label') as HTMLElement;
-        const chooseButton = photoInput().closest('label') as HTMLElement;
+        const takeTile = take.closest('label') as HTMLElement;
+        const chooseTile = photoInput().closest('label') as HTMLElement;
+        const group = takeTile.parentElement as HTMLElement;
 
         expect(take.getAttribute('capture')).toBe('environment');
-        expect(takeButton.className).toContain('bg-ink');
-        expect(chooseButton.textContent).toBe('Choisir une photo');
-        expect(chooseButton.className).toContain('border-rule');
-        expect(takeButton.nextElementSibling).toBe(chooseButton);
+        expect(takeTile.textContent).toBe('Prendre une photoCaméra');
+        expect(chooseTile.textContent).toBe('Choisir une photoPhotothèque');
+        expect(takeTile.nextElementSibling).toBe(chooseTile);
+        expect(group.children).toHaveLength(2);
+        expect(group.className).toContain('rounded-14');
+        expect(takeTile.className).toContain('flex-1');
+        expect(chooseTile.className).toContain('flex-1');
+        expect(takeTile.className).toContain('bg-surface-1');
         expect(screen.queryByText('Photo de la carte')).toBeNull();
     });
 
@@ -203,11 +223,39 @@ describe('Sending a photo', () => {
         expect(photoInput()).not.toBeDisabled();
     });
 
-    it('on a computer, shows no « Prendre une photo » and keeps « Photo de la carte »', () => {
+    it('on a computer, shows the single tile « Choisir une photo » and keeps « Photo de la carte »', () => {
         render(<ImportIndex imports={[]} readingEnabled />);
 
+        const chooseTile = photoInput().closest('label') as HTMLElement;
+
         expect(screen.queryByLabelText('Prendre une photo')).toBeNull();
+        expect(screen.queryByText('Caméra')).toBeNull();
         expect(photoInput().getAttribute('type')).toBe('file');
+        expect(chooseTile.parentElement?.children).toHaveLength(1);
+        expect(chooseTile.className).toContain('flex-1');
+    });
+
+    // Spec « Mise en page de l'écran Importer ».
+    it('shows the title, « Saisie manuelle », the hint and « NOUVELLE CARTE »', () => {
+        render(<ImportIndex imports={[]} readingEnabled />);
+
+        expect(screen.getByRole('heading', { level: 1 }).textContent).toBe(
+            'Importer',
+        );
+        expect(
+            screen
+                .getByRole('link', { name: 'Saisie manuelle' })
+                .getAttribute('href'),
+        ).toBe('/rounds/new');
+        expect(
+            screen.getByText(
+                "Photo de l'écran de fin de round, prise au téléphone.",
+            ),
+        ).toBeInTheDocument();
+        expect(screen.getByText('Nouvelle carte')).toBeInTheDocument();
+        expect(
+            screen.getByRole('link', { name: 'Golf' }).getAttribute('href'),
+        ).toBe('/');
     });
 
     it('shows « Préparation de la photo… » then « Envoi de la photo… », the buttons disabled', async () => {
@@ -261,7 +309,7 @@ describe('Sending a photo', () => {
             screen.getByText('Format de photo non lisible, exporte-la en JPEG'),
         ).toBeInTheDocument();
         expect(
-            screen
+            within(screen.getByRole('alert'))
                 .getByRole('link', { name: 'Saisie manuelle' })
                 .getAttribute('href'),
         ).toBe('/rounds/new');
@@ -304,7 +352,7 @@ describe('Sending a photo', () => {
             ),
         ).toBeInTheDocument();
         expect(
-            screen
+            within(screen.getByRole('alert'))
                 .getByRole('link', { name: 'Saisie manuelle' })
                 .getAttribute('href'),
         ).toBe('/rounds/new');
@@ -329,60 +377,161 @@ describe('List of imports', () => {
                 .getAllByRole('heading', { level: 3 })
                 .map((heading) => heading.textContent),
         ).toEqual([
-            '17 octobre 2026 à 21:05',
-            '17 octobre 2026 à 21:04',
-            '17 octobre 2026 à 21:03',
-            '17 octobre 2026 à 21:02',
-            '17 octobre 2026 à 21:01',
+            '17 oct. 2026 · 21:05',
+            '17 oct. 2026 · 21:04',
+            '17 oct. 2026 · 21:03',
+            '17 oct. 2026 · 21:02',
+            '17 oct. 2026 · 21:01',
         ]);
         expect(
             within(list)
                 .getAllByTestId('import-status')
                 .map((badge) => badge.textContent),
         ).toEqual([
-            'Prêt à vérifier',
+            'À VÉRIFIER',
             'Échec',
             'En attente',
-            'Lecture en cours',
+            'LECTURE…',
             'Prêt à vérifier',
         ]);
 
-        expect(actions(line('17 octobre 2026 à 21:05'))).toEqual([
+        expect(actions(line('17 oct. 2026 · 21:05'))).toEqual([
             'Vérifier',
             'Supprimer',
         ]);
-        expect(actions(line('17 octobre 2026 à 21:04'))).toEqual([
+        expect(actions(line('17 oct. 2026 · 21:04'))).toEqual([
             "Ouvrir l'écran de correction vide",
             'Relancer la lecture',
             'Supprimer',
         ]);
-        expect(actions(line('17 octobre 2026 à 21:03'))).toEqual(['Supprimer']);
-        expect(actions(line('17 octobre 2026 à 21:02'))).toEqual([]);
-        expect(actions(line('17 octobre 2026 à 21:01'))).toEqual([
+        expect(actions(line('17 oct. 2026 · 21:03'))).toEqual(['Supprimer']);
+        expect(actions(line('17 oct. 2026 · 21:02'))).toEqual([]);
+        expect(actions(line('17 oct. 2026 · 21:01'))).toEqual([
             'Voir le round',
         ]);
 
         expect(
-            within(line('17 octobre 2026 à 21:05'))
+            within(line('17 oct. 2026 · 21:05'))
                 .getByRole('link', { name: 'Vérifier' })
                 .getAttribute('href'),
         ).toBe(`/imports/${READY}`);
         expect(
-            within(line('17 octobre 2026 à 21:04'))
+            within(line('17 oct. 2026 · 21:04'))
                 .getByRole('link', {
                     name: "Ouvrir l'écran de correction vide",
                 })
                 .getAttribute('href'),
         ).toBe(`/imports/${FAILED}`);
         expect(
-            within(line('17 octobre 2026 à 21:01'))
+            within(line('17 oct. 2026 · 21:01'))
                 .getByRole('link', { name: 'Voir le round' })
                 .getAttribute('href'),
         ).toBe(`/rounds/${ROUND}`);
         expect(
-            within(line('17 octobre 2026 à 21:04')).getByText(
+            within(line('17 oct. 2026 · 21:04')).getByText(
                 'Budget IA du mois atteint',
             ),
+        ).toBeInTheDocument();
+    });
+
+    // Spec « Ligne d'un import ». Mutations: the ready pill left neutral
+    // (`secondary`) → red; the reading pill in `accent` → red; the failed pill
+    // without `text-signal` → red.
+    it('colours the pills: « À VÉRIFIER » amber, « LECTURE… » cyan, « ÉCHEC » red, « En attente » neutral', () => {
+        render(
+            <ImportIndex
+                imports={[ready, failed, queued, reading]}
+                readingEnabled
+            />,
+        );
+
+        const pill = (heading: string) =>
+            within(line(heading)).getByTestId('import-status').className;
+
+        expect(pill('17 oct. 2026 · 21:05')).toContain('text-accent');
+        expect(pill('17 oct. 2026 · 21:05')).toContain('bg-accent/15');
+        expect(pill('17 oct. 2026 · 21:04')).toContain('text-signal');
+        expect(pill('17 oct. 2026 · 21:03')).toContain('text-ink-2');
+        expect(pill('17 oct. 2026 · 21:02')).toContain('text-info');
+        expect(pill('17 oct. 2026 · 21:02')).toContain('bg-info/15');
+    });
+
+    // Mutations: the date written « 23 octobre 2026 à 16:58 » (the former
+    // heading) → red; the thumbnail dropped → red.
+    it('titles a line with the instant of sending, « 23 oct. 2026 · 16:58 », beside the thumbnail of its photo', () => {
+        render(
+            <ImportIndex
+                imports={[{ ...ready, createdAt: '2026-10-23 16:58' }]}
+                readingEnabled
+            />,
+        );
+
+        const item = line('23 oct. 2026 · 16:58');
+        const thumbnail = item.querySelector('img') as HTMLImageElement;
+
+        expect(thumbnail.getAttribute('src')).toBe(`/imports/${READY}/photo`);
+        expect(thumbnail.getAttribute('alt')).toBe('');
+        expect(thumbnail.parentElement?.className).toContain('h-[42px]');
+        expect(thumbnail.parentElement?.className).toContain('w-14');
+        expect(within(item).getByRole('time').getAttribute('datetime')).toBe(
+            '2026-10-23T16:58',
+        );
+    });
+
+    // Mutations: « Vérifier » in an outline button → red; « Supprimer » kept as
+    // a text button (no trash icon in `text-signal`) → red; a « Recadrer »
+    // button rendered → red.
+    it('gives a ready import the filled « Vérifier » and the square trash « Supprimer », never « Recadrer »', () => {
+        render(<ImportIndex imports={[ready]} readingEnabled />);
+
+        const item = line('17 oct. 2026 · 21:05');
+        const verify = within(item).getByRole('link', { name: 'Vérifier' });
+        const trash = within(item).getByRole('button', { name: 'Supprimer' });
+
+        expect(verify.className).toContain('bg-ink');
+        expect(verify.className).toContain('h-11');
+        expect(verify.className).toContain('flex-1');
+        expect(trash.textContent).toBe('');
+        expect(trash.className).toContain('size-11');
+        expect(trash.className).toContain('border-rule');
+        expect(trash.querySelector('svg')?.getAttribute('class')).toContain(
+            'text-signal',
+        );
+        expect(screen.queryByText(/Recadrer/)).toBeNull();
+    });
+
+    it('writes the failure of a failed import in grey 13 px under its line', () => {
+        render(<ImportIndex imports={[failed]} readingEnabled />);
+
+        const reason = within(line('17 oct. 2026 · 21:04')).getByText(
+            'Budget IA du mois atteint',
+        );
+
+        expect(reason.className).toContain('text-body-13');
+        expect(reason.className).toContain('text-ink-2');
+    });
+
+    // Spec « Mise en page de l'écran Importer ». Mutation: the section hidden
+    // when the list is empty (the former `return null`) → red.
+    it('heads the list with « IMPORTS » and its count, and says « Aucun import en attente. » when empty', () => {
+        const { rerender } = render(
+            <ImportIndex imports={[ready, failed]} readingEnabled />,
+        );
+
+        const heading = screen.getByRole('heading', {
+            level: 2,
+            name: 'Imports',
+        });
+        expect(heading.parentElement?.textContent).toBe('Imports2');
+
+        rerender(<ImportIndex imports={[]} readingEnabled />);
+
+        expect(
+            screen.getByRole('heading', { level: 2, name: 'Imports' })
+                .parentElement?.textContent,
+        ).toBe('Imports0');
+        expect(
+            screen.getByText('Aucun import en attente.'),
         ).toBeInTheDocument();
     });
 
@@ -409,7 +558,7 @@ describe('List of imports', () => {
             />,
         );
 
-        expect(actions(line('17 octobre 2026 à 21:04'))).toEqual([
+        expect(actions(line('17 oct. 2026 · 21:04'))).toEqual([
             "Ouvrir l'écran de correction vide",
             'Supprimer',
         ]);
@@ -420,7 +569,7 @@ describe('List of imports', () => {
 
         render(<ImportIndex imports={[failed, other]} readingEnabled />);
 
-        const retried = line('17 octobre 2026 à 21:04');
+        const retried = line('17 oct. 2026 · 21:04');
         await userEvent.click(
             within(retried).getByRole('button', {
                 name: 'Relancer la lecture',
@@ -454,7 +603,7 @@ describe('List of imports', () => {
                 .getAttribute('aria-disabled'),
         ).toBe('true');
 
-        const untouched = line('17 octobre 2026 à 21:00');
+        const untouched = line('17 oct. 2026 · 21:00');
         expect(within(untouched).getByRole('status').textContent).toBe('');
         expect(
             within(untouched).getByRole('button', {
@@ -512,7 +661,7 @@ describe('List of imports', () => {
         render(<ImportIndex imports={[ready]} readingEnabled />);
 
         await userEvent.click(
-            within(line('17 octobre 2026 à 21:05')).getByRole('button', {
+            within(line('17 oct. 2026 · 21:05')).getByRole('button', {
                 name: 'Supprimer',
             }),
         );
@@ -547,7 +696,7 @@ describe('List of imports', () => {
         render(<ImportIndex imports={[ready]} readingEnabled />);
 
         await userEvent.click(
-            within(line('17 octobre 2026 à 21:05')).getByRole('button', {
+            within(line('17 oct. 2026 · 21:05')).getByRole('button', {
                 name: 'Supprimer',
             }),
         );
@@ -558,6 +707,6 @@ describe('List of imports', () => {
         );
 
         expect(remove).not.toHaveBeenCalled();
-        expect(line('17 octobre 2026 à 21:05')).toBeInTheDocument();
+        expect(line('17 oct. 2026 · 21:05')).toBeInTheDocument();
     });
 });

@@ -4,6 +4,7 @@ import { create, show } from '@/actions/App/Http/Controllers/RoundController';
 import { PageTopRow } from '@/components/page-top-row';
 import { PlayerSwatch } from '@/components/player-swatch';
 import { formatPlayedOn, NO_VALUE, playedOnParts } from '@/lib/format';
+import { TITLE_LINK } from '@/lib/utils';
 
 export type RoundListItem = {
     id: string;
@@ -15,9 +16,6 @@ export type RoundListItem = {
     /** Joueurs classés premiers en net, ex æquo compris ; vide si personne n'avait d'index. */
     netWinners: string[];
 };
-
-/** Lien de la rangée du titre : Geist 500, 14 px, bas aligné sur le titre, 44 px de toucher. */
-const TITLE_LINK = 'flex min-h-11 items-end pb-1 text-link';
 
 /**
  * Rounds du plus récent au plus ancien (l'ordre vient du serveur, RoundList),

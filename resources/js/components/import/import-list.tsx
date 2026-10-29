@@ -1,13 +1,15 @@
 import { Link, router, usePoll } from '@inertiajs/react';
 import { useEffect, useState } from 'react';
 import { show } from '@/actions/App/Http/Controllers/ImportController';
+import ImportPhotoController from '@/actions/App/Http/Controllers/ImportPhotoController';
 import ImportReadingController from '@/actions/App/Http/Controllers/ImportReadingController';
 import { show as showRound } from '@/actions/App/Http/Controllers/RoundController';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
+import { SectionLabel } from '@/components/section-label';
+import { Button, buttonVariants } from '@/components/ui/button';
 import { ORB_FOR, Pending, PendingOrb } from '@/components/ui/pending';
-import { formatPlayedOn } from '@/lib/format';
-import { ACTION_LINK, cn } from '@/lib/utils';
+import { formatShortPlayedOn } from '@/lib/format';
+import { cn } from '@/lib/utils';
 import type { RouteDefinition } from '@/wayfinder';
 import { DeleteImport } from './delete-import';
 
@@ -38,14 +40,42 @@ export const POLL_INTERVAL_MS = 2000;
 const isWaiting = ({ status }: ImportListItem) =>
     status === 'queued' || status === 'reading';
 
-/** « 17 octobre 2026 à 21:05 » pour `2026-10-17 21:05`. */
+/** « 23 oct. 2026 · 16:58 » pour `2026-10-23 16:58` (décision Q5). */
 const createdLabel = (createdAt: string) => {
     const [date, time] = createdAt.split(' ');
 
-    return `${formatPlayedOn(date)} à ${time}`;
+    return `${formatShortPlayedOn(date)} · ${time}`;
 };
 
-/** Lien d'action ; désactivé pendant la relance de la lecture de sa ligne. */
+/**
+ * Pastille d'état (spec « Ligne d'un import ») : les mots du design pour un
+ * import prêt (« À VÉRIFIER », ambre) et en lecture (« LECTURE… », cyan), le
+ * libellé du serveur pour les autres, « Échec » en rouge, le reste neutre.
+ */
+function statusPill(item: ImportListItem): {
+    text: string;
+    variant: 'accent' | 'info' | 'destructive' | 'secondary';
+} {
+    if (item.roundId !== null) {
+        return { text: item.label, variant: 'secondary' };
+    }
+
+    switch (item.status) {
+        case 'ready':
+            return { text: 'À VÉRIFIER', variant: 'accent' };
+        case 'reading':
+            return { text: 'LECTURE…', variant: 'info' };
+        case 'failed':
+            return { text: item.label, variant: 'destructive' };
+        default:
+            return { text: item.label, variant: 'secondary' };
+    }
+}
+
+/**
+ * Lien d'action en bouton de 44 px : le premier est plein et prend la largeur
+ * restante ; désactivé pendant la relance de la lecture de sa ligne.
+ */
 function ActionLink({
     href,
     disabled,
@@ -66,8 +96,9 @@ function ActionLink({
                 }
             }}
             className={cn(
-                ACTION_LINK,
-                'aria-disabled:cursor-not-allowed aria-disabled:opacity-55',
+                buttonVariants({ size: 'sm' }),
+                'flex-1',
+                'aria-disabled:cursor-not-allowed aria-disabled:bg-surface-3 aria-disabled:text-ink-3',
             )}
         >
             {children}
@@ -96,27 +127,42 @@ function ImportLine({ item }: { item: ImportListItem }) {
         );
     }
 
+    const pill = statusPill(item);
+
     return (
-        <li className="text-sm flex flex-wrap items-center gap-x-3 gap-y-1 border-b py-2">
-            <h3 className="font-heading text-base font-semibold">
-                <time dateTime={item.createdAt.replace(' ', 'T')}>
-                    {heading}
-                </time>
-            </h3>
-            {/* Orbe seule, sans `role="status"` : le badge change déjà à chaque rafraîchissement. */}
-            {item.status === 'queued' || item.status === 'reading' ? (
-                <PendingOrb state={ORB_FOR[item.status]} />
+        <li className="border-b border-rule-soft py-4">
+            <div className="flex items-center gap-3">
+                <div className="h-[42px] w-14 flex-none overflow-hidden rounded-6 bg-surface-2">
+                    <img
+                        src={ImportPhotoController.url(item.id)}
+                        alt=""
+                        className="size-full object-cover object-[50%_55%]"
+                    />
+                </div>
+                <h3 className="min-w-0 text-label">
+                    <time dateTime={item.createdAt.replace(' ', 'T')}>
+                        {heading}
+                    </time>
+                </h3>
+                <span className="ml-auto flex flex-none items-center gap-2">
+                    {/* Orbe seule, sans `role="status"` : la pastille change déjà à chaque rafraîchissement. */}
+                    {item.status === 'queued' || item.status === 'reading' ? (
+                        <PendingOrb state={ORB_FOR[item.status]} />
+                    ) : null}
+                    <Badge
+                        data-testid="import-status"
+                        variant={pill.variant}
+                        className="h-auto px-2 py-[5px] tracking-[0.06em]"
+                    >
+                        {pill.text}
+                    </Badge>
+                </span>
+            </div>
+            {item.failure !== null ? (
+                <p className="mt-2 text-body-13 text-ink-2">{item.failure}</p>
             ) : null}
-            <span className="flex basis-full flex-wrap items-baseline justify-between gap-x-3">
-                <Badge
-                    data-testid="import-status"
-                    variant={
-                        item.status === 'failed' ? 'destructive' : 'secondary'
-                    }
-                >
-                    {item.label}
-                </Badge>
-                <span className="ml-auto flex min-w-0 flex-wrap items-center justify-end gap-x-4">
+            {item.actions.length > 0 ? (
+                <div className="mt-3 flex flex-wrap gap-2">
                     {has('viewRound') && item.roundId !== null ? (
                         <ActionLink
                             href={showRound(item.roundId)}
@@ -137,9 +183,9 @@ function ImportLine({ item }: { item: ImportListItem }) {
                     ) : null}
                     {has('retry') ? (
                         <Button
-                            variant="ghost"
+                            variant="outline"
                             size="sm"
-                            className="max-md:min-h-11"
+                            className="font-medium"
                             disabled={retrying}
                             onClick={retry}
                         >
@@ -149,12 +195,7 @@ function ImportLine({ item }: { item: ImportListItem }) {
                     {has('delete') ? (
                         <DeleteImport importId={item.id} disabled={retrying} />
                     ) : null}
-                </span>
-            </span>
-            {item.failure !== null ? (
-                <p className="basis-full text-muted-foreground">
-                    {item.failure}
-                </p>
+                </div>
             ) : null}
             {has('retry') ? (
                 <Pending
@@ -187,30 +228,22 @@ export function ImportList({ imports }: { imports: ImportListItem[] }) {
         }
     }, [waiting, start, stop]);
 
-    if (imports.length === 0) {
-        return null;
-    }
-
     return (
-        <section
-            aria-labelledby="imports-title"
-            className="flex flex-col gap-3"
-        >
-            <h2
-                id="imports-title"
-                className="font-heading text-xl font-extrabold"
-            >
+        <section aria-labelledby="imports-title" className="mt-[30px]">
+            <SectionLabel id="imports-title" value={imports.length}>
                 Imports
-            </h2>
-            {/* Registre réglé : filet d'encre en tête, une rangée par import sur un filet fin. */}
-            <ul
-                aria-labelledby="imports-title"
-                className="flex flex-col border-t-2 border-foreground"
-            >
-                {imports.map((item) => (
-                    <ImportLine key={item.id} item={item} />
-                ))}
-            </ul>
+            </SectionLabel>
+            {imports.length === 0 ? (
+                <p className="mt-5 text-body text-ink-2">
+                    Aucun import en attente.
+                </p>
+            ) : (
+                <ul aria-labelledby="imports-title">
+                    {imports.map((item) => (
+                        <ImportLine key={item.id} item={item} />
+                    ))}
+                </ul>
+            )}
         </section>
     );
 }

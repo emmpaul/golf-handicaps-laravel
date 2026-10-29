@@ -1,4 +1,5 @@
 import { router } from '@inertiajs/react';
+import { Trash2Icon } from 'lucide-react';
 import { useState } from 'react';
 import { destroy } from '@/actions/App/Http/Controllers/ImportController';
 import {
@@ -43,15 +44,13 @@ export function DeleteImport({
         <AlertDialog open={open} onOpenChange={setOpen}>
             <AlertDialogTrigger
                 disabled={disabled}
-                render={
-                    <Button
-                        variant="ghost"
-                        size="sm"
-                        className="max-md:min-h-11"
-                    />
-                }
+                aria-label="Supprimer"
+                render={<Button variant="outline" size="icon" />}
             >
-                Supprimer
+                <Trash2Icon
+                    aria-hidden="true"
+                    className="size-[18px] text-signal"
+                />
             </AlertDialogTrigger>
             <AlertDialogContent>
                 <AlertDialogHeader>
