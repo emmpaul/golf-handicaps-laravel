@@ -594,6 +594,33 @@ describe('Handicaps page', () => {
         expect(screen.getByText('54 trous')).toBeTruthy();
     });
 
+    // Change of player (D8, DO31): the chart and the STATS block are keyed by
+    // player so they replay; with the same key on both siblings, React kept
+    // the former chart beside the new one. Mutation: `key={player.id}` on
+    // both DifferentialBars and ScoringStats → two « Différentiels » headings,
+    // this test goes red.
+    it('shows one chart only after switching from Gab to Manu', () => {
+        const { rerender } = render(
+            <HandicapsIndex
+                players={players}
+                selectedPlayerId={GAB}
+                history={gabHistory}
+            />,
+        );
+
+        rerender(
+            <HandicapsIndex
+                players={players}
+                selectedPlayerId={MANU}
+                history={history(8, 8, 158)}
+            />,
+        );
+
+        expect(
+            screen.getAllByRole('heading', { name: 'Différentiels' }),
+        ).toHaveLength(1);
+    });
+
     it('shows « Aucun joueur. » without tabs when there is no player', () => {
         render(
             <HandicapsIndex

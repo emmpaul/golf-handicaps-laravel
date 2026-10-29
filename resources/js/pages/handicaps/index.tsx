@@ -194,12 +194,16 @@ function PlayerSection({
             </p>
             {history.length > 0 ? (
                 <>
+                    {/* Keys distinct per sibling: one shared key left the former chart in place (DO31). */}
                     <DifferentialBars
-                        key={player.id}
+                        key={`bars-${player.id}`}
                         history={history}
                         colorSlot={player.colorSlot}
                     />
-                    <ScoringStats key={player.id} stats={scoringStats} />
+                    <ScoringStats
+                        key={`stats-${player.id}`}
+                        stats={scoringStats}
+                    />
                     <RoundHistory
                         name={player.name}
                         history={history}
