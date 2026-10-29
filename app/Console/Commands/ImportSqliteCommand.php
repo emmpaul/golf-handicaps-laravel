@@ -35,7 +35,7 @@ class ImportSqliteCommand extends Command
             $report = $importLegacyDatabase->handle(
                 (string) $this->argument('db'),
                 is_string($uploads) ? $uploads : null,
-                $force,
+                $force ? $nonEmpty : null,
                 (bool) $this->option('dry-run'),
             );
         } catch (LegacyImportFailed $failure) {
