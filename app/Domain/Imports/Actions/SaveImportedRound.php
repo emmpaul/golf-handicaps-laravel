@@ -3,6 +3,8 @@
 namespace App\Domain\Imports\Actions;
 
 use App\Domain\Imports\Exceptions\ImportAlreadySaved;
+use App\Domain\Imports\Exceptions\ImportBeingRead;
+use App\Domain\Imports\ImportStatus;
 use App\Domain\Players\Actions\AssignAlias;
 use App\Domain\Players\PlayerNameMatcher;
 use App\Domain\Rounds\Actions\CreateRound;
@@ -28,6 +30,8 @@ final class SaveImportedRound
     /**
      * @throws ImportAlreadySaved when the import has a round, checked under the lock: two tabs
      *                            saving the same import save one round
+     * @throws ImportBeingRead when the import is queued or being read, checked under the lock:
+     *                         the job would read it after its round is saved
      * @throws IncoherentRoundCard before any write
      */
     public function handle(Import $import, RoundCard $card): Round
@@ -36,6 +40,9 @@ final class SaveImportedRound
             $locked = Import::query()->lockForUpdate()->findOrFail($import->id);
             if ($locked->round_id !== null) {
                 throw new ImportAlreadySaved;
+            }
+            if (in_array($locked->status, [ImportStatus::Queued, ImportStatus::Reading], true)) {
+                throw new ImportBeingRead;
             }
 
             $round = $this->createRound->handle($card);
