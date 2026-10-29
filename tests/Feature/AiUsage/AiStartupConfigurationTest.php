@@ -11,6 +11,10 @@
  * - the price checked only when an API key is configured: claude-unknown-1 without key boots;
  * - a message that does not name the variable: « AI_BUDGET_TIME_ZONE » or « AI_MODEL » is
  *   missing from the failure.
+ *
+ * Course-rating-sgt, design D10: SGT_LOOKUP other than on or off stops every process the same
+ * way. Mutation that turns these tests red: the SGT_LOOKUP check run only for HTTP requests
+ * (skipped when running in console): `artisan about` boots with SGT_LOOKUP=yes.
  */
 
 use Illuminate\Container\Container;
@@ -134,3 +138,30 @@ test('artisan boots under a valid AI configuration', function (array $environmen
 
     expect($exitCode)->toBe(0);
 })->with('valid configurations');
+
+dataset('valid SGT_LOOKUP values', [
+    'on' => ['on'],
+    'off' => ['off'],
+    'absent' => [null],
+]);
+
+test('a request does not boot with an unknown SGT_LOOKUP', function () {
+    expect(bootForRequest(['SGT_LOOKUP' => 'yes']))->toBeString()->toContain('SGT_LOOKUP');
+});
+
+test('a request boots with SGT_LOOKUP on, off or absent', function (?string $value) {
+    expect(bootForRequest(['SGT_LOOKUP' => $value]))->toBe(200);
+})->with('valid SGT_LOOKUP values');
+
+test('artisan does not boot with an unknown SGT_LOOKUP', function () {
+    [$exitCode, $output] = artisanAbout(['SGT_LOOKUP' => 'yes']);
+
+    expect($exitCode)->not->toBe(0)
+        ->and($output)->toContain('SGT_LOOKUP');
+});
+
+test('artisan boots with SGT_LOOKUP on, off or absent', function (?string $value) {
+    [$exitCode] = artisanAbout(['SGT_LOOKUP' => $value ?? false]);
+
+    expect($exitCode)->toBe(0);
+})->with('valid SGT_LOOKUP values');

@@ -35,6 +35,7 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->configureDefaults();
         $this->ensureAiConfiguration();
+        $this->ensureSgtConfiguration();
         $this->configureSessionStorage();
         $this->configureWorkerHeartbeat();
     }
@@ -58,6 +59,20 @@ class AppServiceProvider extends ServiceProvider
         $model = config()->string('golf.ai.model');
         if (! array_key_exists($model, config()->array('golf.ai.prices'))) {
             throw new InvalidArgumentException("AI_MODEL {$model} n’a pas de tarif dans config/golf.php");
+        }
+    }
+
+    /**
+     * Stop every process, web, worker and migrate alike, when SGT_LOOKUP is neither on nor off
+     * (course-rating-sgt, design D10).
+     *
+     * @throws InvalidArgumentException naming the variable to fix
+     */
+    protected function ensureSgtConfiguration(): void
+    {
+        $lookup = config()->string('golf.sgt.lookup');
+        if (! in_array($lookup, ['on', 'off'], true)) {
+            throw new InvalidArgumentException("SGT_LOOKUP {$lookup} doit valoir on ou off");
         }
     }
 
