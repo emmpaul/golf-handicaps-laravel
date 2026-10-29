@@ -13,6 +13,7 @@ import {
 
 import ImportShow from '@/pages/imports/show';
 import type { ImportEditor, ImportSummary } from '@/pages/imports/show';
+import { holeCells } from '@/tests/grid-cells';
 import {
     GAB,
     GAB_STROKES,
@@ -166,11 +167,9 @@ describe('Correction screen of an import read by the AI', () => {
                 'lu « GAB »',
             ),
         ).toBeInTheDocument();
-        expect(
-            Array.from({ length: 18 }, (_, hole) =>
-                Number(cell(`Par trou ${hole + 1}`).value),
-            ),
-        ).toEqual([4, 4, 3, 5, 4, 4, 5, 3, 4, 4, 4, 4, 5, 3, 4, 4, 3, 4]);
+        expect(holeCells('Par').map((par) => Number(par.value))).toEqual([
+            4, 4, 3, 5, 4, 4, 5, 3, 4, 4, 4, 4, 5, 3, 4, 4, 3, 4,
+        ]);
     });
 
     it('highlights the cell the reading left empty from the opening', () => {

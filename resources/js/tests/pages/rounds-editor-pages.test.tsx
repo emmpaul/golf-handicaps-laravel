@@ -13,6 +13,7 @@ import {
 
 import RoundsCreate from '@/pages/rounds/create';
 import RoundsEdit from '@/pages/rounds/edit';
+import { holeCells } from '@/tests/grid-cells';
 import {
     DISTANCES,
     GAB,
@@ -138,13 +139,10 @@ describe('Manual entry page', () => {
             'Gab',
         );
 
+        const holes = holeCells('Ligne 1');
+
         for (const [hole, strokes] of GAB_STROKES.entries()) {
-            await userEvent.type(
-                screen.getByRole('textbox', {
-                    name: `Ligne 1 trou ${hole + 1}`,
-                }),
-                `${strokes}`,
-            );
+            await userEvent.type(holes[hole], `${strokes}`);
         }
 
         await userEvent.click(

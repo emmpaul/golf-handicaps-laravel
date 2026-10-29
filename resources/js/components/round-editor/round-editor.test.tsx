@@ -34,6 +34,7 @@ import {
     SEAN,
     STROKE_INDEXES,
 } from '@/tests/reference-round';
+import { holeCells } from '@/tests/grid-cells';
 
 // Spec rounds « Saisie manuelle neuve sans alerte », « Contrôles de
 // cohérence », « Totaux calculés », « Pré-remplissage depuis un parcours
@@ -234,11 +235,10 @@ describe('RoundEditor, fresh manual entry', () => {
 
         const front = [5, 5, 3, 5, 4, 4, 4, 3];
 
+        const holes = holeCells('Ligne 1');
+
         for (const [hole, strokes] of front.entries()) {
-            await userEvent.type(
-                cell(`Ligne 1 trou ${hole + 1}`),
-                `${strokes}`,
-            );
+            await userEvent.type(holes[hole], `${strokes}`);
         }
 
         expect(cell('Ligne 1 OUT').value).toBe('');
@@ -263,10 +263,7 @@ describe('RoundEditor, known course', () => {
         await openDistances();
 
         const row = (label: string) =>
-            Array.from(
-                { length: 18 },
-                (_, hole) => cell(`${label} trou ${hole + 1}`).value,
-            );
+            holeCells(label).map((input) => input.value);
 
         expect(row('Par')).toEqual([
             '4',
@@ -373,11 +370,10 @@ describe('RoundEditor, lines of players', () => {
             screen.getByRole('combobox', { name: 'Joueur de la ligne 3' }),
             'Sean',
         );
+        const holes = holeCells('Ligne 3');
+
         for (const [hole, strokes] of seanStrokes.entries()) {
-            await userEvent.type(
-                cell(`Ligne 3 trou ${hole + 1}`),
-                String(strokes),
-            );
+            await userEvent.type(holes[hole], String(strokes));
         }
 
         expect(
