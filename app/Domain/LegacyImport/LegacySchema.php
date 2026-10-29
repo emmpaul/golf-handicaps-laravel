@@ -7,8 +7,8 @@ use App\Domain\LegacyImport\Exceptions\LegacyImportFailed;
 /**
  * The schema of the Next base at the level of the Drizzle migration 0004_course_ratings (design
  * D4), read in drizzle/0000 to 0004: each table the import reads, with each of its columns. A
- * column more is tolerated; the tables the import ignores (jobs, internal tables) are not
- * checked.
+ * column more is tolerated. jobs, only counted, is checked for its presence; the internal tables
+ * of SQLite and Drizzle are not checked.
  */
 final class LegacySchema
 {
@@ -23,6 +23,8 @@ final class LegacySchema
         'imports' => ['id', 'status', 'photo_path', 'corners', 'draft', 'round_id', 'created_at', 'ai_cells', 'ai_note', 'correction', 'corners_source'],
         'ai_usage' => ['id', 'created_at', 'month', 'model', 'input_tokens', 'output_tokens', 'cost_micro_usd'],
         'course_ratings' => ['id', 'course_name', 'tees', 'rating_t', 'slope', 'source', 'status', 'sgt_course_id', 'sgt_course_name', 'sgt_course_location', 'candidates', 'tees_read', 'proposed_tee', 'note', 'updated_at'],
+        // Only counted in the report, never imported: its presence is all that is read.
+        'jobs' => ['id'],
     ];
 
     /**

@@ -31,7 +31,7 @@ La commande SHALL ouvrir la base SQLite en lecture seule et MUST NOT la modifier
 - **THEN** la commande affiche « Base en WAL : copier par VACUUM INTO (docs/deployment.md, Bascule depuis Next). », sort en 1, n'écrit rien, et aucun fichier `-wal` ni `-shm` n'apparaît à côté de la base
 
 ### Requirement: Niveau de schéma vérifié
-La commande SHALL refuser une base dont le schéma n'est pas celui de la migration Drizzle `0004_course_ratings` de Next : chaque table reprise doit exister avec chacune de ses colonnes. Le refus nomme les tables ou colonnes manquantes et arrive avant toute écriture. Les tables que l'import ignore (`jobs`, tables internes de SQLite et de Drizzle) ne sont pas contrôlées.
+La commande SHALL refuser une base dont le schéma n'est pas celui de la migration Drizzle `0004_course_ratings` de Next : chaque table reprise doit exister avec chacune de ses colonnes. Le refus nomme les tables ou colonnes manquantes et arrive avant toute écriture. La table `jobs`, seulement comptée dans le rapport, doit exister ; les tables internes de SQLite et de Drizzle ne sont pas contrôlées.
 
 #### Scenario: Base d'avant les ratings
 - **GIVEN** une base SQLite créée par les migrations `0000` à `0003` seulement

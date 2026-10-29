@@ -5,6 +5,7 @@ namespace App\Domain\LegacyImport;
 use App\Domain\Imports\Exceptions\UnreadablePhoto;
 use App\Domain\Imports\WebpPhoto;
 use App\Domain\LegacyImport\Exceptions\LegacyImportFailed;
+use Exception;
 use Illuminate\Contracts\Filesystem\Filesystem;
 use Illuminate\Support\Facades\Storage;
 
@@ -114,24 +115,42 @@ final class LegacyPhotos
      *
      * @return int the photos read
      *
-     * @throws LegacyImportFailed when a photo cannot be decoded
+     * @throws LegacyImportFailed when a photo cannot be decoded or written
      */
     public function copy(bool $dryRun): int
     {
         foreach ($this->paths as $path) {
-            $bytes = $this->webp($path);
-            if ($dryRun) {
-                continue;
-            }
-
             $destination = (string) self::destination($path);
-            if (! array_key_exists($destination, $this->previous)) {
-                $this->previous[$destination] = $this->disk()->exists($destination) ? $this->disk()->get($destination) : null;
+            try {
+                $this->copyOne($path, $destination, $dryRun);
+            } catch (LegacyImportFailed $failure) {
+                throw $failure;
+            } catch (Exception $exception) {
+                // An error of Imagick other than UnreadablePhoto, or of the filesystem.
+                throw new LegacyImportFailed("Échec de la copie des photos : {$path} → {$destination} : {$exception->getMessage()}");
             }
-            $this->disk()->put($destination, $bytes);
         }
 
         return count($this->paths);
+    }
+
+    /**
+     * @throws LegacyImportFailed when the photo cannot be decoded or written
+     * @throws Exception an error of Imagick other than UnreadablePhoto, or of a disk that throws
+     */
+    private function copyOne(string $path, string $destination, bool $dryRun): void
+    {
+        $bytes = $this->webp($path);
+        if ($dryRun) {
+            return;
+        }
+
+        if (! array_key_exists($destination, $this->previous)) {
+            $this->previous[$destination] = $this->disk()->exists($destination) ? $this->disk()->get($destination) : null;
+        }
+        if (! $this->disk()->put($destination, $bytes)) {
+            throw new LegacyImportFailed("Échec de la copie des photos : {$path} → {$destination}");
+        }
     }
 
     /**

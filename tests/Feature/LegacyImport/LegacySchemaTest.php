@@ -49,6 +49,23 @@ test('a base without a column of 0004 is refused and the column named', function
         ->and(nonEmptyTargetTables())->toBe([]);
 });
 
+// Design D4: jobs is only counted in the report, but read; a base without it would fail at the
+// count, after every insertion.
+// Mutation that turns it red: jobs removed from LegacySchema::TABLES (the import then ends on
+// the « no such table » of SQLite).
+test('a base without the table jobs is refused before any write', function () {
+    $base = LegacySqliteFixture::atLevel('0004')->execute('drop table jobs')->player(1, 'Gab', 1792251843742);
+
+    [$exitCode, $lines] = importSqlite($base->path);
+
+    expect($exitCode)->toBe(1)
+        ->and($lines)->toBe([
+            'Base SQLite au mauvais niveau : migration Drizzle 0004 attendue.',
+            'Table manquante : jobs',
+        ])
+        ->and(nonEmptyTargetTables())->toBe([]);
+});
+
 // Mutation that turns it red: the check throws at the first missing table or column.
 test('every missing table and column is listed, not only the first', function () {
     $base = LegacySqliteFixture::atLevel('0003')->execute('alter table imports drop column correction');
