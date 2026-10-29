@@ -61,12 +61,15 @@ const share = (count: number, holes: number) =>
  * nulle et s'élargissent en 700 ms (D8).
  */
 export function ScoringStats({ stats }: { stats: ScoringStatsData | null }) {
+    return stats === null ? null : <StatsBlock stats={stats} />;
+}
+
+/**
+ * Le bloc rendu avec ses statistiques : son entrée (`useEntered`) part de son
+ * montage, à l'arrivée de la prop différée, et non de la page (DO37).
+ */
+function StatsBlock({ stats }: { stats: ScoringStatsData }) {
     const entered = useEntered();
-
-    if (stats === null) {
-        return null;
-    }
-
     const classes = CLASSES.map((entry, index) => ({
         ...entry,
         count: stats.classes[index],

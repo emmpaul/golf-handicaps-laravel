@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it } from 'vite-plus/test';
 
 import {
@@ -86,7 +86,7 @@ describe('ScoringStats', () => {
 
         const heading = screen.getByRole('heading', { name: 'Stats' });
 
-        expect(heading.parentElement?.className).toContain('uppercase');
+        expect(heading.parentElement).toHaveClass('uppercase');
         expect(screen.getByText('18 trous')).toBeTruthy();
     });
 
@@ -96,7 +96,7 @@ describe('ScoringStats', () => {
         expect(valueOf('Moy. brut')).toBe('72,0');
         expect(valueOf('Meilleur brut')).toBe('72');
         expect(valueOf('Par ou mieux')).toBe('78%');
-        expect(screen.getByText('Moy. brut').className).toContain('uppercase');
+        expect(screen.getByText('Moy. brut')).toHaveClass('uppercase');
     });
 
     it('lists the classes of one round without « Eagle ou mieux »', () => {
@@ -143,6 +143,35 @@ describe('ScoringStats', () => {
         );
     });
 
+    // M5, DO37: the stats come as a deferred prop, after the page. The bar
+    // must still grow from a null width when they arrive. Mutation:
+    // `useEntered` called in ScoringStats itself, before `stats === null`
+    // returns (its frames run out while the prop is missing) → the segments
+    // arrive at their final widths, this test goes red.
+    it('grows the segments from 0 when the stats arrive after the block', async () => {
+        const { rerender } = render(<ScoringStats stats={null} />);
+
+        await act(
+            () =>
+                new Promise<void>((resolve) =>
+                    requestAnimationFrame(() =>
+                        requestAnimationFrame(() => resolve()),
+                    ),
+                ),
+        );
+        rerender(<ScoringStats stats={gabOneRound} />);
+
+        const widths = () =>
+            Array.from(
+                document.querySelectorAll<HTMLElement>('[data-part="segment"]'),
+            ).map((segment) => segment.style.width);
+
+        expect(widths()).toEqual(['0%', '0%', '0%', '0%']);
+        await waitFor(() =>
+            expect(widths()).toEqual(['16.7%', '61.1%', '22.2%', '0%']),
+        );
+    });
+
     it('writes each par with its average and its signed delta', () => {
         render(<ScoringStats stats={gabOneRound} />);
 
@@ -151,23 +180,23 @@ describe('ScoringStats', () => {
         expect(within(parBox('Par 4')).getByText('+0,3')).toBeTruthy();
         expect(within(parBox('Par 5')).getByText('4,3')).toBeTruthy();
         expect(within(parBox('Par 5')).getByText('−0,7')).toBeTruthy();
-        expect(screen.getByText('Par 5').className).toContain('uppercase');
+        expect(screen.getByText('Par 5')).toHaveClass('uppercase');
     });
 
     it('tints a delta good, neutral or bad with the ok, ink-2 and signal tokens', () => {
         const { unmount } = render(<ScoringStats stats={gabTwoRounds} />);
 
-        expect(within(parBox('Par 3')).getByText('+0,1').className).toContain(
+        expect(within(parBox('Par 3')).getByText('+0,1')).toHaveClass(
             'text-ok',
         );
-        expect(within(parBox('Par 4')).getByText('+0,7').className).toContain(
+        expect(within(parBox('Par 4')).getByText('+0,7')).toHaveClass(
             'text-ink-2',
         );
         unmount();
 
         render(<ScoringStats stats={{ ...gabOneRound, pars: manuPars }} />);
 
-        expect(within(parBox('Par 5')).getByText('+1,3').className).toContain(
+        expect(within(parBox('Par 5')).getByText('+1,3')).toHaveClass(
             'text-signal',
         );
     });
