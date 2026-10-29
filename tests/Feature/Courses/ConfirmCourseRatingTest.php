@@ -6,6 +6,7 @@
  *
  * Mutations that turn these tests red:
  * - no recompute after the confirmation: Gab and Manu stay at 10 and 170, Manu's index at 170;
+ *   after the choice of the tee White, the Gold card stays at 10 and 170 instead of −17 and 105;
  * - the confirmation written with source manual: the row reads manual instead of sgt;
  * - the tee looked up whatever its case (strcasecmp): « white » is accepted instead of refused
  *   with « Tee absent de la carte SGT »;
@@ -71,6 +72,23 @@ test('choosing the tee White writes 74,2 / 148 and retains it', function () {
     app(ChooseCourseRatingTee::class)->handle($rating, 'White');
 
     expect(confirmedValues($rating))->toBe([742, 148, 'sgt', CourseRatingStatus::Confirmed, 'White', null]);
+});
+
+test('retaining the tee White recomputes the rounds of BETHPAGE BLACK / Gold on 74,2 and 148', function () {
+    // The reference card again a week later on the Gold tees: Gab 72 and Manu 88, par 71.
+    // 113 / 148 × (72 − 74,2) = −1,68 → −1,7; 113 / 148 × (88 − 74,2) = 10,54 → 10,5. The Red
+    // card, without rating, stays at 1,0 and 17,0.
+    $gold = referenceCardData($this->gab->id, $this->manu->id);
+    $gold['tees'] = 'Gold';
+    $gold['playedOn'] = '2026-10-24';
+    createRoundCard($gold);
+    CourseRating::query()->delete();
+    $rating = CourseRating::factory()->chooseTee()->create(['course_name' => 'BETHPAGE BLACK', 'tees' => 'Gold']);
+
+    app(ChooseCourseRatingTee::class)->handle($rating, 'White');
+
+    expect(statsByDateOf($this->gab, ['differential_t']))->toBe([[10], [-17]])
+        ->and(statsByDateOf($this->manu, ['differential_t']))->toBe([[170], [105]]);
 });
 
 test('a confirmation without proposal is refused and nothing changes', function () {
