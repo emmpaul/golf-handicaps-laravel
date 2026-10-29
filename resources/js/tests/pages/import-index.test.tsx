@@ -14,6 +14,12 @@ import {
 
 import ImportIndex from '@/pages/import/index';
 import type { ImportListItem } from '@/components/import/import-list';
+import {
+    advancePoll,
+    expectReloadsEvery2s,
+    spyOnPollReload,
+} from '@/tests/poll';
+import type { PollReload } from '@/tests/poll';
 import { ROUND } from '@/tests/reference-round';
 
 // Spec scorecard-import « Envoi d'une photo », « Prise de photo depuis
@@ -26,7 +32,8 @@ import { ROUND } from '@/tests/reference-round';
 // image) and resolved or rejected by each test. The router's verbs are
 // stubbed (jsdom cannot run a visit); the visit callbacks they receive are
 // played by hand. The poll of Inertia runs on fake timers; its reload goes
-// through the router's `doReload`, stubbed to record the request options.
+// through the router's `doReload`, stubbed to record the request options
+// (`tests/poll.ts`).
 // Head renders nothing outside createInertiaApp; the orb paints on a canvas
 // jsdom cannot draw.
 // Mutations:
@@ -119,7 +126,7 @@ const saved: ImportListItem = {
 let coarse = false;
 let post: MockInstance<typeof router.post>;
 let remove: MockInstance<typeof router.delete>;
-let reload: MockInstance<(options: VisitOptions) => void>;
+let reload: PollReload;
 
 beforeEach(() => {
     coarse = false;
@@ -131,14 +138,7 @@ beforeEach(() => {
     }));
     post = vi.spyOn(router, 'post').mockImplementation(() => {});
     remove = vi.spyOn(router, 'delete').mockImplementation(() => {});
-    reload = vi
-        .spyOn(
-            router as unknown as {
-                doReload: (options: VisitOptions) => void;
-            },
-            'doReload',
-        )
-        .mockImplementation(() => {});
+    reload = spyOnPollReload();
 });
 
 afterEach(() => {
@@ -480,21 +480,7 @@ describe('List of imports', () => {
             <ImportIndex imports={[queued, ready]} readingEnabled />,
         );
 
-        await act(async () => {
-            await vi.advanceTimersByTimeAsync(1999);
-        });
-        expect(reload).not.toHaveBeenCalled();
-
-        await act(async () => {
-            await vi.advanceTimersByTimeAsync(1);
-        });
-        expect(reload).toHaveBeenCalledTimes(1);
-        expect(reload.mock.calls[0][0].only).toEqual(['imports']);
-
-        await act(async () => {
-            await vi.advanceTimersByTimeAsync(2000);
-        });
-        expect(reload).toHaveBeenCalledTimes(2);
+        await expectReloadsEvery2s(reload, ['imports']);
 
         rerender(
             <ImportIndex
@@ -505,9 +491,7 @@ describe('List of imports', () => {
                 readingEnabled
             />,
         );
-        await act(async () => {
-            await vi.advanceTimersByTimeAsync(10_000);
-        });
+        await advancePoll(10_000);
         expect(reload).toHaveBeenCalledTimes(2);
     });
 
@@ -516,9 +500,7 @@ describe('List of imports', () => {
 
         render(<ImportIndex imports={[ready, failed]} readingEnabled />);
 
-        await act(async () => {
-            await vi.advanceTimersByTimeAsync(10_000);
-        });
+        await advancePoll(10_000);
         expect(reload).not.toHaveBeenCalled();
     });
 

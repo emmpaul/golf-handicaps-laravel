@@ -11,6 +11,12 @@ import {
     vi,
 } from 'vite-plus/test';
 
+import {
+    advancePoll,
+    expectReloadsEvery2s,
+    spyOnPollReload,
+} from '@/tests/poll';
+import type { PollReload } from '@/tests/poll';
 import { STROKE_INDEXES } from '@/tests/reference-round';
 import CoursesIndex from '@/pages/courses/index';
 import type { CourseWithLookup } from '@/pages/courses/index';
@@ -98,7 +104,6 @@ const courses = [
 
 type VisitOptions = {
     data?: Record<string, string>;
-    only?: string[];
     preserveScroll?: boolean;
     onFinish?: (visit: unknown) => void;
     onStart?: (visit: unknown) => void;
@@ -108,19 +113,11 @@ type VisitOptions = {
 let put: MockInstance<typeof router.put>;
 let remove: MockInstance<typeof router.delete>;
 let post: MockInstance<typeof router.post>;
-let reload: MockInstance<(options: VisitOptions) => void>;
+let reload: PollReload;
 
 beforeEach(() => {
     post = vi.spyOn(router, 'post').mockImplementation(() => {});
-    // The poll of Inertia reloads through the router's doReload.
-    reload = vi
-        .spyOn(
-            router as unknown as {
-                doReload: (options: VisitOptions) => void;
-            },
-            'doReload',
-        )
-        .mockImplementation(() => {});
+    reload = spyOnPollReload();
     put = vi.spyOn(router, 'put').mockImplementation(() => {});
     remove = vi.spyOn(router, 'delete').mockImplementation(() => {});
 });
@@ -797,29 +794,10 @@ describe('Courses page, lookup on Simulator Golf Tour', () => {
             <CoursesIndex courses={[pending]} lookupPending />,
         );
 
-        await act(async () => {
-            await vi.advanceTimersByTimeAsync(1999);
-        });
-        expect(reload).not.toHaveBeenCalled();
-
-        await act(async () => {
-            await vi.advanceTimersByTimeAsync(1);
-        });
-        expect(reload).toHaveBeenCalledTimes(1);
-        expect(reload.mock.calls[0][0].only).toEqual([
-            'courses',
-            'lookupPending',
-        ]);
-
-        await act(async () => {
-            await vi.advanceTimersByTimeAsync(2000);
-        });
-        expect(reload).toHaveBeenCalledTimes(2);
+        await expectReloadsEvery2s(reload, ['courses', 'lookupPending']);
 
         rerender(<CoursesIndex courses={[proposed]} lookupPending={false} />);
-        await act(async () => {
-            await vi.advanceTimersByTimeAsync(10_000);
-        });
+        await advancePoll(10_000);
         expect(reload).toHaveBeenCalledTimes(2);
     });
 
@@ -828,9 +806,7 @@ describe('Courses page, lookup on Simulator Golf Tour', () => {
 
         render(<CoursesIndex courses={[confirmed]} lookupPending={false} />);
 
-        await act(async () => {
-            await vi.advanceTimersByTimeAsync(10_000);
-        });
+        await advancePoll(10_000);
         expect(reload).not.toHaveBeenCalled();
     });
 
