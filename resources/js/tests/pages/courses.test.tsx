@@ -441,7 +441,9 @@ describe('Courses page', () => {
 // - « Relancer la recherche » hidden on a pending row (as in Next) → the
 //   relaunch presence test goes red;
 // - one sending state shared by the page → the « other rows stay usable »
-//   assertion goes red;
+//   assertions of the confirmation and of the relaunch go red;
+// - the proposal shown only without tees read → the poll test, whose reload
+//   brings the proposal of BETHPAGE BLACK / Red, goes red;
 // - the manual form keyed on the status too → the reload keeps-typing test
 //   goes red.
 describe('Courses page, lookup on Simulator Golf Tour', () => {
@@ -755,12 +757,14 @@ describe('Courses page, lookup on Simulator Golf Tour', () => {
         ).toBeEnabled();
     });
 
-    it('shows « Relance de la recherche… » while relaunching', async () => {
+    it('shows « Relance de la recherche… » while relaunching, the buttons of BETHPAGE BLACK / Red still enabled', async () => {
         post.mockImplementation((_url, _data, options) => {
             (options as VisitOptions).onStart?.({});
         });
 
-        render(<CoursesIndex courses={[failed]} lookupPending={false} />);
+        render(
+            <CoursesIndex courses={[proposed, failed]} lookupPending={false} />,
+        );
 
         await act(async () => {
             await userEvent.click(
@@ -785,6 +789,9 @@ describe('Courses page, lookup on Simulator Golf Tour', () => {
                 name: 'Relancer la recherche pour PAYNES VALLEY / Blue',
             }),
         ).toBeDisabled();
+        for (const button of within(row(BETHPAGE)).getAllByRole('button')) {
+            expect(button).toBeEnabled();
+        }
     });
 
     it('reloads the courses and lookupPending every 2 s while a lookup runs, and stops once none runs', async () => {
@@ -796,7 +803,18 @@ describe('Courses page, lookup on Simulator Golf Tour', () => {
 
         await expectReloadsEvery2s(reload, ['courses', 'lookupPending']);
 
+        // The reload brings the outcome of the lookup: the row shows the
+        // proposal without any action, and the poll stops.
         rerender(<CoursesIndex courses={[proposed]} lookupPending={false} />);
+
+        const line = row('BETHPAGE BLACK / Red');
+
+        expect(within(line).getByTestId('course-status').textContent).toBe(
+            'Proposition à confirmer',
+        );
+        expect(within(line).getByTestId('course-proposal').textContent).toBe(
+            'Proposition : tee Red, 71,4 / 144',
+        );
         await advancePoll(10_000);
         expect(reload).toHaveBeenCalledTimes(2);
     });
