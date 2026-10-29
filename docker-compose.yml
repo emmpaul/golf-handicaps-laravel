@@ -28,6 +28,14 @@ x-app: &app
         SESSION_DRIVER: database
         QUEUE_CONNECTION: database
         CACHE_STORE: database
+        # Lecture des cartes par l'IA (ADR 0011). Sans clé, la lecture est désactivée et la saisie
+        # manuelle reste possible. Les défauts sont ceux de config/golf.php : une valeur vide
+        # remplacerait le défaut de Laravel. migrate les reçoit aussi : un AI_MODEL sans tarif ou un
+        # AI_BUDGET_TIME_ZONE inconnu l'arrête, et web et worker ne démarrent pas.
+        ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+        AI_MODEL: ${AI_MODEL:-claude-sonnet-5-5}
+        AI_MONTHLY_BUDGET_USD: ${AI_MONTHLY_BUDGET_USD:-5}
+        AI_BUDGET_TIME_ZONE: ${AI_BUDGET_TIME_ZONE:-America/Montreal}
 
 services:
     pgsql:
