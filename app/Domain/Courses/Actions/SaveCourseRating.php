@@ -35,12 +35,13 @@ final class SaveCourseRating
 
             // PostgreSQL infers the unique index on the expression: two ratings typed at once
             // for the same course never raise a unique violation. The row keeps its first name.
+            // A new row is a rating typed by hand, confirmed (design D1 of course-rating-sgt).
             $now = now();
             DB::insert(
-                'insert into course_ratings (id, course_name, tees, rating_t, slope, created_at, updated_at)
-                values (?, ?, ?, ?, ?, ?, ?)
+                "insert into course_ratings (id, course_name, tees, rating_t, slope, source, status, created_at, updated_at)
+                values (?, ?, ?, ?, ?, 'manual', 'confirmed', ?, ?)
                 on conflict ((lower(trim(course_name))), (lower(trim(tees))))
-                do update set rating_t = excluded.rating_t, slope = excluded.slope, updated_at = excluded.updated_at',
+                do update set rating_t = excluded.rating_t, slope = excluded.slope, updated_at = excluded.updated_at",
                 [(string) Str::uuid7(), $courseName, $tees, $ratingT, $slope, $now, $now],
             );
 

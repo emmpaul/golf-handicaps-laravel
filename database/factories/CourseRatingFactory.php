@@ -2,11 +2,13 @@
 
 namespace Database\Factories;
 
+use App\Domain\Courses\CourseRatingStatus;
 use App\Models\CourseRating;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * Written as is, without recomputing the history: for the tests that read the ratings.
+ * Written as is, without recomputing the history: for the tests that read the ratings. The
+ * definition is a rating typed by hand, confirmed.
  *
  * @extends Factory<CourseRating>
  */
@@ -22,6 +24,8 @@ class CourseRatingFactory extends Factory
             'tees' => fake()->randomElement(['Red', 'White', 'Blue']),
             'rating_t' => fake()->numberBetween(680, 740),
             'slope' => fake()->numberBetween(110, 145),
+            'source' => 'manual',
+            'status' => CourseRatingStatus::Confirmed,
         ];
     }
 
