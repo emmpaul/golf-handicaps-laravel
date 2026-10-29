@@ -1,38 +1,38 @@
 "use client"
 
 import * as React from "react"
-import { AlertDialog as AlertDialogPrimitive } from "@base-ui/react/alert-dialog"
+import { Dialog as DialogPrimitive } from "@base-ui/react/dialog"
 import { cn } from "@/lib/utils"
 
 import { Button } from "@/components/ui/button"
 
-function AlertDialog({ ...props }: AlertDialogPrimitive.Root.Props) {
-  return <AlertDialogPrimitive.Root data-slot="alert-dialog" {...props} />
+// Feuille de confirmation du design (spec app-shell « Feuille de confirmation », D5) : même API
+// que l'alert dialog de shadcn, rendue en feuille du bas sur le voile `scrim`. Bâtie sur le Dialog
+// de base-ui avec `role="alertdialog"` : l'AlertDialog de base-ui refuse la fermeture par le
+// voile, que le design demande. Focus piégé, Échap, focus rendu au déclencheur : base-ui.
+
+function AlertDialog({ ...props }: DialogPrimitive.Root.Props) {
+  return <DialogPrimitive.Root data-slot="alert-dialog" {...props} />
 }
 
-function AlertDialogTrigger({ ...props }: AlertDialogPrimitive.Trigger.Props) {
-  return (
-    <AlertDialogPrimitive.Trigger data-slot="alert-dialog-trigger" {...props} />
-  )
+function AlertDialogTrigger({ ...props }: DialogPrimitive.Trigger.Props) {
+  return <DialogPrimitive.Trigger data-slot="alert-dialog-trigger" {...props} />
 }
 
-function AlertDialogPortal({ ...props }: AlertDialogPrimitive.Portal.Props) {
-  return (
-    <AlertDialogPrimitive.Portal data-slot="alert-dialog-portal" {...props} />
-  )
+function AlertDialogPortal({ ...props }: DialogPrimitive.Portal.Props) {
+  return <DialogPrimitive.Portal data-slot="alert-dialog-portal" {...props} />
 }
 
 function AlertDialogOverlay({
   className,
   ...props
-}: AlertDialogPrimitive.Backdrop.Props) {
+}: DialogPrimitive.Backdrop.Props) {
   return (
-    <AlertDialogPrimitive.Backdrop
+    <DialogPrimitive.Backdrop
       data-slot="alert-dialog-overlay"
       className={cn(
-        // Voile plein, sans flou ni transparence (design D4, D10) : un voile translucide fausse la
-        // teinte que Safari iOS prend sous la barre d'état. Fondu seul, coupé en mouvement réduit.
-        "fixed inset-0 isolate z-50 bg-muted duration-(--dur-micro) data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0 motion-reduce:data-open:animate-none motion-reduce:data-closed:animate-none",
+        // Voile `scrim` (noir à 60 %), fondu de 300 ms ; mouvement réduit : base.css.
+        "fixed inset-0 isolate z-(--z-modal) bg-scrim opacity-100 transition-opacity duration-(--dur-swap) ease-[ease] data-ending-style:opacity-0 data-starting-style:opacity-0",
         className
       )}
       {...props}
@@ -42,22 +42,18 @@ function AlertDialogOverlay({
 
 function AlertDialogContent({
   className,
-  size = "default",
   ...props
-}: AlertDialogPrimitive.Popup.Props & {
-  size?: "default" | "sm"
-}) {
+}: DialogPrimitive.Popup.Props) {
   return (
     <AlertDialogPortal>
       <AlertDialogOverlay />
-      <AlertDialogPrimitive.Popup
+      <DialogPrimitive.Popup
         data-slot="alert-dialog-content"
-        data-size={size}
+        role="alertdialog"
         className={cn(
-          // Centrée par `inset-0 m-auto`, sans `translate` : au repos la boîte n'a aucune transformation.
-          // Fondu et zoom de 95 % à l'ouverture ; en mouvement réduit, aucune animation (spec
-          // `visual-theme` « Mouvement des contrôles »).
-          "group/alert-dialog-content fixed inset-0 z-50 m-auto grid h-fit w-[calc(100%-2rem)] gap-4 rounded-none border-2 border-foreground bg-background p-4 text-foreground duration-(--dur-micro) outline-none data-[size=default]:max-w-xs data-[size=sm]:max-w-xs data-[size=default]:sm:max-w-sm data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95 motion-reduce:data-open:animate-none motion-reduce:data-closed:animate-none",
+          // Monte du bas de l'écran en 400 ms dans la colonne de 390 px ; coins du haut de 22 px,
+          // marges 24 px 20 px 34 px plus la zone sûre du bas.
+          "fixed inset-x-0 bottom-0 z-(--z-modal) mx-auto flex max-w-(--column) translate-y-0 flex-col gap-2.5 rounded-t-22 border-t border-rule bg-surface-1 px-5 pt-6 pb-[calc(34px+var(--safe-bottom))] text-ink outline-none transition-[translate] duration-(--dur-sheet) ease-design data-ending-style:translate-y-full data-starting-style:translate-y-full",
           className
         )}
         {...props}
@@ -73,10 +69,7 @@ function AlertDialogHeader({
   return (
     <div
       data-slot="alert-dialog-header"
-      className={cn(
-        "grid grid-rows-[auto_1fr] place-items-center gap-1.5 text-center has-data-[slot=alert-dialog-media]:grid-rows-[auto_auto_1fr] has-data-[slot=alert-dialog-media]:gap-x-4 sm:group-data-[size=default]/alert-dialog-content:place-items-start sm:group-data-[size=default]/alert-dialog-content:text-left sm:group-data-[size=default]/alert-dialog-content:has-data-[slot=alert-dialog-media]:grid-rows-[auto_1fr]",
-        className
-      )}
+      className={cn("flex flex-col gap-2.5", className)}
       {...props}
     />
   )
@@ -89,10 +82,7 @@ function AlertDialogFooter({
   return (
     <div
       data-slot="alert-dialog-footer"
-      className={cn(
-        "-mx-4 -mb-4 flex flex-col-reverse gap-2 border-t p-4 group-data-[size=sm]/alert-dialog-content:grid group-data-[size=sm]/alert-dialog-content:grid-cols-2 sm:flex-row sm:justify-end",
-        className
-      )}
+      className={cn("flex flex-col gap-2.5", className)}
       {...props}
     />
   )
@@ -105,10 +95,7 @@ function AlertDialogMedia({
   return (
     <div
       data-slot="alert-dialog-media"
-      className={cn(
-        "mb-2 inline-flex size-10 items-center justify-center rounded-md bg-muted sm:group-data-[size=default]/alert-dialog-content:row-span-2 *:[svg:not([class*='size-'])]:size-6",
-        className
-      )}
+      className={cn("inline-flex size-10 items-center justify-center", className)}
       {...props}
     />
   )
@@ -117,14 +104,11 @@ function AlertDialogMedia({
 function AlertDialogTitle({
   className,
   ...props
-}: React.ComponentProps<typeof AlertDialogPrimitive.Title>) {
+}: React.ComponentProps<typeof DialogPrimitive.Title>) {
   return (
-    <AlertDialogPrimitive.Title
+    <DialogPrimitive.Title
       data-slot="alert-dialog-title"
-      className={cn(
-        "font-heading text-lg font-semibold sm:group-data-[size=default]/alert-dialog-content:group-has-data-[slot=alert-dialog-media]/alert-dialog-content:col-start-2",
-        className
-      )}
+      className={cn("text-name-m leading-[1.2] tracking-normal", className)}
       {...props}
     />
   )
@@ -133,14 +117,11 @@ function AlertDialogTitle({
 function AlertDialogDescription({
   className,
   ...props
-}: React.ComponentProps<typeof AlertDialogPrimitive.Description>) {
+}: React.ComponentProps<typeof DialogPrimitive.Description>) {
   return (
-    <AlertDialogPrimitive.Description
+    <DialogPrimitive.Description
       data-slot="alert-dialog-description"
-      className={cn(
-        "text-sm text-balance text-muted-foreground md:text-pretty *:[a]:underline *:[a]:underline-offset-3 *:[a]:hover:text-foreground",
-        className
-      )}
+      className={cn("mb-2 text-body text-ink-2", className)}
       {...props}
     />
   )
@@ -148,11 +129,13 @@ function AlertDialogDescription({
 
 function AlertDialogAction({
   className,
+  size = "lg",
   ...props
 }: React.ComponentProps<typeof Button>) {
   return (
     <Button
       data-slot="alert-dialog-action"
+      size={size}
       className={cn(className)}
       {...props}
     />
@@ -162,12 +145,12 @@ function AlertDialogAction({
 function AlertDialogCancel({
   className,
   variant = "outline",
-  size = "default",
+  size = "lg",
   ...props
-}: AlertDialogPrimitive.Close.Props &
+}: DialogPrimitive.Close.Props &
   Pick<React.ComponentProps<typeof Button>, "variant" | "size">) {
   return (
-    <AlertDialogPrimitive.Close
+    <DialogPrimitive.Close
       data-slot="alert-dialog-cancel"
       className={cn(className)}
       render={<Button variant={variant} size={size} />}

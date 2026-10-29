@@ -1,5 +1,6 @@
 import { createElement } from 'react';
 import { toast } from 'sonner';
+import { ToastPill } from '@/components/ui/toaster';
 
 /** Message éphémère joint par le serveur (`Inertia::flash('toast', …)`). */
 export type FlashToast = {
@@ -8,9 +9,9 @@ export type FlashToast = {
 };
 
 /**
- * Affiche la donnée flash `toast`, rien si elle manque. Une erreur est
- * annoncée aussitôt (`role="alert"`), une confirmation poliment
- * (`role="status"`) : sonner ne pose aucun rôle sur ses messages.
+ * Affiche la donnée flash `toast` dans sa pilule, rien si elle manque. La
+ * pilule pose le rôle : `alert` pour une erreur, `status` pour une
+ * confirmation.
  */
 export function showFlashToast(flash: { toast?: FlashToast }): void {
     if (flash.toast === undefined) {
@@ -19,9 +20,5 @@ export function showFlashToast(flash: { toast?: FlashToast }): void {
 
     const { type, message } = flash.toast;
 
-    if (type === 'error') {
-        toast.error(createElement('span', { role: 'alert' }, message));
-    } else {
-        toast.success(createElement('span', { role: 'status' }, message));
-    }
+    toast.custom((id) => createElement(ToastPill, { id, type, message }));
 }

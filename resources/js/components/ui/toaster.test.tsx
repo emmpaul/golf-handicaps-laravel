@@ -11,11 +11,13 @@ import { afterEach, describe, expect, it } from 'vite-plus/test';
 import { Toaster } from '@/components/ui/toaster';
 import { showFlashToast } from '@/lib/flash-toast';
 
-// Spec app-shell « Message éphémère »: an error is announced at once
-// (role="alert"), a confirmation politely (role="status"), and the close
-// button removes the message.
-// Mutation: `toast.success` for an error in showFlashToast → the error test
-// goes red (the message loses the destructive colour of `classNames.error`).
+// Spec app-shell « Message éphémère » (decision Q7): a confirmation in the
+// light pill with the check, announced politely (role="status"); an error in
+// the red pill without check, announced at once (role="alert"); a tap on the
+// pill or its « Fermer le message » button closes it.
+// Mutations: the error rendered with the confirmation style (bg-ink and check)
+// → the error test goes red; roles swapped (status for an error) → both role
+// tests go red; the pill's onClick removed → the tap test goes red.
 
 afterEach(() => {
     act(() => {
@@ -23,68 +25,69 @@ afterEach(() => {
     });
 });
 
-describe('Toaster with the flash toast', () => {
-    it('shows an error in an alert', async () => {
-        render(<Toaster />);
+function pillOf(element: HTMLElement) {
+    return element.closest<HTMLElement>('[data-slot="toast-pill"]')!;
+}
 
-        act(() => {
-            showFlashToast({
-                toast: { type: 'error', message: 'Ce joueur existe déjà.' },
-            });
-        });
-
-        const alert = await screen.findByRole('alert');
-
-        expect(alert.textContent).toBe('Ce joueur existe déjà.');
-        expect(screen.queryByRole('status')).toBeNull();
-        expect(
-            alert
-                .closest('[data-sonner-toast]')
-                ?.classList.contains('text-destructive'),
-        ).toBe(true);
+function show(type: 'error' | 'success', message: string) {
+    act(() => {
+        showFlashToast({ toast: { type, message } });
     });
+}
 
-    it('shows a confirmation in a status', async () => {
+describe('Toaster with the flash toast', () => {
+    it('shows a confirmation in the light pill with the check', async () => {
         render(<Toaster />);
-
-        act(() => {
-            showFlashToast({
-                toast: { type: 'success', message: 'Round enregistré.' },
-            });
-        });
+        show('success', 'Round enregistré.');
 
         const status = await screen.findByRole('status');
 
         expect(status.textContent).toBe('Round enregistré.');
         expect(screen.queryByRole('alert')).toBeNull();
-        expect(
-            status
-                .closest('[data-sonner-toast]')
-                ?.classList.contains('text-destructive'),
-        ).toBe(false);
+        expect(pillOf(status)).toHaveClass('bg-ink', 'text-bg', 'rounded-pill');
+        expect(pillOf(status).querySelector('svg.lucide-check')).not.toBeNull();
+    });
+
+    it('shows an error in the red pill, without check', async () => {
+        render(<Toaster />);
+        show('error', 'Ce joueur existe déjà.');
+
+        const alert = await screen.findByRole('alert');
+
+        expect(alert.textContent).toBe('Ce joueur existe déjà.');
+        expect(screen.queryByRole('status')).toBeNull();
+        expect(pillOf(alert)).toHaveClass('bg-signal', 'text-bg');
+        expect(pillOf(alert)).not.toHaveClass('bg-ink');
+        expect(pillOf(alert).querySelector('svg.lucide-check')).toBeNull();
     });
 
     it('shows nothing for a flash without toast', () => {
-        const { container } = render(<Toaster />);
+        render(<Toaster />);
 
         act(() => {
             showFlashToast({});
         });
 
-        expect(container.ownerDocument.querySelectorAll('[data-sonner-toast]'))
-            .toHaveLength(0);
+        expect(
+            document.querySelectorAll('[data-slot="toast-pill"]'),
+        ).toHaveLength(0);
     });
 
-    it('removes the message with the close button', async () => {
+    it('closes the pill on a tap', async () => {
         render(<Toaster />);
+        show('error', 'Ce joueur existe déjà.');
 
-        act(() => {
-            showFlashToast({
-                toast: { type: 'success', message: 'Round enregistré.' },
-            });
+        fireEvent.click(pillOf(await screen.findByRole('alert')));
+
+        await waitFor(() => {
+            expect(screen.queryByText('Ce joueur existe déjà.')).toBeNull();
         });
-        // A plain click: jsdom has no setPointerCapture, which sonner calls
-        // on pointerdown.
+    });
+
+    it('closes the pill with the « Fermer le message » button', async () => {
+        render(<Toaster />);
+        show('success', 'Round enregistré.');
+
         fireEvent.click(
             await screen.findByRole('button', { name: 'Fermer le message' }),
         );
