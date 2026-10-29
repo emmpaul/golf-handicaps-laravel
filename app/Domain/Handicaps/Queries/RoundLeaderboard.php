@@ -7,6 +7,7 @@ use App\Domain\Handicaps\NetRanking;
 use App\Domain\Handicaps\RankedNet;
 use App\Domain\Handicaps\RatedCourse;
 use App\Models\CourseRating;
+use App\Models\Player;
 use App\Models\Round;
 use App\Models\RoundPlayer;
 
@@ -22,7 +23,7 @@ final class RoundLeaderboard
     /**
      * @param  array{rated: bool, ratingT: int, slope: int}|null  $rating  the rating of the round when
      *                                                                     the caller has read it already
-     * @return list<array{playerId: string, name: string, gross: int, indexBeforeT: int|null, playingHandicap: int|null, net: int|null, rank: int|null}>
+     * @return list<array{playerId: string, name: string, colorSlot: int, gross: int, indexBeforeT: int|null, playingHandicap: int|null, net: int|null, rank: int|null}>
      */
     public function for(Round $round, ?array $rating = null): array
     {
@@ -30,13 +31,14 @@ final class RoundLeaderboard
 
         $lines = RoundPlayer::query()
             ->join('players', 'players.id', '=', 'round_players.player_id')
+            ->joinSub(Player::colorSlots(), 'player_slots', 'player_slots.id', '=', 'round_players.player_id')
             ->join('player_round_stats', fn ($join) => $join
                 ->on('player_round_stats.round_id', '=', 'round_players.round_id')
                 ->on('player_round_stats.player_id', '=', 'round_players.player_id'))
             ->where('round_players.round_id', $round->id)
             ->orderBy('round_players.position')
             ->toBase()
-            ->get(['round_players.player_id', 'players.name', 'player_round_stats.gross', 'player_round_stats.index_before_t'])
+            ->get(['round_players.player_id', 'players.name', 'player_slots.color_slot', 'player_round_stats.gross', 'player_round_stats.index_before_t'])
             ->all();
 
         // Without a typed rating, the fallback (par × 10, 113) gives the index rounded, as Next.
@@ -51,6 +53,7 @@ final class RoundLeaderboard
         return array_map(fn (object $line, RankedNet $net): array => [
             'playerId' => $line->player_id,
             'name' => $line->name,
+            'colorSlot' => (int) $line->color_slot,
             'gross' => $net->gross,
             'indexBeforeT' => $net->indexBeforeT,
             'playingHandicap' => $net->playingHandicap,

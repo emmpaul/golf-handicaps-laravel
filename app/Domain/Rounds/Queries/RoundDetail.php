@@ -26,23 +26,28 @@ final class RoundDetail
      *     playedOn: string,
      *     par: int,
      *     hasPhoto: bool,
-     *     leaderboard: list<array{playerId: string, name: string, gross: int, indexBeforeT: int|null, playingHandicap: int|null, net: int|null, rank: int|null}>,
+     *     leaderboard: list<array{playerId: string, name: string, colorSlot: int, gross: int, indexBeforeT: int|null, playingHandicap: int|null, net: int|null, rank: int|null}>,
      *     rating: array{rated: bool, ratingT: int, slope: int},
      *     card: array{
      *         holes: list<array{par: int, strokeIndex: int, distance: int|null}>,
-     *         lines: list<array{playerId: string, name: string, strokes: list<int>}>,
+     *         lines: list<array{playerId: string, name: string, colorSlot: int, strokes: list<int>}>,
      *     },
      * }
      */
     public function for(Round $round): array
     {
-        $round->loadMissing(['holes', 'lines.player:id,name', 'scores']);
+        $round->loadMissing([
+            'holes',
+            'lines.player' => fn ($query) => $query->select('players.id', 'players.name')->withColorSlot(),
+            'scores',
+        ]);
         // Read once for the page and its leaderboard.
         $rating = $this->leaderboard->rating($round);
 
         $lines = array_values($round->lines->map(fn (RoundPlayer $line): array => [
             'playerId' => $line->player_id,
             'name' => $line->player->name,
+            'colorSlot' => (int) $line->player->color_slot,
             'strokes' => array_values($round->scores
                 ->where('player_id', $line->player_id)
                 ->sortBy('hole')

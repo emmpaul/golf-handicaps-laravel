@@ -10,7 +10,7 @@ use App\Models\PlayerAlias;
  * The players of the group for the Players page: by name whatever the case, each with its
  * aliases in alphabetical order and its current index (spec players, « Index sur la page
  * Joueurs »): the one just after its latest round by date of play, date of saving then id,
- * provisional below 3 rounds, null without round. Port of playerOverviews of the Next.js
+ * provisional below 3 rounds, null without round; its colour slot (design D6). Port of playerOverviews of the Next.js
  * application.
  */
 final class PlayerOverview
@@ -18,16 +18,17 @@ final class PlayerOverview
     public function __construct(private readonly PlayerStandings $standings) {}
 
     /**
-     * @return list<array{id: string, name: string, aliases: list<array{id: string, alias: string}>, indexT: int|null, provisional: bool}>
+     * @return list<array{id: string, name: string, aliases: list<array{id: string, alias: string}>, indexT: int|null, provisional: bool, colorSlot: int}>
      */
     public function get(): array
     {
         $indexes = $this->standings->currentStats();
 
         return array_values(Player::query()
+            ->withColorSlot()
             ->with(['aliases' => fn ($query) => $query->orderBy('alias')])
-            ->orderByRaw('lower(name)')
-            ->orderBy('id')
+            ->orderByRaw('lower(players.name)')
+            ->orderBy('players.id')
             ->get()
             ->map(function (Player $player) use ($indexes): array {
                 $index = $indexes->get($player->id);
@@ -40,6 +41,7 @@ final class PlayerOverview
                         ->all()),
                     'indexT' => $index === null ? null : (int) $index->index_after_t,
                     'provisional' => PlayerStandings::provisional($index),
+                    'colorSlot' => (int) $player->color_slot,
                 ];
             })
             ->all());
