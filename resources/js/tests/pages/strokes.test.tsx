@@ -334,7 +334,11 @@ describe('Strokes page', () => {
         expect(cells).toHaveLength(18);
         expect(
             cells
-                .filter((cell) => cell.lastElementChild?.textContent === '·')
+                .filter(
+                    (cell) =>
+                        cell.lastElementChild?.getAttribute('data-slot') ===
+                        'no-stroke',
+                )
                 .map((cell) => cell.getAttribute('aria-label')),
         ).toEqual(['Trou 3 : aucun coup', 'Trou 14 : aucun coup']);
     });
