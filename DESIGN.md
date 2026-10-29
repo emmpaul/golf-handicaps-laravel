@@ -25,10 +25,10 @@ L'application est le tableau des scores du groupe : papier bleuté froid, encre 
 | `--color-rule`    | `#CAD2DA` |           | filet de 1 px                                                               |
 | `--color-signal`  | `#CB1E21` | `#F86B65` | sous le par (`--birdie`), jamais un fond de bouton                          |
 | `--color-error`   | `#9B540C` | `#EB9854` | `destructive` et erreurs                                                    |
-| `--color-ai`      | `#018090` |           | repère « Carte lue par l’IA, vérifie chaque case » de l'écran de correction |
+| `--color-ai`      | `#007D8D` |           | repère « Carte lue par l’IA, vérifie chaque case » de l'écran de correction |
 | `--color-focus`   | `#0B66D6` |           | contour de focus de 2 px                                                    |
 
-Une case sombre vide n'a pas de valeur hex fixée par la spec ; sa valeur OKLCH est dans `tokens.css`. Les valeurs hex de la spec sont des littéraux dans `resources/js/tests/theme-contrast.test.ts`, qui vérifie aussi les contrastes : 4,5:1 pour le texte courant et secondaire sur chaque fond, 3:1 pour le contour de champ, le contour de focus et la marque « au-dessus du par », dans les deux modes.
+Une case sombre vide n'a pas de valeur hex fixée par la spec ; sa valeur OKLCH est dans `tokens.css`. Les valeurs hex de la spec sont des littéraux dans `resources/js/tests/theme-contrast.test.ts`, qui vérifie aussi les contrastes : 4,5:1 pour le texte courant et secondaire sur chaque fond et pour le repère de lecture par l’IA (`--color-ai`), 3:1 pour le contour de champ, le contour de focus et la marque « au-dessus du par », dans les deux modes.
 
 La palette est fermée : `--color-*`, `--text-*`, `--radius-*` et `--shadow-*` sont vidés avant les déclarations du projet. Une classe Tailwind par défaut comme `text-gray-500` ne produit aucun style. `--text-base` et les interlignes de `text-xs` à `text-3xl` sont redéclarés pour garder les valeurs calculées de Next.
 

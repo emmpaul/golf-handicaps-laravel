@@ -21,12 +21,15 @@ const textPairs = [
     ['destructive', 'background'],
     ['destructive', 'muted'],
     ['background', 'destructive'],
+    // « Carte lue par l’IA, vérifie chaque case » (16 px, 500): text, not a mark.
+    // Mutation: light --color-ai back to oklch(0.55 0.095 210) in tokens.css →
+    // "light: ai/background >= 4.5:1" goes red (about 4.35:1).
+    ['ai', 'background'],
 ] as const;
 
 // Non-text marks and edges: 3:1 (WCAG 1.4.11).
 const markPairs = [
     ['bogey', 'background'],
-    ['ai', 'background'],
     ['input', 'background'],
     ['ring', 'background'],
     ['ring', 'muted'],
