@@ -115,7 +115,7 @@ Correspondance des tables :
 
 | SQLite               | Postgres         | Traitement                                                                                                                                                          |
 | -------------------- | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `players`            | `players`        | Nouvel UUID, `created_at` ms → `timestamptz` UTC.                                                                                                                   |
+| `players`            | `players`        | Nouvel UUID, `created_at` ms → `timestamp(0)` UTC, millisecondes tronquées (UUID triés dans l'ordre SQLite pour garder l'ordre de création).                        |
 | `player_aliases`     | `player_aliases` | FK remappée.                                                                                                                                                        |
 | `rounds`             | `rounds`         | Nouvel UUID, `played_on` → `date`, photo copiée.                                                                                                                    |
 | `round_holes`        | `round_holes`    | FK remappée.                                                                                                                                                        |
@@ -127,7 +127,7 @@ Correspondance des tables :
 | `ai_usage`           | `ai_usage`       | Copiée (le budget du mois en cours reste juste).                                                                                                                    |
 | `jobs`               | —                | Ignorée. La file Next est vidée avant le cutover.                                                                                                                   |
 
-Photos : chaque `photo_path` (`uploads/<uuid>.webp`) est copié vers le disque Laravel. Une photo qui n'est pas en WebP est convertie. Une photo absente fait échouer l'import et la commande liste les chemins manquants.
+Photos : chaque `photo_path` (`uploads/<uuid>.webp`) est copié une fois vers `imports/<uuid>.webp` du disque `photos`, chemin partagé par le round et son import. Une photo qui n'est pas en WebP est convertie. Une photo absente fait échouer l'import et la commande liste les chemins manquants.
 
 Rapport final : nombre de lignes par table (source → cible), photos copiées et nombre de stats comparées identiques.
 
@@ -148,10 +148,12 @@ Les variables vivent dans l'environnement Dokploy : `APP_KEY`, `APP_PASSCODE`, `
 
 ## Cutover
 
-1. Répétition sur staging : copier `app.db` et `uploads/` de la prod, lancer `golf:import-sqlite`, comparer à l'œil l'accueil, les handicaps et quelques rounds avec la prod.
-2. Le jour J : arrêter `golf-web`, attendre que la file du worker soit vide, arrêter `golf-worker`.
-3. Copier `app.db` et `uploads/` depuis le volume `golf-data`.
-4. Lancer `golf:import-sqlite` dans le conteneur `web` de la stack Laravel et lire le rapport.
+Procédure détaillée, commande par commande : `docs/deployment.md`, « Bascule depuis Next ».
+
+1. Répétition sur staging : copier la base et `uploads/` de la prod, lancer `golf:import-sqlite`, comparer à l'œil l'accueil, les handicaps et quelques rounds avec la prod.
+2. Le jour J : arrêter le web de Next, attendre que la file du worker soit vide, arrêter le worker. Les noms des conteneurs sont à relever dans Dokploy : `golf-web` et `golf-worker` ne sont pas ceux du serveur, où le script de sauvegarde du mainteneur trouve un seul conteneur `golfhandicaps-app-*`.
+3. Copier la base par `VACUUM INTO` (elle est en WAL : `app.db` seul peut perdre des écritures) en vérifiant son intégrité, puis `uploads/`, depuis le volume `golf-data`.
+4. Lancer `golf:import-sqlite` dans le conteneur `web` de la stack Laravel, d'abord avec `--dry-run`, puis pour de bon, et lire le rapport. La base de production a déjà les joueurs de `INITIAL_PLAYERS` créés par `migrate` : la commande passe `--force` dans un terminal interactif (`docker exec -it`) et l'opérateur répond oui à la question qui nomme `players` et `player_aliases`.
 5. Basculer le domaine sur la stack Laravel et vérifier `/login`, l'accueil et les handicaps.
 6. Garder le volume `golf-data` et les deux applications Dokploy arrêtées pendant 30 jours. Pour revenir en arrière, rebasculer le domaine et redémarrer les deux applications.
 

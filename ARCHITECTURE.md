@@ -84,6 +84,18 @@ Monolithe Laravel 13 + Inertia 3 + React 19, PostgreSQL 18, monté selon le sque
 - Correction : l'éditeur des rounds envoie son état par `PUT /imports/{import}/correction` une seconde après la dernière modification (`autosave.ts`), gardé dans `imports.correction` (`{ version: 1, card }`) ; `ImportEditorState` rouvre la correction, sinon le brouillon, sinon un écran vide. L'enregistrement (`POST /imports/{import}/round`) passe par `CreateRound`, les contrôles des totaux lus compris, puis apprend en alias les noms lus qui ne désignaient pas exactement leur joueur.
 - Données de développement : `make demo` ajoute par `DemoImportsSeeder` un import « Prêt à vérifier » de la carte de référence avec une ligne lue « JULIEN », un « Échec » « Budget IA du mois atteint », un « En attente » sans job, chacun avec sa photo, et 3 lignes d'`ai_usage` du mois courant. Aucun appel à l'IA.
 
+## Import de la base Next (ADR 0014)
+
+- Commande `golf:import-sqlite {db} {--uploads=} {--force} {--dry-run}` (`App\Console\Commands\ImportSqliteCommand`), lancée une fois au cutover. Elle lit les options, pose la question de `--force` (non par défaut, non sans terminal), appelle `App\Domain\LegacyImport\Actions\ImportLegacyDatabase` et affiche le rapport (`ImportReport`) ou l'erreur. Elle sort en 0 sur un import ou un essai à blanc réussis, en 1 sinon. Procédure de bascule : `docs/deployment.md`, « Bascule depuis Next ».
+- Domaine réservé : seul `ImportSqliteCommand` utilise `App\Domain\LegacyImport`, qui n'utilise ni `App\Http` ni la façade `Log` (règles d'architecture). Ses refus sont des `LegacyImportFailed` (message pour l'opérateur et liste de détails), hors de `App\Domain\DomainException` : aucune requête HTTP ne les rend, et aucune ligne de la base Next ne part dans le journal.
+- Lecture : connexion `legacy` déclarée à la volée sur le fichier, en lecture seule (`Pdo\Sqlite::OPEN_READONLY`). `LegacySchema` vérifie les tables et colonnes du niveau Drizzle `0004` avant toute écriture, colonnes en plus tolérées.
+- Écriture : insertions directes par `DB::table()`, sans les Actions des domaines, dans une seule transaction avec la copie des photos (une photo écrite est effacée si la transaction échoue). Les contraintes de PostgreSQL restent la garde ; une ligne refusée fait échouer l'import en nommant la table et la clé SQLite. Seule normalisation : une distance hors de 1 à 999 devient vide.
+- Identifiants : `IdMap` garde en mémoire la correspondance `id` SQLite → UUID. Pour chaque table à `id`, les UUID v7 générés sont triés puis attribués dans l'ordre des `id` SQLite : `order by created_at, id` rend l'ordre de Next malgré des dates tronquées à la seconde et deux joueurs créés dans la même milliseconde (couleur de joueur, historique d'index).
+- Photos : `LegacyPhotos` copie chaque chemin `uploads/<nom>` une fois vers `imports/<nom>.webp` du disque `photos`, chemin partagé par le round et l'import, et convertit en WebP ce qui ne l'est pas (`WebpPhoto`).
+- Statistiques : `player_round_stats` n'est pas copiée. `RecomputePlayerStats` la recalcule dans la transaction, puis `StatsComparison` la compare colonne par colonne à celle de Next ; un écart annule l'import et liste chaque différence.
+- Après le commit : effacement des photos des lignes vidées par `--force`, et `LookUpCourseRating` mis en file pour chaque rating importée `pending`. `--dry-run` fait tout puis annule, sans écrire de photo ni mettre de job en file.
+- Tests : `tests/Support/LegacySqlite/LegacySqliteFixture` construit une base SQLite à chaque test depuis les migrations Drizzle de Next copiées sous `tests/fixtures/legacy-sqlite/drizzle/`, avec des valeurs littérales. Aucune base réelle n'est versionnée.
+
 ## Heures et fuseau (ADR 0004)
 
 - `app.timezone` reste `UTC`. Chaque instant envoyé à une page passe par `App\Domain\LocalTime`, qui le convertit vers `app.display_timezone` (`America/Montreal`).
@@ -113,7 +125,7 @@ Monolithe Laravel 13 + Inertia 3 + React 19, PostgreSQL 18, monté selon le sque
 - TLS chez Traefik (Dokploy). `AddSecurityHeaders` pose `Strict-Transport-Security: max-age=31536000` sur toute réponse servie en HTTPS, d'après `isSecure()` lu après les mandataires de confiance. Le témoin de session est `Secure` par défaut quand `APP_ENV=production` (`config/session.php`). `TRUSTED_PROXIES` vaut en production le sous-réseau du proxy de Dokploy, jamais `*`.
 - L'image installe `imagick` (conversion des photos en WebP) et `docker/php/uploads.ini` (envoi jusqu'à 20 Mo). `ANTHROPIC_API_KEY`, `AI_MODEL`, `AI_MONTHLY_BUDGET_USD` et `AI_BUDGET_TIME_ZONE` arrivent par l'environnement de `migrate`, `web` et `worker`, jamais par l'image.
 - Journaux sur la sortie d'erreur du conteneur (`LOG_CHANNEL=stderr`), gardés et tournés par Docker.
-- Procédures (installation, version, santé, sauvegarde, restauration, retour arrière, fermeture des sessions) : `docs/deployment.md`.
+- Procédures (installation, version, santé, sauvegarde, restauration, retour arrière, bascule depuis Next, fermeture des sessions) : `docs/deployment.md`.
 
 ## Frontend (ADR 0006)
 
