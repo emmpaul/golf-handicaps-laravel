@@ -66,7 +66,7 @@ Recherche des ratings sur Simulator Golf Tour par le worker, confirmation, recal
 
 ## 11. `visual-redesign`
 
-**Dépend de** : 6, 7, 8, 9. **Statut** : proposé.
+**Dépend de** : 6, 7, 8, 9. **Statut** : en cours.
 
 Refonte visuelle selon le design « Golf handicap app redesign » du mainteneur : thème sombre, Geist et Geist Mono, barre d'onglets flottante et bouton Importer, toutes les pages recomposées, animations du design. Remplace la décision 7 de `docs/PORT_TO_LARAVEL.md` pour le thème, les tokens et recharts, et une partie de l'ADR 0006.
 
