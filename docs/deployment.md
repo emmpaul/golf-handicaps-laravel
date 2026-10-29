@@ -12,7 +12,7 @@ L'application tourne sur un hôte Docker piloté par [Dokploy](https://dokploy.c
 | `worker`  | `php artisan queue:work`, relancé chaque heure par `--max-time=3600`                                   | son battement a moins de 300 s          |
 | `backup`  | `pg_dump` au démarrage puis toutes les 24 h dans le volume `backups`                                   | un dump réussi a moins de 26 h          |
 
-`web` et `worker` démarrent seulement après la sortie en 0 de `migrate`. Si une migration, la création des joueurs initiaux ou le recalcul de l'historique d'index échoue, ils ne démarrent pas sur la nouvelle image et restent sur `Created`. Lire alors `docker logs "$P-migrate-1"`, corriger, redéployer. Ce que deviennent les conteneurs de l'ancienne version pendant ce temps reste à observer sur le staging. Ils partagent le volume `storage`, monté sur `storage/app`. Les journaux partent sur la sortie d'erreur des conteneurs (`docker logs`, onglet Logs de Dokploy). Aucun fichier de journal ne grossit dans un conteneur.
+`web` et `worker` démarrent seulement après la sortie en 0 de `migrate`. Si une migration, la création des joueurs initiaux ou le recalcul de l'historique d'index échoue, ils ne démarrent pas sur la nouvelle image et restent sur `Created`. Lire alors `docker logs "$P-migrate-1"`, corriger, redéployer. Ce que deviennent les conteneurs de l'ancienne version pendant ce temps reste à observer sur le staging. `migrate`, `web` et `worker` montent le volume `storage` sur `storage/app` : `migrate`, créé avant les deux autres, remplit seul un volume neuf, sinon `web` et `worker`, créés en même temps, copient chacun le contenu de l'image et le second échoue (`file exists`, issue #14). Le contrôle de « Volume `storage` neuf » le vérifie. Les journaux partent sur la sortie d'erreur des conteneurs (`docker logs`, onglet Logs de Dokploy). Aucun fichier de journal ne grossit dans un conteneur.
 
 ## Lancer les commandes de cette page
 
@@ -195,6 +195,18 @@ docker pull ghcr.io/emmpaul/golf-handicaps-laravel:main
 Serveur seulement. Le comportement de Dokploy face à un tag qui bouge reste à confirmer sur le staging.
 
 Changer une variable demande un redéploiement, pas un simple redémarrage. `docker restart` relance le conteneur avec l'environnement qu'il avait à sa création ; seul le redéploiement recrée les conteneurs avec les nouvelles valeurs.
+
+## Volume `storage` neuf
+
+Docker copie le contenu de l'image dans un volume nommé vide à la création du premier conteneur qui le monte. Compose crée `migrate` avant `web` et `worker`, qui en dépendent : c'est donc `migrate` qui remplit un volume `storage` neuf, une seule fois. Après une mise à jour majeure de Docker ou de Compose sur le serveur, refaire ce contrôle sur la stack locale, avec les mêmes versions de Docker et de Compose que le serveur. Il crée `migrate` seul, puis liste le volume depuis une autre image :
+
+```sh
+docker compose -f docker-compose.yml -f docker-compose.smoke.yml --env-file docker/smoke.env create migrate
+docker run --rm --entrypoint sh -v golf-handicaps-smoke_storage:/mnt postgres:18.4-alpine@sha256:9a8afca54e7861fd90fab5fdf4c42477a6b1cb7d293595148e674e0a3181de15 -c 'ls -lan /mnt'
+docker compose -f docker-compose.yml -f docker-compose.smoke.yml --env-file docker/smoke.env down -v
+```
+
+Le listing doit montrer `.gitignore`, `private` et `public` à l'uid 1000. Un volume vide, à `root` (`0 0`), veut dire que Compose ne crée plus `migrate` avant `web` et `worker`, ou que Docker ne copie plus : la course de l'issue #14 redevient possible sur un volume neuf.
 
 ## Santé du worker
 

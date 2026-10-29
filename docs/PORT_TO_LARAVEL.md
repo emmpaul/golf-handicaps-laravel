@@ -141,7 +141,7 @@ docker-compose.yml (Dokploy)
 ├── web      image GHCR, FrankenPHP :8080, healthcheck /up, depends_on migrate (completed)
 ├── worker   image GHCR, `php artisan queue:work --tries=2`, depends_on migrate (completed)
 └── pgsql    postgres:18-alpine, volume pgdata, healthcheck pg_isready
-volumes: pgdata, storage (photos, monté sur web et worker)
+volumes: pgdata, storage (photos, monté sur migrate, web et worker)
 ```
 
 Les variables vivent dans l'environnement Dokploy : `APP_KEY`, `APP_PASSCODE`, `ANTHROPIC_API_KEY`, `AI_MONTHLY_BUDGET_USD`, `AI_BUDGET_TIME_ZONE`, `SGT_LOOKUP`, `INITIAL_PLAYERS`, `TRUSTED_PROXIES`, `DB_*`. Aucun secret n'est dans l'image.
