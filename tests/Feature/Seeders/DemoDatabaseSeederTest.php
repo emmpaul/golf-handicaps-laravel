@@ -11,12 +11,14 @@
  * - a generated card with a stroke index in double: RoundCardChecks refuses it and the seeding
  *   fails;
  * - the photos directory not emptied first: the stale file stays on the disk;
- * - the demonstration rating written by CourseRating::factory() instead of SaveCourseRating:
- *   the differentials are not recomputed and Manu stays at 170 on the reference round;
- * - DemoCourseRatingsSeeder called after DemoRoundsSeeder: each round finds no row and its
- *   lookup ends in « Saisie manuelle » (SGT_LOOKUP off), not in the statuses of the literal list;
- * - DemoConfirmedRatingSeeder called before DemoRoundsSeeder: SaveCourseRating finds no round on
- *   BETHPAGE BLACK / Red and the seeding fails with « Parcours introuvable ».
+ * - DemoConfirmedRatingSeeder through SaveCourseRating: the rating has the source manual;
+ * - DemoCourseRatingsSeeder called after DemoRoundsSeeder: each new course of the rounds already
+ *   has its pending row and its job, and the seeder fails on the unique index of course_ratings;
+ *   CALA NOVA / White left out of DemoCourseRatingsSeeder: its rounds queue a lookup and
+ *   assertNothingPushed fails;
+ * - DemoConfirmedRatingSeeder writing the confirmed rating by an update, without
+ *   ConfirmCourseRatingProposal: the history is not recomputed and Gab and Manu stay at 10 and
+ *   170 on the reference round.
  */
 
 use App\Domain\Courses\Queries\CourseOverview;
@@ -33,6 +35,7 @@ use App\Models\PlayerRoundStat;
 use App\Models\Round;
 use App\Models\RoundPlayer;
 use Database\Seeders\DemoDatabaseSeeder;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
 
 /**
@@ -156,24 +159,35 @@ test('the demonstration refuses a base that already has a round and writes nothi
         ->and(Round::query()->pluck('course_name')->all())->toBe(['OLD COURSE']);
 });
 
-test('the demonstration rates BETHPAGE BLACK / Red, proposes PAYNES VALLEY / Blue, finds no CALA NOVA and computes the index history of every round', function () {
+// No request leaves the seeding: Http::preventStrayRequests() of tests/Pest.php throws on any.
+test('the demonstration confirms BETHPAGE BLACK / Red from SGT, proposes PAYNES VALLEY / Blue, finds no CALA NOVA, queues no lookup and computes the index history of every round', function () {
+    Queue::fake();
+
     $this->seed(DemoDatabaseSeeder::class);
 
+    Queue::assertNothingPushed();
+
     expect(CourseRating::query()->orderBy('course_name')->get()->map(fn (CourseRating $rating): array => [
-        $rating->course_name, $rating->tees, $rating->rating_t, $rating->slope, $rating->status->value,
+        $rating->course_name, $rating->tees, $rating->rating_t, $rating->slope, $rating->source,
+        $rating->status->value, $rating->sgt_course_id, $rating->proposed_tee,
     ])->all())
         ->toBe([
-            ['BETHPAGE BLACK', 'Red', 714, 144, 'confirmed'],
-            ['CALA NOVA', 'White', null, null, 'not_found'],
-            ['PAYNES VALLEY', 'Blue', null, null, 'proposed'],
+            ['BETHPAGE BLACK', 'Red', 714, 144, 'sgt', 'confirmed', 30, 'Red'],
+            ['CALA NOVA', 'White', null, null, null, 'not_found', null, null],
+            ['PAYNES VALLEY', 'Blue', null, null, null, 'proposed', 573, 'Blue'],
         ])
+        // jsonb keeps its keys in its own order: compared by value.
+        ->and(CourseRating::query()->where('course_name', 'PAYNES VALLEY')->sole()->tees_read)
+        ->toEqual([['name' => 'Blue', 'ratingT' => 729, 'slope' => 131]])
         ->and(PlayerRoundStat::query()->count())->toBe(RoundPlayer::query()->count());
 
+    // The reference round of BETHPAGE BLACK / Red computed on 71,4 / 144: Gab 72 and Manu 88 give
+    // 0,5 and 13,0 (tasks.md, preamble), not 1,0 and 17,0 on the par and 113.
     $reference = Round::query()->whereDate('played_on', '2026-10-17')->sole();
-    $manu = Player::query()->where('name', 'Manu')->sole();
 
-    expect(PlayerRoundStat::query()->where('round_id', $reference->id)->where('player_id', $manu->id)->value('differential_t'))
-        ->toBe(130);
+    expect(PlayerRoundStat::query()->where('round_id', $reference->id)->join('players', 'players.id', '=', 'player_round_stats.player_id')
+        ->orderBy('players.name')->pluck('differential_t', 'players.name')->all())
+        ->toBe(['Gab' => 5, 'Manu' => 130]);
 });
 
 // Mutation: DemoImportsSeeder removed from DemoDatabaseSeeder: PendingImports counts 0 and has no latest id.
