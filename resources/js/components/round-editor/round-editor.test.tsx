@@ -622,3 +622,172 @@ describe('RoundEditor, grid layouts', () => {
         );
     });
 });
+
+// Spec scorecard-import « Repère de lecture par l'IA », « Nom lu sur chaque
+// ligne », « Contrôle des totaux lus » and design D7: the card of an import
+// carries the names and totals read; the editor of an import gets its
+// `importContext`. The read card: Gab's hole 9 read as 3 with OUT 38.
+// Mutations:
+// - the totals of a read line recomputed at each keystroke (`totals` of the
+//   grid row from `withTotals` for every line) → the read OUT test reads 36
+//   and goes red;
+// - the totals of a read line kept read-only → the editable totals test goes
+//   red;
+// - « lu « … » » shown for every line (`line.readName ?? ''`) → the added
+//   line test finds « lu « » » and goes red;
+// - the mark shown without `readByAi` → the failed import test goes red;
+// - the straight apostrophe in « l'IA » → the mark test goes red.
+
+const READ_GAB = [5, 5, 3, 5, 4, 4, 4, 3, 3, 4, 4, 4, 4, 3, 4, 5, 3, 3];
+
+const readCard = (): EditorState =>
+    cardEditorState({
+        courseName: 'BETHPAGE BLACK',
+        tees: 'Red',
+        playedOn: '2026-10-17',
+        holes: REFERENCE_CARD.holes,
+        lines: [
+            {
+                playerId: null,
+                strokes: READ_GAB,
+                readName: 'GAB',
+                totals: { out: 38, in: 34, total: 72 },
+            },
+            {
+                playerId: null,
+                strokes: REFERENCE_CARD.lines[1].strokes,
+                readName: 'MANU',
+                totals: { out: 46, in: 42, total: 88 },
+            },
+        ],
+        parTotals: { out: 36, in: 35, total: 71 },
+    });
+
+const IMPORT = '0190a6b2-7c3e-7000-8000-0000000000c1';
+
+function importEditor(readByAi = true) {
+    return (
+        <RoundEditor
+            initial={readCard()}
+            players={PLAYERS}
+            courses={[]}
+            action={store()}
+            importContext={{
+                importId: IMPORT,
+                photoUrl: `/imports/${IMPORT}/photo`,
+                readByAi,
+                failure: null,
+            }}
+        />
+    );
+}
+
+describe('RoundEditor, card of an import', () => {
+    it('shows « Carte lue par l’IA, vérifie chaque case » first, in the AI colour', () => {
+        const { container } = render(importEditor());
+
+        const mark = screen.getByText(
+            'Carte lue par l’IA, vérifie chaque case',
+        );
+
+        expect(mark.className).toContain('text-ai');
+        expect(container.firstElementChild?.firstElementChild).toBe(mark);
+    });
+
+    it('shows no mark when the AI gave no draft', () => {
+        render(importEditor(false));
+
+        expect(screen.queryByText(/Carte lue par l/)).toBeNull();
+    });
+
+    it('shows no mark and no saving status without an import (manual entry, saved round)', () => {
+        render(editor({ initial: readCard() }));
+
+        expect(screen.queryByText(/Carte lue par l/)).toBeNull();
+        expect(screen.queryByTestId('autosave-status')).toBeNull();
+        expect(
+            screen.queryByRole('img', { name: 'Photo de la carte importée' }),
+        ).toBeNull();
+    });
+
+    it('shows « lu « GAB » » on the row of « Ligne 1 », the player list and its remove button on the next', () => {
+        render(importEditor());
+
+        const group = screen.getByRole('group', { name: 'Ligne 1' });
+        const read = within(group).getByText('lu « GAB »');
+        // The list sits in the wrapper that draws its chevron.
+        const select = within(group)
+            .getByRole('combobox', { name: 'Joueur de la ligne 1' })
+            .closest('[data-slot="native-select-wrapper"]');
+
+        expect(read.parentElement).toBe(
+            within(group).getByText('Ligne 1').parentElement,
+        );
+        expect(read.parentElement?.nextElementSibling).toBe(select);
+        expect(select?.nextElementSibling).toBe(
+            within(group).getByRole('button', { name: 'Retirer la ligne 1' }),
+        );
+        expect(
+            within(screen.getByRole('group', { name: 'Ligne 2' })).getByText(
+                'lu « MANU »',
+            ),
+        ).toBeInTheDocument();
+    });
+
+    it('shows no read name on an added line', async () => {
+        render(importEditor());
+
+        await userEvent.click(
+            screen.getByRole('button', { name: 'Ajouter une ligne' }),
+        );
+
+        expect(
+            within(screen.getByRole('group', { name: 'Ligne 3' })).queryByText(
+                /^lu «/,
+            ),
+        ).toBeNull();
+    });
+
+    it('keeps the totals read on a line, editable, and computes those of an added line', async () => {
+        render(importEditor());
+
+        expect(cell('Ligne 1 OUT').value).toBe('38');
+        expect(cell('Ligne 1 OUT').readOnly).toBe(false);
+        expect(cell('Par TOT').value).toBe('71');
+        expect(cell('Par TOT').readOnly).toBe(false);
+
+        await userEvent.clear(cell('Ligne 1 trou 1'));
+        await userEvent.type(cell('Ligne 1 trou 1'), '4');
+
+        expect(cell('Ligne 1 OUT').value).toBe('38');
+
+        await userEvent.clear(cell('Ligne 1 TOT'));
+        await userEvent.type(cell('Ligne 1 TOT'), '71');
+
+        expect(cell('Ligne 1 TOT').value).toBe('71');
+
+        await userEvent.click(
+            screen.getByRole('button', { name: 'Ajouter une ligne' }),
+        );
+        await userEvent.type(cell('Ligne 3 trou 1'), '5');
+
+        expect(cell('Ligne 3 OUT').readOnly).toBe(true);
+        expect(cell('Ligne 3 OUT').value).toBe('');
+    });
+
+    it('flags « Somme aller 36 ≠ OUT 38 » until the 3 of hole 9 becomes 5', async () => {
+        render(importEditor());
+
+        expect(problemMessages()).toContain('Somme aller 36 ≠ OUT 38');
+        expect(cell('Ligne 1 OUT').getAttribute('aria-invalid')).toBe('true');
+        expect(cell('Ligne 1 trou 9').getAttribute('aria-invalid')).toBe(
+            'true',
+        );
+
+        await userEvent.clear(cell('Ligne 1 trou 9'));
+        await userEvent.type(cell('Ligne 1 trou 9'), '5');
+
+        expect(problemMessages()).not.toContain('Somme aller 36 ≠ OUT 38');
+        expect(cell('Ligne 1 OUT').getAttribute('aria-invalid')).toBeNull();
+    });
+});
