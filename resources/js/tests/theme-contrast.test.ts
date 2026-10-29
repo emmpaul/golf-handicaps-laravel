@@ -54,14 +54,18 @@ const EXCEPTIONS: [string, string, number, number][] = [
 ];
 
 // Colour tokens kept out of the pairs (DO15), with the only use each is
-// allowed: none of them is readable text.
+// allowed: none of them is readable text. A graphic mark whose information is
+// also written as text is a permitted use of ink-4 and bar (DO22).
 const OUT_OF_PAIRS: [string, string][] = [
     ['color-ink-3', 'contrôle désactivé (exempté par WCAG 1.4.3) ou décor'],
     [
         'color-ink-4',
-        'décor masqué aux lecteurs d’écran ou trait non porteur d’information ; bordure de case décochée (exception Q4)',
+        'décor masqué aux lecteurs d’écran ou trait non porteur d’information ; bordure de case décochée (exception Q4) ; segment « Double bogey + », dont le compte est écrit (DO22)',
     ],
-    ['color-bar', 'décor ou trait non porteur d’information'],
+    [
+        'color-bar',
+        'décor ou trait non porteur d’information ; barre de différentiel qui ne compte pas, l’historique portant « Compte » (DO22)',
+    ],
     ['color-rule-soft', 'décor ou trait non porteur d’information'],
 ];
 
