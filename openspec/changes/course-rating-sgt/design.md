@@ -210,7 +210,7 @@ Le mainteneur n'était pas joignable. Chaque question ouverte a reçu l'option r
 
 1. Pull request de code, après l'archivage de 8 : une migration qui modifie `course_ratings` (lignes existantes « Confirmé », source `manual`), la commande `golf:queue-rating-lookups` au bout de la commande de `migrate`, `SGT_LOOKUP` dans `docker-compose.yml`.
 2. Staging : redéployer ; `docker logs "$P-migrate-1"` montre « N recherches de rating mises en file. » ; le worker les traite ; ouvrir `/courses`, vérifier chaque proposition contre sa carte SGT et confirmer. Rien ne change dans les index avant une confirmation.
-3. Retour arrière : redéployer l'image précédente puis `php artisan migrate:rollback --step=1`. Les ratings confirmées restent (`rating_t` et `slope` remis non nuls), les lignes sans valeur confirmée sont effacées. Les jobs `LookUpCourseRating` restés dans `jobs` échouent sur l'ancienne image et partent dans `failed_jobs`, sans effet sur les données.
+3. Retour arrière : worker arrêté, `php artisan migrate:rollback --step=1 --force` lancé dans le web **encore sur la nouvelle image**, puis redéploiement de l'image précédente (corrigé à l'apply, tâche 10.1, relu dans `Migrator::rollbackMigrations()` : l'ancienne image n'a pas le fichier de la migration, et `migrate:rollback` y écrit « Migration not found » sans rien défaire ; détail dans `docs/deployment.md`, « Retour arrière de la recherche des ratings »). Les ratings confirmées restent (`rating_t` et `slope` remis non nuls), les lignes sans valeur confirmée sont effacées. Les jobs `LookUpCourseRating` restés dans `jobs` échouent sur l'ancienne image et partent dans `failed_jobs`, sans effet sur les données.
 
 ## Open Questions
 
