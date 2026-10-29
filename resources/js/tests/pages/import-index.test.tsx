@@ -55,7 +55,8 @@ import { ROUND } from '@/tests/reference-round';
 //   goes red.
 // Capitals of the design go through `uppercase` (design D2): the DOM keeps
 // « Imports », « Caméra », « Échec »; the words the design changes
-// (« À VÉRIFIER », « LECTURE… ») are written as such.
+// (« À VÉRIFIER », « LECTURE… ») are written as such, and so is
+// « ENREGISTRÉ », the pill of a saved import (DO28).
 
 vi.mock('thinking-orbs', () => ({
     ThinkingOrb: () => <canvas data-testid="orb" />,
@@ -392,7 +393,7 @@ describe('List of imports', () => {
             'Échec',
             'En attente',
             'LECTURE…',
-            'Prêt à vérifier',
+            'ENREGISTRÉ',
         ]);
 
         expect(actions(line('17 oct. 2026 · 21:05'))).toEqual([
@@ -436,11 +437,12 @@ describe('List of imports', () => {
 
     // Spec « Ligne d'un import ». Mutations: the ready pill left neutral
     // (`secondary`) → red; the reading pill in `accent` → red; the failed pill
-    // without `text-signal` → red.
-    it('colours the pills: « À VÉRIFIER » amber, « LECTURE… » cyan, « ÉCHEC » red, « En attente » neutral', () => {
+    // without `text-signal` → red; the saved import shown « Prêt à vérifier »
+    // in amber like a ready one (its status stays `ready`, DO28) → red.
+    it('colours the pills: « À VÉRIFIER » amber, « LECTURE… » cyan, « ÉCHEC » red, « En attente » and « ENREGISTRÉ » neutral', () => {
         render(
             <ImportIndex
-                imports={[ready, failed, queued, reading]}
+                imports={[ready, failed, queued, reading, saved]}
                 readingEnabled
             />,
         );
@@ -454,6 +456,8 @@ describe('List of imports', () => {
         expect(pill('17 oct. 2026 · 21:03')).toContain('text-ink-2');
         expect(pill('17 oct. 2026 · 21:02')).toContain('text-info');
         expect(pill('17 oct. 2026 · 21:02')).toContain('bg-info/15');
+        expect(pill('17 oct. 2026 · 21:01')).toContain('text-ink-2');
+        expect(pill('17 oct. 2026 · 21:01')).not.toContain('text-accent');
     });
 
     // Mutations: the date written « 23 octobre 2026 à 16:58 » (the former
