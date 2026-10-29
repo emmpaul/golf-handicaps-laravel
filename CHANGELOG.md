@@ -4,6 +4,10 @@ All notable changes to this application, version by version. The format follows 
 
 ## [Unreleased]
 
+### Changed
+
+- `docs/deployment.md` records the first install on Dokploy: `APP_NAME` is required, the domain needs a deploy to take effect, Dokploy adds `dokploy-network` itself, Autodeploy stays off, and the login limiter sees the client IP behind Cloudflare.
+
 ## [0.1.0] - 2026-10-29
 
 First release of the Laravel port of the golf handicap app. It takes over from the Next.js app with the same data and the same WHS computation, a redesigned interface, and a single Docker image deployed on Dokploy.

@@ -80,7 +80,8 @@ docker version --format '{{.Server.Version}}'
 Dans Dokploy, créer un projet, puis un service de type Compose :
 
 - source : le dépôt GitHub `emmpaul/golf-handicaps-laravel`, branche `main`, fichier `./docker-compose.yml`. Le mode Raw marche aussi, en collant le fichier : la stack ne lit aucun autre fichier du dépôt ;
-- type : Docker Compose, pas Stack (Swarm). L'ordre `migrate` puis `web` et `worker` repose sur `depends_on: condition: service_completed_successfully`, que seul `docker compose` honore.
+- type : Docker Compose, pas Stack (Swarm). L'ordre `migrate` puis `web` et `worker` repose sur `depends_on: condition: service_completed_successfully`, que seul `docker compose` honore ;
+- Autodeploy : désactivé. Sinon chaque push sur `main`, même de documentation seule, redéploie la stack avec le `docker-compose.yml` de `main`. Une version se déploie à la main, par `IMAGE_TAG` (« Déployer une version »).
 
 ### 4. Renseigner les variables
 
@@ -95,7 +96,7 @@ Onglet Environment. Dokploy écrit ces lignes dans un `.env` à côté de `docke
 | `DB_PASSWORD`           | une chaîne aléatoire           | Obligatoire. Lu une seule fois, à la création du volume `pgdata` (voir plus bas).                                                                                                                                                                                                                |
 | `TRUSTED_PROXIES`       | `10.0.1.0/24`                  | Sous-réseau du proxy de Dokploy (étape 6). Jamais `*`.                                                                                                                                                                                                                                           |
 | `INITIAL_PLAYERS`       | `Gab,Manu,Sean`                | Facultatif. Joueurs créés par `migrate` sur une base sans joueur, chacun avec son nom en majuscules pour alias. Sans effet dès qu'un joueur existe. Un nom en double, sans tenir compte de la casse, fait échouer `migrate` : `web` et `worker` ne démarrent pas.                                |
-| `APP_NAME`              | `Handicaps golf`               | Facultatif, c'est le défaut.                                                                                                                                                                                                                                                                     |
+| `APP_NAME`              | `"Handicaps golf"`             | Obligatoire sur Dokploy, entre guillemets. Sans lui, Dokploy passe le nom d'application du service (`golfhandicapslaravel-app-…`), qui devient le titre des pages et le nom du témoin de session. Vu le 2026-10-29 sur `golf2`.                                                                  |
 | `DB_DATABASE`           | `golf`                         | Facultatif, c'est le défaut. Les commandes de cette page supposent `golf`.                                                                                                                                                                                                                       |
 | `DB_USERNAME`           | `golf`                         | Facultatif, c'est le défaut.                                                                                                                                                                                                                                                                     |
 | `LOG_LEVEL`             | `info`                         | Facultatif, c'est le défaut.                                                                                                                                                                                                                                                                     |
@@ -126,7 +127,7 @@ docker run --rm --entrypoint php golf-handicaps-laravel:local artisan key:genera
 
 Onglet Domains : l'hôte de `APP_URL`, service `web`, port `8080`, HTTPS avec un certificat Let's Encrypt. Traefik termine le TLS et parle HTTP au port 8080 de `web`.
 
-Le service `web` doit partager un réseau avec Traefik. Dokploy le fait de deux façons : l'option « Isolated Deployment » du service compose, ou le réseau externe `dokploy-network` ajouté à la main à `web`. Le staging dira laquelle marche avec cette stack, et cette page la gardera (tâche 8.4 de `production-deployment`).
+Le service `web` doit partager un réseau avec Traefik. Avec un domaine dans l'onglet Domains, Dokploy ajoute lui-même à `web` les labels Traefik et le réseau externe `dokploy-network` (bouton « Preview Compose » pour les voir) : ni « Isolated Deployment », ni réseau ajouté à la main. Il ne les pose qu'au déploiement : un domaine créé après le premier Deploy demande un nouveau Deploy. Sans eux, Traefik répond `404 page not found`. Vu le 2026-10-29 sur `golf2`.
 
 ### 6. Régler `TRUSTED_PROXIES`
 
@@ -141,6 +142,8 @@ docker network inspect dokploy-network --format '{{range .IPAM.Config}}{{.Subnet
 Serveur seulement. En local, la même commande sur le réseau de la stack (`docker network inspect "${P}_default" --format '{{range .IPAM.Config}}{{.Subnet}} {{end}}'`) donne par exemple `192.168.239.0/24`.
 
 Mettre ce sous-réseau dans `TRUSTED_PROXIES` (plusieurs valeurs séparées par des virgules si la commande en affiche plusieurs). Ne jamais mettre `*` : n'importe quel client pourrait alors se faire passer pour une autre IP. La configuration retire d'ailleurs `*` et `**`. Si la stack rejoint Traefik par un autre réseau que `dokploy-network` (« Isolated Deployment »), c'est le sous-réseau de ce réseau-là qu'il faut.
+
+Derrière le proxy de Cloudflare (enregistrement DNS proxifié, comme `golf2.emmanuelpaul.com`), Laravel voit bien l'IP du client : le 2026-10-29 sur `golf2`, 10 codes faux depuis un téléphone en données cellulaires ont donné « Trop d'essais », et un code faux depuis un autre réseau, aussitôt après, « Code incorrect ».
 
 Vérifier la valeur que voit l'application après le déploiement :
 
@@ -399,7 +402,7 @@ Le passage de l'application Next à cette stack se fait en deux temps, sans basc
 
 **Rien ne se saisit sur `golf2`.** Chaque import vide la base Laravel avant de la remplir (`--force`) : un round saisi sur `golf2` disparaît au réimport suivant, et il n'est jamais dans Next. Ne pas donner l'adresse au groupe, ou le prévenir.
 
-Chaque étape est faite par le mainteneur, une à la fois : lancer la commande, lire la sortie comme indiqué, puis seulement passer à la suivante. Une sortie différente arrête la procédure ; pour recommencer, suivre « Reprendre après un arrêt », en fin de section. La commande d'import a tourné sur une copie locale de la base de production le 2026-10-29 (essai à blanc, puis import). Le 2026-10-29, en local, sur une base de test en WAL : le relevé de `NEXT_IMAGE` et `NEXT_VOLUME` sur un conteneur arrêté, la copie `VACUUM INTO` en lecture seule avec l'image `node:24.22.0-trixie-slim` de Next (copie hors WAL), la copie des photos, `docker cp -a` et l'effacement de `/tmp/next` dans l'image Laravel ont tourné. Les autres commandes `docker` ont seulement été relues : la phase parallèle les essaie sur le serveur, sans risque pour Next.
+Chaque étape est faite par le mainteneur, une à la fois : lancer la commande, lire la sortie comme indiqué, puis seulement passer à la suivante. Une sortie différente arrête la procédure ; pour recommencer, suivre « Reprendre après un arrêt », en fin de section. La commande d'import a tourné sur une copie locale de la base de production le 2026-10-29 (essai à blanc, puis import). Le 2026-10-29, en local, sur une base de test en WAL : le relevé de `NEXT_IMAGE` et `NEXT_VOLUME` sur un conteneur arrêté, la copie `VACUUM INTO` en lecture seule avec l'image `node:24.22.0-trixie-slim` de Next (copie hors WAL), la copie des photos, `docker cp -a` et l'effacement de `/tmp/next` dans l'image Laravel ont tourné. Les autres commandes `docker` ont seulement été relues : la phase parallèle les essaie sur le serveur, sans risque pour Next. Les étapes 1 à 5 de la phase parallèle ont tourné telles quelles sur le serveur le 2026-10-29, avec `v0.1.0` : import de 9 rounds, 9 photos, « Statistiques identiques : 22 / 22 », puis comparaison bonne.
 
 Ce qui dépend du domaine, dans ce dépôt, se règle dans Dokploy : la variable `APP_URL` et l'onglet Domains du service compose (« Première installation », étape 5 : hôte, service `web`, port `8080`, certificat Let's Encrypt, Traefik termine le TLS). `docker-compose.yml` ne nomme aucun hôte. `TRUSTED_PROXIES` dépend du réseau de Traefik, pas du domaine : il ne change pas. L'enregistrement DNS de `golf2.emmanuelpaul.com` se fait chez le fournisseur DNS du domaine, hors de ce dépôt. Le témoin de session vaut pour un seul hôte : une session ouverte sur `golf2` ne vaut pas sur le domaine principal.
 
@@ -412,7 +415,7 @@ NEXT_WORKER=<conteneur worker de Next>
 COPY=/root/golf-cutover
 ```
 
-Les noms des conteneurs de Next changent à chaque déploiement. Les relever sur le serveur, dans l'onglet de chaque application Next de Dokploy ou avec :
+Les noms des conteneurs de Next changent à chaque déploiement. Next tourne en Swarm : deux conteneurs, `golfhandicaps-app-<id>.1.<tâche>` (le web) et `golfhandicaps-worker-<id>.1.<tâche>` (le worker), sur l'image `ghcr.io/emmpaul/golf-handicaps:latest` et le volume `golf-data`. Les relever sur le serveur, dans l'onglet de chaque application Next de Dokploy ou avec :
 
 ```sh
 docker ps --format '{{.Names}}  {{.Image}}' | grep -i golf
