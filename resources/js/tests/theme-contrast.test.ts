@@ -1,5 +1,8 @@
+/// <reference types="node" />
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vite-plus/test';
 import { contrast, hex } from './palette';
+import { sources } from './sources';
 
 // Spec visual-theme « Contraste sur le thème sombre » and design D9: every text
 // pair keeps 4.5:1, every non-text mark 3:1, except the three pairs of the
@@ -8,6 +11,11 @@ import { contrast, hex } from './palette';
 // other ink-2 pairs are named under 4.5; the field outline (--input) pointed at
 // ink-3 → the "input/bg" exception reads 3.35 instead of 1.34; a fourth entry
 // added to EXCEPTIONS without its ratio → the exception list test goes red.
+// DO15: the four tokens kept out of the pairs are never readable text.
+// Mutations: input placeholder at `placeholder:text-ink-3` → input.tsx is
+// named; a fifth token added to OUT_OF_PAIRS → the out-of-pairs list test goes
+// red; --color-ink-3 dropped from OUT_OF_PAIRS → the classification test names
+// it.
 
 // Text: running text, secondary text, text on filled controls and pills.
 const textPairs: [string, string][] = [
@@ -44,6 +52,30 @@ const EXCEPTIONS: [string, string, number, number][] = [
     // White text of the red « Supprimer » button.
     ['destructive-foreground', 'destructive', 4.5, 2.88],
 ];
+
+// Colour tokens kept out of the pairs (DO15), with the only use each is
+// allowed: none of them is readable text.
+const OUT_OF_PAIRS: [string, string][] = [
+    ['color-ink-3', 'contrôle désactivé (exempté par WCAG 1.4.3) ou décor'],
+    [
+        'color-ink-4',
+        'décor masqué aux lecteurs d’écran ou trait non porteur d’information ; bordure de case décochée (exception Q4)',
+    ],
+    ['color-bar', 'décor ou trait non porteur d’information'],
+    ['color-rule-soft', 'décor ou trait non porteur d’information'],
+];
+
+// The shadcn variables of the pairs, as the tokens they point at (app.css).
+const ALIASES: Record<string, string> = {
+    input: 'color-rule',
+    ring: 'color-ink',
+    destructive: 'color-signal',
+    'destructive-foreground': 'color-on-signal',
+};
+
+// Colour tokens that are no text nor mark of the pairs: utility keywords, the
+// scrim, and the player colours, out of the sRGB gamut, always beside a name.
+const NOT_MEASURED = /^color-(transparent|current|scrim|player-\d)$/;
 
 describe('dark palette values', () => {
     for (const [name, expected] of [
@@ -120,4 +152,60 @@ describe('dark palette contrast', () => {
             expect(measured).toBeLessThan(threshold);
         });
     }
+});
+
+describe('tokens kept out of the pairs (DO15)', () => {
+    it('names exactly the four tokens kept out of the pairs', () => {
+        expect(OUT_OF_PAIRS.map(([token]) => token)).toEqual([
+            'color-ink-3',
+            'color-ink-4',
+            'color-bar',
+            'color-rule-soft',
+        ]);
+    });
+
+    it('classifies every colour token of tokens.css: in a pair, an exception or out of the pairs', () => {
+        const classified = new Set(
+            [
+                ...textPairs.flat(),
+                ...markPairs.flat(),
+                ...EXCEPTIONS.flatMap(([fg, bg]) => [fg, bg]),
+                ...OUT_OF_PAIRS.map(([token]) => token),
+            ].map((name) => ALIASES[name] ?? name),
+        );
+        const tokens = [
+            ...readFileSync('resources/css/tokens.css', 'utf8').matchAll(
+                /^\s*--(color-[\w-]+):/gm,
+            ),
+        ]
+            .map(([, name]) => name)
+            .filter((name) => !NOT_MEASURED.test(name));
+
+        expect(tokens).toContain('color-surface-2');
+        expect(tokens.filter((name) => !classified.has(name))).toEqual([]);
+    });
+
+    it('writes no placeholder and no enabled text in ink-3 or ink-4', () => {
+        // A class such as `placeholder:text-ink-3`, `text-ink-4` or
+        // `hover:text-ink-3`; allowed only under a disabled variant
+        // (`disabled:`, `aria-disabled:`, `*:disabled:`…).
+        const offenders = sources().flatMap((file) =>
+            [
+                ...readFileSync(file, 'utf8').matchAll(
+                    /(?<![\w-])((?:[^\s"'`:]+:)*)text-ink-[34](?![\w-])/g,
+                ),
+            ]
+                .filter(([, variants]) => {
+                    const chain = variants.split(':').filter(Boolean);
+
+                    return (
+                        chain.includes('placeholder') ||
+                        !chain.some((variant) => variant.includes('disabled'))
+                    );
+                })
+                .map(([match]) => `${file}: ${match}`),
+        );
+
+        expect(offenders).toEqual([]);
+    });
 });
