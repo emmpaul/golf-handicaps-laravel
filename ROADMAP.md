@@ -72,9 +72,13 @@ Refonte visuelle selon le design « Golf handicap app redesign » du mainteneur 
 
 ## 10. `sqlite-import-command`
 
-**Dépend de** : 9, 11. **Statut** : fait. Le changement est archivé ; restent au mainteneur la répétition de la bascule sur le staging (`docs/deployment.md`, « Bascule depuis Next »), la comparaison de l'index de chaque joueur avec celui de Next en production, puis la bascule réelle.
+**Dépend de** : 9, 11. **Statut** : fait. Le changement est archivé. Pas de bascule franche (changement `parallel-run-cutover`) ; restent au mainteneur, dans l'ordre (`docs/deployment.md`, « Bascule depuis Next ») :
 
-Commande `golf:import-sqlite`, puis cutover. La répétition sur le staging et le cutover de production sont faits à la main par le mainteneur.
+- déployer la stack Laravel sur `golf2.emmanuelpaul.com`, avec `SGT_LOOKUP=off`, et y importer une copie de la base Next, Next restant en production ;
+- comparer, pour chaque joueur, l'index et les rounds (liste, scores, différentiels) entre Next et `golf2`, en réimportant une copie fraîche au besoin ;
+- déménager : arrêter les saisies sur Next, dernier import, domaine principal passé à la stack Laravel, `golf2` retiré, Next gardé arrêté 30 jours.
+
+Commande `golf:import-sqlite`, puis cutover, fait à la main par le mainteneur.
 
 ## Définition de terminé
 

@@ -110,6 +110,7 @@ All notable changes to this application, version by version. The format follows 
 
 ### Changed
 
+- Cutover from the Next.js app in `docs/deployment.md` (« Bascule depuis Next »): no hard cutover anymore; the Laravel stack first runs on `golf2.emmanuelpaul.com` with an imported copy and `SGT_LOOKUP=off` while Next stays in production, then moves to the main domain.
 - Composer runs `boost:update` after every `composer update` (`post-update-cmd`).
 - PHPUnit runs on the PostgreSQL `testing` database and gains an `Arch` suite.
 - Vitest runs under jsdom, and `vp check` also checks types.

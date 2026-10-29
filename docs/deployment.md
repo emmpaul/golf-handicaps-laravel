@@ -390,13 +390,23 @@ Les recherches perdues repartent au redéploiement suivant de la nouvelle versio
 
 ## Bascule depuis Next
 
-La bascule remplace l'application Next par cette stack, sur le même domaine. `golf:import-sqlite` copie la base SQLite de Next et ses photos dans la base PostgreSQL et le volume `storage`, en une transaction. Elle recalcule l'historique d'index et le compare à celui de Next : un écart annule tout. Les décisions sont dans l'ADR 0014.
+Le passage de l'application Next à cette stack se fait en deux temps, sans bascule franche :
 
-Chaque étape est faite par le mainteneur, une à la fois : lancer la commande, lire la sortie comme indiqué, puis seulement passer à la suivante. Une sortie différente arrête la bascule ; pour recommencer, suivre « Reprendre après un arrêt », en fin de section. La commande d'import a tourné sur une copie locale de la base de production le 2026-10-29 (essai à blanc, puis import). Le 2026-10-29, en local, sur une base de test en WAL : le relevé de `NEXT_IMAGE` et `NEXT_VOLUME` sur un conteneur arrêté, la copie `VACUUM INTO` en lecture seule avec l'image `node:24.22.0-trixie-slim` de Next (copie hors WAL), la copie des photos, `docker cp -a` et l'effacement de `/tmp/next` dans l'image Laravel ont tourné. Les autres commandes `docker` ont seulement été relues : l'étape 1 les essaie sur le staging.
+1. **Phase parallèle.** Next reste en production sur son domaine actuel, appelé ici « le domaine principal », et reste la seule source de vérité : le groupe continue d'y saisir ses rounds. La stack Laravel tourne à côté, sur le domaine temporaire `golf2.emmanuelpaul.com`, avec une copie de la base Next importée par `golf:import-sqlite`. Le mainteneur compare les deux applications, et réimporte une copie fraîche aussi souvent qu'il veut.
+2. **Déménagement.** Quand la comparaison est bonne : arrêt des saisies sur Next, dernière copie, dernier import, puis le domaine principal passe à la stack Laravel et `golf2` est retiré. Next reste arrêté, avec son volume, 30 jours : c'est le retour arrière.
 
-Variables, en plus de `P` et `URL` (voir « Lancer les commandes de cette page ») :
+`golf:import-sqlite` copie la base SQLite de Next et ses photos dans la base PostgreSQL et le volume `storage`, en une transaction. Elle recalcule l'historique d'index et le compare à celui de Next : un écart annule tout. Les décisions sont dans l'ADR 0014 et dans le changement OpenSpec `parallel-run-cutover`.
+
+**Rien ne se saisit sur `golf2`.** Chaque import vide la base Laravel avant de la remplir (`--force`) : un round saisi sur `golf2` disparaît au réimport suivant, et il n'est jamais dans Next. Ne pas donner l'adresse au groupe, ou le prévenir.
+
+Chaque étape est faite par le mainteneur, une à la fois : lancer la commande, lire la sortie comme indiqué, puis seulement passer à la suivante. Une sortie différente arrête la procédure ; pour recommencer, suivre « Reprendre après un arrêt », en fin de section. La commande d'import a tourné sur une copie locale de la base de production le 2026-10-29 (essai à blanc, puis import). Le 2026-10-29, en local, sur une base de test en WAL : le relevé de `NEXT_IMAGE` et `NEXT_VOLUME` sur un conteneur arrêté, la copie `VACUUM INTO` en lecture seule avec l'image `node:24.22.0-trixie-slim` de Next (copie hors WAL), la copie des photos, `docker cp -a` et l'effacement de `/tmp/next` dans l'image Laravel ont tourné. Les autres commandes `docker` ont seulement été relues : la phase parallèle les essaie sur le serveur, sans risque pour Next.
+
+Ce qui dépend du domaine, dans ce dépôt, se règle dans Dokploy : la variable `APP_URL` et l'onglet Domains du service compose (« Première installation », étape 5 : hôte, service `web`, port `8080`, certificat Let's Encrypt, Traefik termine le TLS). `docker-compose.yml` ne nomme aucun hôte. `TRUSTED_PROXIES` dépend du réseau de Traefik, pas du domaine : il ne change pas. L'enregistrement DNS de `golf2.emmanuelpaul.com` se fait chez le fournisseur DNS du domaine, hors de ce dépôt. Le témoin de session vaut pour un seul hôte : une session ouverte sur `golf2` ne vaut pas sur le domaine principal.
+
+Variables, en plus de `P` (voir « Lancer les commandes de cette page ») :
 
 ```sh
+URL=https://golf2.emmanuelpaul.com
 NEXT_WEB=<conteneur web de Next>
 NEXT_WORKER=<conteneur worker de Next>
 COPY=/root/golf-cutover
@@ -408,7 +418,7 @@ Les noms des conteneurs de Next changent à chaque déploiement. Les relever sur
 docker ps --format '{{.Names}}  {{.Image}}' | grep -i golf
 ```
 
-Relever ensuite l'image et le volume de Next, qui servent à l'étape 3 (répétition comprise). `docker inspect` lit aussi un conteneur arrêté :
+Relever ensuite l'image et le volume de Next, qui servent à la copie (étape 3). `docker inspect` lit aussi un conteneur arrêté :
 
 ```sh
 NEXT_IMAGE="$(docker inspect --format '{{.Config.Image}}' "$NEXT_WEB")"
@@ -418,23 +428,43 @@ echo "image=$NEXT_IMAGE volume=$NEXT_VOLUME"
 
 La sortie nomme l'image de Next et un volume qui finit par `golf-data`. `image=` ou `volume=` vide : `NEXT_WEB` est faux.
 
-### 1. Répétition sur le staging
+### Phase parallèle
 
-Mainteneur. Faire les étapes 3, 4 et 6 avec `P` et `URL` du staging, sans arrêter Next (étape 2) : `VACUUM INTO` lit une image cohérente d'une base en service. Puis comparer à l'œil le staging à Next : accueil, handicaps (index de chaque joueur), trois rounds avec leur photo, Parcours, Importer. Le staging met en file les recherches de rating importées : son worker appelle Simulator Golf Tour, et l'IA si `ANTHROPIC_API_KEY` y est réglée.
+#### 1. Faire pointer `golf2` vers le serveur
 
-### 2. Arrêter Next
-
-Mainteneur, le jour J. `NEXT_IMAGE` et `NEXT_VOLUME` sont relevés (bloc des variables). Arrêter le web de Next dans Dokploy (Stop sur son application). Plus personne n'écrit ; le worker finit ce qui reste dans sa file. Lire la file jusqu'à ce qu'elle soit vide :
+Mainteneur. Chez le fournisseur DNS, créer l'enregistrement de `golf2.emmanuelpaul.com` vers le serveur Dokploy (hors de ce dépôt). Depuis le poste :
 
 ```sh
-docker exec "$NEXT_WORKER" node -e "const { DatabaseSync } = require('node:sqlite'); const db = new DatabaseSync('/data/app.db', { readOnly: true }); console.log(db.prepare(\"select status, count(*) n from jobs where status in ('queued', 'running') group by status\").all())"
+dig +short golf2.emmanuelpaul.com
 ```
 
-Attendu : `[]`. Une lecture de photo dure au plus 2 minutes ; relancer la commande jusqu'à `[]`. Arrêter ensuite le worker de Next dans Dokploy. Garder les deux applications et leur volume : c'est le retour arrière.
+Attendu : l'adresse IP du serveur Dokploy. Une sortie vide : l'enregistrement n'est pas encore visible, attendre avant l'étape 2 (Let's Encrypt échoue sinon).
 
-### 3. Copier la base et les photos
+#### 2. Installer la stack Laravel sur `golf2`
 
-Mainteneur. La base Next est en WAL : copier `app.db` seul peut perdre les dernières écritures, et `golf:import-sqlite` refuse une base en WAL (« Base en WAL : copier par VACUUM INTO … »). `VACUUM INTO` écrit une copie complète, hors WAL, que la commande vérifie ; la base de Next est ouverte en lecture seule. `$COPY` ne doit contenir ni `app.db` ni `uploads` : `VACUUM INTO` refuse un fichier qui existe, et `cp` copierait les photos dans `uploads/uploads` (voir « Reprendre après un arrêt »). Le conteneur jetable tourne sous l'utilisateur `node` (uid 1000) de l'image Next, qui doit pouvoir écrire dans `$COPY` :
+Mainteneur. Suivre « Première installation », étapes 1 à 7, avec ces valeurs :
+
+- `APP_URL=https://golf2.emmanuelpaul.com` ;
+- `SGT_LOOKUP=off`, pour toute la phase parallèle : avec `on`, le worker de `golf2` interrogerait Simulator Golf Tour et ferait lire les cartes par l'IA, sur le budget du mois, pour des lignes que le réimport suivant remplace. Chaque recherche finit en « Saisie manuelle » avec « Recherche SGT désactivée ». `SGT_LOOKUP` repasse à `on` au déménagement (étape 10). `ANTHROPIC_API_KEY` peut déjà être réglée : sans saisie ni recherche SGT, rien n'appelle l'IA ;
+- onglet Domains : `golf2.emmanuelpaul.com`, service `web`, port `8080`, HTTPS avec Let's Encrypt.
+
+C'est cette stack qui deviendra la production au déménagement : on ne la réinstalle pas. Ne toucher à aucune application de Next. Après le déploiement, lire les deux variables vues par l'application :
+
+```sh
+docker exec "$P-web-1" printenv APP_URL SGT_LOOKUP
+```
+
+Attendu : `https://golf2.emmanuelpaul.com`, puis `off`. Puis :
+
+```sh
+curl -si "$URL/api/version"
+```
+
+Attendu : `200` et le JSON `version` et `commit` de la stack Laravel (« Vérifier ce qui tourne »).
+
+#### 3. Copier la base et les photos
+
+Mainteneur, sans arrêter Next : `VACUUM INTO` lit une image cohérente d'une base en service. Noter l'heure de la copie : les rounds saisis dans Next après elle manqueront sur `golf2`. La base Next est en WAL : copier `app.db` seul peut perdre les dernières écritures, et `golf:import-sqlite` refuse une base en WAL (« Base en WAL : copier par VACUUM INTO … »). `VACUUM INTO` écrit une copie complète, hors WAL, que la commande vérifie ; la base de Next est ouverte en lecture seule. `$COPY` ne doit contenir ni `app.db` ni `uploads` : `VACUUM INTO` refuse un fichier qui existe, et `cp` copierait les photos dans `uploads/uploads` (voir « Reprendre après un arrêt »). Le conteneur jetable tourne sous l'utilisateur `node` (uid 1000) de l'image Next, qui doit pouvoir écrire dans `$COPY` :
 
 ```sh
 install -d -o 1000 -g 1000 -m 700 "$COPY"
@@ -460,7 +490,7 @@ ls "$COPY/uploads" | wc -l
 
 Attendu : le nombre de photos, au moins le nombre de rounds avec photo. L'import vérifie chaque fichier référencé et nomme ceux qui manquent.
 
-### 4. Importer
+#### 4. Importer
 
 Mainteneur. Mettre la copie dans le conteneur `web` de la stack Laravel :
 
@@ -470,20 +500,20 @@ docker cp -a "$COPY/app.db" "$P-web-1:/tmp/next/app.db"
 docker cp -a "$COPY/uploads" "$P-web-1:/tmp/next/uploads"
 ```
 
-Aucune erreur quand tout va bien (`docker cp` affiche seulement la taille copiée). `-a` garde le propriétaire des fichiers, l'uid 1000 de l'image Next, qui est aussi celui de l'utilisateur `app` du conteneur Laravel : il lit les copies et peut les effacer. Lancer l'essai à blanc. La base a déjà les joueurs de `INITIAL_PLAYERS`, créés par `migrate` : l'essai passe donc aussi `--force`, dans un terminal interactif (`docker exec -it`) :
+Aucune erreur quand tout va bien (`docker cp` affiche seulement la taille copiée). `-a` garde le propriétaire des fichiers, l'uid 1000 de l'image Next, qui est aussi celui de l'utilisateur `app` du conteneur Laravel : il lit les copies et peut les effacer. Lancer l'essai à blanc. La base a déjà les joueurs de `INITIAL_PLAYERS`, créés par `migrate`, ou les données d'un import précédent : l'essai passe donc aussi `--force`, dans un terminal interactif (`docker exec -it`) :
 
 ```sh
 docker exec -it "$P-web-1" php artisan golf:import-sqlite /tmp/next/app.db --uploads=/tmp/next/uploads --force --dry-run
 ```
 
-La commande demande « Vider … avant l'import ? » en nommant chaque table non vide avec son compte. En production, elle nomme seulement les tables des joueurs initiaux (`players (3), player_aliases (3)` avec `INITIAL_PLAYERS=Gab,Manu,Sean`) ; sur le staging, après une répétition, les tables remplies par l'import précédent. Répondre `yes` seulement si elle ne nomme rien d'autre (l'essai n'écrit rien) ; sinon répondre `no`, la commande sort sur « Import abandonné. », et chercher d'où viennent ces lignes. Lire le rapport :
+La commande demande « Vider … avant l'import ? » en nommant chaque table non vide avec son compte. Au premier import, elle nomme seulement les tables des joueurs initiaux (`players (3), player_aliases (3)` avec `INITIAL_PLAYERS=Gab,Manu,Sean`) ; à un réimport, les tables remplies par l'import précédent, avec les comptes du rapport de cet import. Répondre `yes` seulement si elle ne nomme rien d'autre (l'essai n'écrit rien) ; sinon répondre `no`, la commande sort sur « Import abandonné. », et chercher d'où viennent ces lignes : une saisie faite sur `golf2` en est la cause la plus probable. Lire le rapport :
 
 - chaque ligne du tableau a le même compte en `SQLite` et en `PostgreSQL`, et ces comptes sont ceux de l'étape 3 ;
 - « Statistiques identiques : N / N », N étant le compte de `player_round_stats` ;
 - « Photos lues : N », « Recherches de rating à remettre en file : N » ;
 - la dernière ligne est « Essai à blanc : import annulé, rien n'a été écrit. ».
 
-Une autre fin (« Statistiques différentes de la base SQLite : », « Photos manquantes : », « Ligne refusée : … », « Échec du recalcul des statistiques : … », « Base en WAL : … ») arrête la bascule : rien n'a été écrit, la commande sort en 1. Redémarrer le web et le worker de Next dans Dokploy (Start), corriger la donnée dans Next, puis suivre « Reprendre après un arrêt ».
+Une autre fin (« Statistiques différentes de la base SQLite : », « Photos manquantes : », « Ligne refusée : … », « Échec du recalcul des statistiques : … », « Base en WAL : … ») arrête la procédure : rien n'a été écrit, la commande sort en 1. Garder la sortie : c'est un écart entre Next et le port, à corriger dans Next ou dans le port avant tout déménagement. Puis suivre « Reprendre après un arrêt ».
 
 Puis l'import réel, même commande sans `--dry-run` :
 
@@ -493,19 +523,9 @@ docker exec -it "$P-web-1" php artisan golf:import-sqlite /tmp/next/app.db --upl
 
 La question nomme les mêmes tables et les mêmes comptes qu'à l'essai : répondre `yes` à cette condition seulement. Si une ligne a été écrite entre la question et l'import, la commande refuse (« Tables modifiées depuis la confirmation : … ») sans rien écrire. Le rapport est celui de l'essai, avec « Photos copiées : N » et « Recherches de rating remises en file : N », et finit par « Import terminé. ». Une dernière ligne « Import terminé ; échec de … » dit que l'import est fait, mais qu'une étape d'après n'a pas abouti : une recherche de rating à relancer depuis la page Parcours (« Relancer la recherche »), ou une ancienne photo restée sur le disque, nommée. Ne pas relancer l'import. Sans terminal (`--no-interaction`, ou `docker exec` sans `-it`), la réponse est non et la commande sort en 1 sur « Import abandonné. », sans rien écrire. Un Ctrl-C pendant l'import attend la fin de la transaction, puis arrête la commande.
 
-Le worker Laravel traite ensuite les recherches remises en file, dans les minutes qui suivent (« Déployer une version », étape 6).
+Le worker Laravel traite ensuite les recherches remises en file. Pendant la phase parallèle, avec `SGT_LOOKUP=off`, chacune finit en « Saisie manuelle » avec « Recherche SGT désactivée » : c'est attendu.
 
-### 5. Basculer le domaine
-
-Mainteneur. Dans Dokploy, retirer le domaine de l'application web de Next, puis le relier au service `web` de la stack Laravel (« Première installation », étape 5). Vérifier :
-
-```sh
-curl -si "$URL/api/version"
-```
-
-Attendu : `200` et la `version` déployée. Ouvrir ensuite `/login`, entrer le code, puis l'accueil, Handicaps (l'index de chaque joueur est celui de Next) et un round avec sa photo.
-
-### 6. Effacer les copies
+#### 5. Effacer les copies
 
 Mainteneur. La copie contient toutes les données du groupe :
 
@@ -515,17 +535,105 @@ rm -rf "$COPY"
 docker exec "$P-web-1" ls /tmp/next; ls "$COPY"
 ```
 
-Attendu : deux erreurs, `ls: cannot access '/tmp/next': No such file or directory` et la même pour `$COPY`. `-u root` efface aussi des fichiers que `docker cp` aurait copiés sans `-a`, sous un autre propriétaire. Faire de même sur le staging après la répétition. Le conteneur `web` perd aussi `/tmp/next` à son prochain redéploiement : `/tmp` n'est pas sur un volume.
+Attendu : deux erreurs, `ls: cannot access '/tmp/next': No such file or directory` et la même pour `$COPY`. `-u root` efface aussi des fichiers que `docker cp` aurait copiés sans `-a`, sous un autre propriétaire. Le conteneur `web` perd aussi `/tmp/next` à son prochain redéploiement : `/tmp` n'est pas sur un volume.
 
-### 7. Retour arrière
+#### 6. Comparer avec Next
 
-Mainteneur, dans les 30 jours qui suivent la bascule. Dans Dokploy, retirer le domaine du service `web` Laravel et le relier de nouveau à l'application web de Next, puis redémarrer le web et le worker de Next (Start). Leur volume `golf-data` n'a pas bougé depuis l'étape 2 : Next repart sur la base d'avant la bascule. Ne rien toucher à la stack Laravel. Ce qui a été saisi dans Laravel depuis la bascule n'existe pas dans Next.
+Mainteneur. Ouvrir Next sur le domaine principal et `golf2` côte à côte, entrer le code d'accès sur chacun. Une vérification à la fois ; noter tout écart avec le joueur, le round et les deux valeurs.
 
-Après 30 jours, supprimer les applications Next et leur volume dans Dokploy.
+1. Le rapport de l'étape 4 disait « Statistiques identiques : N / N ». C'est la comparaison faite par la commande, colonne par colonne, de l'historique d'index recalculé par le port avec celui de Next, sur la copie.
+2. Handicaps, pour chaque joueur : l'« Index actuel » est le même des deux côtés.
+3. Rounds, pour chaque joueur : le même nombre de rounds, et les mêmes dates et parcours en tête de liste, jusqu'à l'heure de la copie.
+4. Pour chaque joueur, ouvrir trois rounds des deux côtés (le plus récent, un avec photo, un plus ancien) : même date, même parcours et tees, même brut, même différentiel, et la même photo.
+
+Peuvent différer, sans être des écarts : les rounds saisis dans Next après l'heure de la copie (absents de `golf2`, et l'index de leur joueur avec eux), et sur la page Parcours les recherches de rating en cours ou proposées dans Next, qui finissent en « Saisie manuelle » sur `golf2` (étape 2). Les ratings confirmées sont les mêmes. Tout autre écart arrête la procédure : ne pas déménager, garder les deux valeurs et le signaler.
+
+#### 7. Rafraîchir la copie
+
+Mainteneur, aussi souvent que voulu, pour comparer des rounds récents. Next continue de tourner. Suivre « Reprendre après un arrêt », puis les étapes 3, 4, 5 et 6. À l'étape 4, la question de `--force` nomme les tables remplies par l'import précédent.
+
+### Déménagement
+
+#### 8. Arrêter les saisies sur Next
+
+Mainteneur, le jour du déménagement. Relever d'abord le domaine principal, dans l'onglet Domains de l'application web de Next, et le garder :
+
+```sh
+MAIN=https://<domaine principal>
+```
+
+`NEXT_IMAGE` et `NEXT_VOLUME` sont relevés (bloc des variables). Arrêter le web de Next dans Dokploy (Stop sur son application). Plus personne n'écrit ; le worker finit ce qui reste dans sa file. Lire la file jusqu'à ce qu'elle soit vide :
+
+```sh
+docker exec "$NEXT_WORKER" node -e "const { DatabaseSync } = require('node:sqlite'); const db = new DatabaseSync('/data/app.db', { readOnly: true }); console.log(db.prepare(\"select status, count(*) n from jobs where status in ('queued', 'running') group by status\").all())"
+```
+
+Attendu : `[]`. Une lecture de photo dure au plus 2 minutes ; relancer la commande jusqu'à `[]`. Arrêter ensuite le worker de Next dans Dokploy. Garder les deux applications et leur volume : c'est le retour arrière.
+
+#### 9. Dernière copie
+
+Mainteneur. Suivre « Reprendre après un arrêt », puis l'étape 3. Les comptes notés sont ceux de la base de Next arrêtée : plus rien n'y change.
+
+#### 10. Régler les variables du domaine principal
+
+Mainteneur. Dans Dokploy, onglet Environment de la stack Laravel : `APP_URL` prend la valeur de `$MAIN`, `SGT_LOOKUP=on`. Puis Deploy. Le domaine ne change pas encore : `golf2` répond toujours. `SGT_LOOKUP` passe à `on` avant l'import pour que les recherches de rating en cours dans Next, remises en file par l'import, soient faites par le worker. Vérifier :
+
+```sh
+docker exec "$P-web-1" printenv APP_URL SGT_LOOKUP
+```
+
+Attendu : l'adresse du domaine principal, puis `on`. Puis l'état des services, comme à « Première installation », étape 7 : `pgsql`, `web`, `worker` et `backup` en `(healthy)`, `migrate` en `Exited (0)`.
+
+#### 11. Dernier import
+
+Mainteneur. L'étape 4, avec les mêmes commandes et les mêmes lectures. Une fin en échec arrête le déménagement : redémarrer le web et le worker de Next dans Dokploy (Start), le groupe y reprend ses saisies, et le domaine principal n'a pas bougé. Pour revenir à la phase parallèle, remettre aussi `APP_URL=https://golf2.emmanuelpaul.com` et `SGT_LOOKUP=off` sur la stack Laravel, puis Deploy. Corriger, puis reprendre à l'étape 8.
+
+Après « Import terminé. », le worker Laravel traite les recherches remises en file dans les minutes qui suivent. Ouvrir ensuite la page Parcours et confirmer chaque proposition (« Déployer une version », étape 6).
+
+#### 12. Passer le domaine principal à la stack Laravel
+
+Mainteneur. Dans Dokploy :
+
+1. retirer le domaine principal de l'application web de Next ;
+2. le relier au service `web` de la stack Laravel : hôte du domaine principal, service `web`, port `8080`, HTTPS avec Let's Encrypt (« Première installation », étape 5) ;
+3. retirer `golf2.emmanuelpaul.com` du service `web` ;
+4. Deploy.
+
+Vérifier :
+
+```sh
+curl -si "$MAIN/api/version"
+```
+
+Attendu : `200` et le même JSON `version` et `commit` qu'à l'étape 2 sur `golf2`. Le certificat peut demander une minute ; une erreur TLS juste après le Deploy se relance. Puis :
+
+```sh
+curl -s -o /dev/null -w '%{http_code}\n' https://golf2.emmanuelpaul.com/api/version
+```
+
+Attendu : autre chose que `200` (`404` de Traefik, ou une erreur de connexion) : `golf2` ne sert plus l'application. Mettre ensuite `URL=$MAIN` pour les autres sections de cette page.
+
+Enfin, depuis un téléphone : `$MAIN/login`, le code (une session ouverte sur `golf2` ne vaut pas ici), l'accueil, Handicaps (l'index de chaque joueur est celui de Next) et un round avec sa photo. Un raccourci d'écran d'accueil créé sur `golf2` ne marche plus : le recréer depuis le domaine principal. L'enregistrement DNS de `golf2` peut être retiré chez le fournisseur DNS.
+
+#### 13. Effacer les copies
+
+Mainteneur. L'étape 5, telle quelle.
+
+#### 14. Retour arrière
+
+Mainteneur, dans les 30 jours qui suivent le déménagement. Dans Dokploy, retirer le domaine principal du service `web` Laravel et le relier de nouveau à l'application web de Next, puis redémarrer le web et le worker de Next (Start). Leur volume `golf-data` n'a pas bougé depuis l'étape 8 : Next repart sur sa base d'avant le déménagement. Ne rien toucher à la stack Laravel. Ce qui a été saisi dans Laravel depuis le déménagement n'existe pas dans Next. Vérifier :
+
+```sh
+curl -s -o /dev/null -w '%{http_code}\n' "$MAIN/login"
+```
+
+Attendu : `200`, servi par Next. Puis, depuis un téléphone, se connecter à Next sur le domaine principal.
+
+Après 30 jours sans retour arrière, supprimer les applications Next et leur volume dans Dokploy.
 
 ### Reprendre après un arrêt
 
-Mainteneur, avant toute reprise après un arrêt de la bascule ou de la répétition. Effacer les copies d'une tentative précédente, sur l'hôte et dans le conteneur :
+Mainteneur, avant chaque nouvelle copie : après un arrêt de la procédure, pour rafraîchir la copie (étape 7), et avant la dernière copie (étape 9). Effacer les copies d'une tentative précédente, sur l'hôte et dans le conteneur :
 
 ```sh
 rm -rf "$COPY/app.db" "$COPY/uploads"
@@ -533,7 +641,7 @@ docker exec -u root "$P-web-1" rm -rf /tmp/next
 ls -A "$COPY"; docker exec "$P-web-1" ls /tmp/next
 ```
 
-Attendu : rien pour `ls -A "$COPY"` (ou `No such file or directory` si l'étape 6 l'a effacé : l'étape 3 le recrée), puis `ls: cannot access '/tmp/next': No such file or directory`. Repartir ensuite de l'étape 2, ou de l'étape 3 pour une répétition, qui n'arrête pas Next.
+Attendu : rien pour `ls -A "$COPY"` (ou `No such file or directory` si l'étape 5 l'a effacé : l'étape 3 le recrée), puis `ls: cannot access '/tmp/next': No such file or directory`. Repartir ensuite de l'étape 3.
 
 ## Fermer toutes les sessions
 
