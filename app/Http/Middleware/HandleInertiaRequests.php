@@ -2,8 +2,11 @@
 
 namespace App\Http\Middleware;
 
+use App\Domain\Imports\Queries\PendingImports;
 use App\Support\AppBuild;
+use App\Support\Passcode;
 use Illuminate\Http\Request;
+use Inertia\Inertia;
 use Inertia\Middleware;
 
 class HandleInertiaRequests extends Middleware
@@ -43,6 +46,16 @@ class HandleInertiaRequests extends Middleware
                 'version' => AppBuild::version(),
                 'commit' => AppBuild::commit(),
             ],
+            // The badge of the Importer button (design D7): deferred, so the count never delays
+            // a page, and only behind the passcode, so /login tells nothing about the imports.
+            ...$this->opened($request) ? [
+                'pendingImports' => Inertia::defer(fn (): int => app(PendingImports::class)->count()),
+            ] : [],
         ];
+    }
+
+    private function opened(Request $request): bool
+    {
+        return Passcode::isFingerprint($request->session()->get('access.passcode'));
     }
 }

@@ -4,27 +4,35 @@ import { inSection } from '@/lib/sections';
 
 /**
  * Lien de section qui porte `aria-current="page"` sur sa section et ses
- * sous-pages. Le style du lien courant passe par la variante
- * `aria-[current=page]:` de `className`.
+ * sous-pages. Le nom accessible est `label`, fixé par `aria-label` : il ne
+ * dépend pas du libellé visible, que la barre d'onglets referme hors de
+ * l'onglet courant. `className` et `children` reçoivent l'état courant.
  */
 export function NavLink({
     href,
+    label,
     className,
     children,
+    ...rest
 }: {
     href: string;
-    className: string;
-    children: ReactNode;
+    label: string;
+    className: (current: boolean) => string;
+    children: (current: boolean) => ReactNode;
+    'aria-describedby'?: string;
 }) {
     const { url } = usePage();
+    const current = inSection(url, href);
 
     return (
         <Link
             href={href}
-            aria-current={inSection(url, href) ? 'page' : undefined}
-            className={className}
+            aria-label={label}
+            aria-current={current ? 'page' : undefined}
+            className={className(current)}
+            {...rest}
         >
-            {children}
+            {children(current)}
         </Link>
     );
 }
