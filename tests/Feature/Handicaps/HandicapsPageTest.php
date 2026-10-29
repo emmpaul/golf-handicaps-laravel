@@ -89,6 +89,25 @@ describe('with a session', function () {
             'unknown' => ['0190a6b2-7c3e-7000-8000-000000000099'],
             'malformed' => ['12'],
         ]);
+
+        test('the stats of the selected player come after the page', function () {
+            // Spec handicap-index, « Statistiques de jeu d'un joueur »; design D13: a deferred
+            // prop, null without round.
+            // Mutations that turn this test red: scoringStats passed as a plain prop (present on
+            // the first answer); the stats of the first player by name instead of the selected
+            // one (Gab's 72 instead of Manu's 88).
+            $this->get('/handicaps?joueur='.$this->manu->id)
+                ->assertInertia(fn (Assert $page) => $page
+                    ->missing('scoringStats')
+                    ->loadDeferredProps(fn (Assert $reload) => $reload
+                        ->where('scoringStats.holes', 18)
+                        ->where('scoringStats.bestGross', 88)
+                        ->where('scoringStats.pars.1.tint', 'bad')));
+
+            $this->get('/handicaps?joueur='.$this->sean->id)
+                ->assertInertia(fn (Assert $page) => $page
+                    ->loadDeferredProps(fn (Assert $reload) => $reload->where('scoringStats', null)));
+        });
     });
 
     test('a player with 21 rounds lists them all and his oldest round does not count', function () {
