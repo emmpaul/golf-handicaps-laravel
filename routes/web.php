@@ -39,8 +39,13 @@ Route::controller(ImportController::class)->group(function () {
     Route::get('/import', 'index')->name('import.index');
     Route::post('/imports', 'store')->name('imports.store');
     Route::get('/imports/{import}', 'show')->whereUuid('import')->name('imports.show');
+    Route::delete('/imports/{import}', 'destroy')->whereUuid('import')->name('imports.destroy');
 });
-Route::get('/imports/{import}/photo', ImportPhotoController::class)->whereUuid('import')->name('imports.photo');
+// The photo of an import deleted since answers as a missing file.
+Route::get('/imports/{import}/photo', ImportPhotoController::class)
+    ->whereUuid('import')
+    ->missing(fn () => response()->json(['error' => 'Photo introuvable'], 404))
+    ->name('imports.photo');
 // JSON only, sent by the autosave of the correction screen.
 Route::put('/imports/{import}/correction', ImportCorrectionController::class)
     ->whereUuid('import')
