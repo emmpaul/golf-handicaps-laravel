@@ -56,7 +56,7 @@ final class ImportList
             ImportStatus::Queued => ['delete'],
             ImportStatus::Reading => [],
             ImportStatus::Ready => ['review', 'delete'],
-            ImportStatus::Failed => ['correctEmpty', 'delete'],
+            ImportStatus::Failed => $readingEnabled ? ['correctEmpty', 'retry', 'delete'] : ['correctEmpty', 'delete'],
         };
     }
 }
