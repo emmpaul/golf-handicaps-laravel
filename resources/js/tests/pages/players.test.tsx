@@ -92,10 +92,11 @@ type VisitOptions = {
 
 let post: MockInstance<typeof router.post>;
 let remove: MockInstance<typeof router.delete>;
+let patch: MockInstance<typeof router.patch>;
 
 beforeEach(() => {
     post = vi.spyOn(router, 'post').mockImplementation(() => {});
-    vi.spyOn(router, 'patch').mockImplementation(() => {});
+    patch = vi.spyOn(router, 'patch').mockImplementation(() => {});
     remove = vi.spyOn(router, 'delete').mockImplementation(() => {});
 });
 
@@ -250,7 +251,7 @@ describe('Players page', () => {
     });
 
     it('keeps the line open with « Ce joueur existe déjà » under the name when the rename is refused', async () => {
-        vi.mocked(router.patch).mockImplementation((_url, _data, options) => {
+        patch.mockImplementation((_url, _data, options) => {
             (options as VisitOptions).onError?.({
                 name: 'Ce joueur existe déjà',
             });
