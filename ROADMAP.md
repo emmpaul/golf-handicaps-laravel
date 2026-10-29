@@ -48,13 +48,13 @@ Calcul WHS, table `player_round_stats`, ratings et slopes saisis à la main.
 
 ## 8. `scorecard-ai-import`
 
-**Dépend de** : 5. **Statut** : à proposer.
+**Dépend de** : 5. **Statut** : fait. Le changement est archivé ; reste au mainteneur la passe sur le staging avec une clé d'API (tâche 9.3).
 
 Photo, job de file, lecture par l'IA, écran de correction, budget mensuel.
 
 ## 7. `home-and-match-strokes`
 
-**Dépend de** : 6, 8. **Statut** : proposé. L'apply attend l'archivage de 8.
+**Dépend de** : 6, 8. **Statut** : proposé.
 
 Tableau de bord, dont le bloc « Imports à vérifier » qui lit les imports de 8, page des handicaps, coups rendus en match.
 
@@ -72,7 +72,7 @@ Refonte visuelle selon le design « Golf handicap app redesign » du mainteneur 
 
 ## 10. `sqlite-import-command`
 
-**Dépend de** : 9, 11. **Statut** : proposé. L'apply attend l'archivage de 8, 9 et 11.
+**Dépend de** : 9, 11. **Statut** : proposé. L'apply attend l'archivage de 9 et 11.
 
 Commande `golf:import-sqlite`, puis cutover. La répétition sur le staging et le cutover de production sont faits à la main par le mainteneur.
 
