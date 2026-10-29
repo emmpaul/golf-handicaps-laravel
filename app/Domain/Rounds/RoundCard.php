@@ -11,15 +11,22 @@ use App\Models\Score;
  * The card of a round as typed or corrected, before it is saved: any cell may still be empty.
  * RoundCardChecks says whether it can be saved.
  *
+ * A card that comes from a reading also keeps the totals printed on the card (OUT, IN, TOT of
+ * the par and of each line) and the name read on each line; they are null for a manual card,
+ * are checked against the holes, and are never saved.
+ *
  * @phpstan-type Hole array{par: int|null, strokeIndex: int|null, distance: int|null}
- * @phpstan-type Line array{playerId: string|null, strokes: list<int|null>}
+ * @phpstan-type Totals array{out: int|null, in: int|null, total: int|null}
+ * @phpstan-type Line array{playerId: string|null, strokes: list<int|null>, readName?: string, totals?: Totals}
  */
 final readonly class RoundCard
 {
     /**
      * @param  string|null  $playedOn  `Y-m-d`
      * @param  list<Hole>  $holes  the 18 holes, hole 1 first
-     * @param  list<Line>  $lines  the lines of players in the order of the card, 18 strokes each
+     * @param  list<Line>  $lines  the lines of players in the order of the card, 18 strokes each;
+     *                            readName and totals only for a line read on the card
+     * @param  Totals|null  $parTotals  the totals of the par read on the card
      */
     public function __construct(
         public ?string $courseName,
@@ -27,10 +34,11 @@ final readonly class RoundCard
         public ?string $playedOn,
         public array $holes,
         public array $lines,
+        public ?array $parTotals = null,
     ) {}
 
     /**
-     * @param  array{courseName?: string|null, tees?: string|null, playedOn?: string|null, holes: list<Hole>, lines: list<Line>}  $card  the validated card, keyed as the editor sends it
+     * @param  array{courseName?: string|null, tees?: string|null, playedOn?: string|null, holes: list<Hole>, lines: list<array{playerId: string|null, strokes: list<int|null>, readName?: string|null, totals?: Totals|null}>, parTotals?: Totals|null}  $card  the validated card, keyed as the editor sends it
      */
     public static function fromArray(array $card): self
     {
@@ -46,14 +54,18 @@ final readonly class RoundCard
             lines: array_map(fn (array $line): array => [
                 'playerId' => $line['playerId'],
                 'strokes' => $line['strokes'],
+                ...(isset($line['readName']) ? ['readName' => $line['readName']] : []),
+                ...(isset($line['totals']) ? ['totals' => $line['totals']] : []),
             ], $card['lines']),
+            parTotals: $card['parTotals'] ?? null,
         );
     }
 
     /**
-     * The card keyed as the editor sends it, the inverse of fromArray().
+     * The card keyed as the editor sends it, the inverse of fromArray(); parTotals only for a
+     * card read on a photo.
      *
-     * @return array{courseName: string|null, tees: string|null, playedOn: string|null, holes: list<Hole>, lines: list<Line>}
+     * @return array{courseName: string|null, tees: string|null, playedOn: string|null, holes: list<Hole>, lines: list<Line>, parTotals?: Totals}
      */
     public function toArray(): array
     {
@@ -63,6 +75,7 @@ final readonly class RoundCard
             'playedOn' => $this->playedOn,
             'holes' => $this->holes,
             'lines' => $this->lines,
+            ...($this->parTotals !== null ? ['parTotals' => $this->parTotals] : []),
         ];
     }
 

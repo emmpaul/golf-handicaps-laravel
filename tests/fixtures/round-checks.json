@@ -692,6 +692,347 @@
                 ]
             },
             "problems": [{ "message": "Case vide", "cells": ["playedOn"] }]
+        },
+        {
+            "name": "somme aller fausse",
+            "card": {
+                "courseName": "BETHPAGE BLACK",
+                "tees": "Red",
+                "playedOn": "2026-10-17",
+                "holes": [
+                    { "par": 4, "strokeIndex": 8, "distance": 420 },
+                    { "par": 4, "strokeIndex": 16, "distance": 344 },
+                    { "par": 3, "strokeIndex": 18, "distance": 128 },
+                    { "par": 5, "strokeIndex": 2, "distance": 444 },
+                    { "par": 4, "strokeIndex": 4, "distance": 398 },
+                    { "par": 4, "strokeIndex": 10, "distance": 377 },
+                    { "par": 5, "strokeIndex": 6, "distance": 480 },
+                    { "par": 3, "strokeIndex": 14, "distance": 155 },
+                    { "par": 4, "strokeIndex": 12, "distance": 392 },
+                    { "par": 4, "strokeIndex": 9, "distance": 353 },
+                    { "par": 4, "strokeIndex": 11, "distance": 405 },
+                    { "par": 4, "strokeIndex": 7, "distance": 392 },
+                    { "par": 5, "strokeIndex": 3, "distance": 470 },
+                    { "par": 3, "strokeIndex": 17, "distance": 149 },
+                    { "par": 4, "strokeIndex": 1, "distance": 401 },
+                    { "par": 4, "strokeIndex": 5, "distance": 423 },
+                    { "par": 3, "strokeIndex": 13, "distance": 173 },
+                    { "par": 4, "strokeIndex": 15, "distance": 337 }
+                ],
+                "lines": [
+                    {
+                        "playerId": "0190a6b2-7c3e-7000-8000-000000000001",
+                        "strokes": [
+                            5, 5, 3, 5, 4, 4, 4, 3, 3, 4, 4, 4, 4, 3, 4, 5, 3, 3
+                        ],
+                        "readName": "GAB",
+                        "totals": { "out": 38, "in": 34, "total": 72 }
+                    },
+                    {
+                        "playerId": "0190a6b2-7c3e-7000-8000-000000000002",
+                        "strokes": [
+                            7, 5, 3, 7, 6, 5, 5, 3, 5, 3, 6, 5, 7, 4, 5, 4, 3, 5
+                        ],
+                        "readName": "MANU",
+                        "totals": null
+                    }
+                ],
+                "parTotals": null
+            },
+            "problems": [
+                {
+                    "message": "Somme aller 36 ≠ OUT 38",
+                    "cells": [
+                        "player0:1",
+                        "player0:2",
+                        "player0:3",
+                        "player0:4",
+                        "player0:5",
+                        "player0:6",
+                        "player0:7",
+                        "player0:8",
+                        "player0:9",
+                        "player0:out"
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "OUT + IN faux",
+            "card": {
+                "courseName": "BETHPAGE BLACK",
+                "tees": "Red",
+                "playedOn": "2026-10-17",
+                "holes": [
+                    { "par": 4, "strokeIndex": 8, "distance": 420 },
+                    { "par": 4, "strokeIndex": 16, "distance": 344 },
+                    { "par": 3, "strokeIndex": 18, "distance": 128 },
+                    { "par": 5, "strokeIndex": 2, "distance": 444 },
+                    { "par": 4, "strokeIndex": 4, "distance": 398 },
+                    { "par": 4, "strokeIndex": 10, "distance": 377 },
+                    { "par": 5, "strokeIndex": 6, "distance": 480 },
+                    { "par": 3, "strokeIndex": 14, "distance": 155 },
+                    { "par": 4, "strokeIndex": 12, "distance": 392 },
+                    { "par": 4, "strokeIndex": 9, "distance": 353 },
+                    { "par": 4, "strokeIndex": 11, "distance": 405 },
+                    { "par": 4, "strokeIndex": 7, "distance": 392 },
+                    { "par": 5, "strokeIndex": 3, "distance": 470 },
+                    { "par": 3, "strokeIndex": 17, "distance": 149 },
+                    { "par": 4, "strokeIndex": 1, "distance": 401 },
+                    { "par": 4, "strokeIndex": 5, "distance": 423 },
+                    { "par": 3, "strokeIndex": 13, "distance": 173 },
+                    { "par": 4, "strokeIndex": 15, "distance": 337 }
+                ],
+                "lines": [
+                    {
+                        "playerId": "0190a6b2-7c3e-7000-8000-000000000001",
+                        "strokes": [
+                            5, 5, 3, 5, 4, 4, 4, 3, 5, 4, 4, 4, 4, 3, 4, 5, 3, 3
+                        ],
+                        "readName": "GAB",
+                        "totals": { "out": 38, "in": 34, "total": 73 }
+                    },
+                    {
+                        "playerId": "0190a6b2-7c3e-7000-8000-000000000002",
+                        "strokes": [
+                            7, 5, 3, 7, 6, 5, 5, 3, 5, 3, 6, 5, 7, 4, 5, 4, 3, 5
+                        ],
+                        "readName": "MANU",
+                        "totals": null
+                    }
+                ],
+                "parTotals": null
+            },
+            "problems": [
+                {
+                    "message": "OUT + IN 72 ≠ TOT 73",
+                    "cells": ["player0:out", "player0:in", "player0:total"]
+                }
+            ]
+        },
+        {
+            "name": "somme retour fausse",
+            "card": {
+                "courseName": "BETHPAGE BLACK",
+                "tees": "Red",
+                "playedOn": "2026-10-17",
+                "holes": [
+                    { "par": 4, "strokeIndex": 8, "distance": 420 },
+                    { "par": 4, "strokeIndex": 16, "distance": 344 },
+                    { "par": 3, "strokeIndex": 18, "distance": 128 },
+                    { "par": 5, "strokeIndex": 2, "distance": 444 },
+                    { "par": 4, "strokeIndex": 4, "distance": 398 },
+                    { "par": 4, "strokeIndex": 10, "distance": 377 },
+                    { "par": 5, "strokeIndex": 6, "distance": 480 },
+                    { "par": 3, "strokeIndex": 14, "distance": 155 },
+                    { "par": 4, "strokeIndex": 12, "distance": 392 },
+                    { "par": 4, "strokeIndex": 9, "distance": 353 },
+                    { "par": 4, "strokeIndex": 11, "distance": 405 },
+                    { "par": 4, "strokeIndex": 7, "distance": 392 },
+                    { "par": 5, "strokeIndex": 3, "distance": 470 },
+                    { "par": 3, "strokeIndex": 17, "distance": 149 },
+                    { "par": 4, "strokeIndex": 1, "distance": 401 },
+                    { "par": 4, "strokeIndex": 5, "distance": 423 },
+                    { "par": 3, "strokeIndex": 13, "distance": 173 },
+                    { "par": 4, "strokeIndex": 15, "distance": 337 }
+                ],
+                "lines": [
+                    {
+                        "playerId": "0190a6b2-7c3e-7000-8000-000000000001",
+                        "strokes": [
+                            5, 5, 3, 5, 4, 4, 4, 3, 5, 4, 4, 4, 4, 3, 4, 5, 3, 3
+                        ],
+                        "readName": "GAB",
+                        "totals": { "out": 38, "in": 35, "total": 73 }
+                    },
+                    {
+                        "playerId": "0190a6b2-7c3e-7000-8000-000000000002",
+                        "strokes": [
+                            7, 5, 3, 7, 6, 5, 5, 3, 5, 3, 6, 5, 7, 4, 5, 4, 3, 5
+                        ],
+                        "readName": "MANU",
+                        "totals": null
+                    }
+                ],
+                "parTotals": null
+            },
+            "problems": [
+                {
+                    "message": "Somme retour 34 ≠ IN 35",
+                    "cells": [
+                        "player0:10",
+                        "player0:11",
+                        "player0:12",
+                        "player0:13",
+                        "player0:14",
+                        "player0:15",
+                        "player0:16",
+                        "player0:17",
+                        "player0:18",
+                        "player0:in"
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "total lu vide",
+            "card": {
+                "courseName": "BETHPAGE BLACK",
+                "tees": "Red",
+                "playedOn": "2026-10-17",
+                "holes": [
+                    { "par": 4, "strokeIndex": 8, "distance": 420 },
+                    { "par": 4, "strokeIndex": 16, "distance": 344 },
+                    { "par": 3, "strokeIndex": 18, "distance": 128 },
+                    { "par": 5, "strokeIndex": 2, "distance": 444 },
+                    { "par": 4, "strokeIndex": 4, "distance": 398 },
+                    { "par": 4, "strokeIndex": 10, "distance": 377 },
+                    { "par": 5, "strokeIndex": 6, "distance": 480 },
+                    { "par": 3, "strokeIndex": 14, "distance": 155 },
+                    { "par": 4, "strokeIndex": 12, "distance": 392 },
+                    { "par": 4, "strokeIndex": 9, "distance": 353 },
+                    { "par": 4, "strokeIndex": 11, "distance": 405 },
+                    { "par": 4, "strokeIndex": 7, "distance": 392 },
+                    { "par": 5, "strokeIndex": 3, "distance": 470 },
+                    { "par": 3, "strokeIndex": 17, "distance": 149 },
+                    { "par": 4, "strokeIndex": 1, "distance": 401 },
+                    { "par": 4, "strokeIndex": 5, "distance": 423 },
+                    { "par": 3, "strokeIndex": 13, "distance": 173 },
+                    { "par": 4, "strokeIndex": 15, "distance": 337 }
+                ],
+                "lines": [
+                    {
+                        "playerId": "0190a6b2-7c3e-7000-8000-000000000001",
+                        "strokes": [
+                            5, 5, 3, 5, 4, 4, 4, 3, 5, 4, 4, 4, 4, 3, 4, 5, 3, 3
+                        ],
+                        "readName": "GAB",
+                        "totals": { "out": 38, "in": 34, "total": null }
+                    },
+                    {
+                        "playerId": "0190a6b2-7c3e-7000-8000-000000000002",
+                        "strokes": [
+                            7, 5, 3, 7, 6, 5, 5, 3, 5, 3, 6, 5, 7, 4, 5, 4, 3, 5
+                        ],
+                        "readName": "MANU",
+                        "totals": null
+                    }
+                ],
+                "parTotals": null
+            },
+            "problems": [{ "message": "Case vide", "cells": ["player0:total"] }]
+        },
+        {
+            "name": "par OUT 37",
+            "card": {
+                "courseName": "BETHPAGE BLACK",
+                "tees": "Red",
+                "playedOn": "2026-10-17",
+                "holes": [
+                    { "par": 4, "strokeIndex": 8, "distance": 420 },
+                    { "par": 4, "strokeIndex": 16, "distance": 344 },
+                    { "par": 3, "strokeIndex": 18, "distance": 128 },
+                    { "par": 5, "strokeIndex": 2, "distance": 444 },
+                    { "par": 4, "strokeIndex": 4, "distance": 398 },
+                    { "par": 4, "strokeIndex": 10, "distance": 377 },
+                    { "par": 5, "strokeIndex": 6, "distance": 480 },
+                    { "par": 3, "strokeIndex": 14, "distance": 155 },
+                    { "par": 4, "strokeIndex": 12, "distance": 392 },
+                    { "par": 4, "strokeIndex": 9, "distance": 353 },
+                    { "par": 4, "strokeIndex": 11, "distance": 405 },
+                    { "par": 4, "strokeIndex": 7, "distance": 392 },
+                    { "par": 5, "strokeIndex": 3, "distance": 470 },
+                    { "par": 3, "strokeIndex": 17, "distance": 149 },
+                    { "par": 4, "strokeIndex": 1, "distance": 401 },
+                    { "par": 4, "strokeIndex": 5, "distance": 423 },
+                    { "par": 3, "strokeIndex": 13, "distance": 173 },
+                    { "par": 4, "strokeIndex": 15, "distance": 337 }
+                ],
+                "lines": [
+                    {
+                        "playerId": "0190a6b2-7c3e-7000-8000-000000000001",
+                        "strokes": [
+                            5, 5, 3, 5, 4, 4, 4, 3, 5, 4, 4, 4, 4, 3, 4, 5, 3, 3
+                        ],
+                        "readName": "GAB",
+                        "totals": null
+                    },
+                    {
+                        "playerId": "0190a6b2-7c3e-7000-8000-000000000002",
+                        "strokes": [
+                            7, 5, 3, 7, 6, 5, 5, 3, 5, 3, 6, 5, 7, 4, 5, 4, 3, 5
+                        ],
+                        "readName": "MANU",
+                        "totals": null
+                    }
+                ],
+                "parTotals": { "out": 37, "in": 35, "total": 72 }
+            },
+            "problems": [
+                {
+                    "message": "Somme aller 36 ≠ OUT 37",
+                    "cells": [
+                        "par:1",
+                        "par:2",
+                        "par:3",
+                        "par:4",
+                        "par:5",
+                        "par:6",
+                        "par:7",
+                        "par:8",
+                        "par:9",
+                        "par:out"
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "carte sans totaux lus",
+            "card": {
+                "courseName": "BETHPAGE BLACK",
+                "tees": "Red",
+                "playedOn": "2026-10-17",
+                "holes": [
+                    { "par": 4, "strokeIndex": 8, "distance": 420 },
+                    { "par": 4, "strokeIndex": 16, "distance": 344 },
+                    { "par": 3, "strokeIndex": 18, "distance": 128 },
+                    { "par": 5, "strokeIndex": 2, "distance": 444 },
+                    { "par": 4, "strokeIndex": 4, "distance": 398 },
+                    { "par": 4, "strokeIndex": 10, "distance": 377 },
+                    { "par": 5, "strokeIndex": 6, "distance": 480 },
+                    { "par": 3, "strokeIndex": 14, "distance": 155 },
+                    { "par": 4, "strokeIndex": 12, "distance": 392 },
+                    { "par": 4, "strokeIndex": 9, "distance": 353 },
+                    { "par": 4, "strokeIndex": 11, "distance": 405 },
+                    { "par": 4, "strokeIndex": 7, "distance": 392 },
+                    { "par": 5, "strokeIndex": 3, "distance": 470 },
+                    { "par": 3, "strokeIndex": 17, "distance": 149 },
+                    { "par": 4, "strokeIndex": 1, "distance": 401 },
+                    { "par": 4, "strokeIndex": 5, "distance": 423 },
+                    { "par": 3, "strokeIndex": 13, "distance": 173 },
+                    { "par": 4, "strokeIndex": 15, "distance": 337 }
+                ],
+                "lines": [
+                    {
+                        "playerId": "0190a6b2-7c3e-7000-8000-000000000001",
+                        "strokes": [
+                            5, 5, 3, 5, 4, 4, 4, 3, 5, 4, 4, 4, 4, 3, 4, 5, 3, 3
+                        ],
+                        "readName": "GAB",
+                        "totals": null
+                    },
+                    {
+                        "playerId": "0190a6b2-7c3e-7000-8000-000000000002",
+                        "strokes": [
+                            7, 5, 3, 7, 6, 5, 5, 3, 5, 3, 6, 5, 7, 4, 5, 4, 3, 5
+                        ],
+                        "readName": "MANU",
+                        "totals": null
+                    }
+                ],
+                "parTotals": null
+            },
+            "problems": []
         }
     ]
 }

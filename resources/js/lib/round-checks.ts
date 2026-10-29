@@ -13,10 +13,21 @@ export type RoundCardHole = {
     distance: CellValue;
 };
 
+/** The OUT, IN and TOT totals printed on a card. */
+export type ReadTotals = {
+    out: CellValue;
+    in: CellValue;
+    total: CellValue;
+};
+
 export type RoundCardLine = {
     playerId: string | null;
     /** The 18 strokes, hole 1 first. */
     strokes: CellValue[];
+    /** The name read on the card; absent or `null` for a line typed by hand. */
+    readName?: string | null;
+    /** The totals read on the card; absent or `null` for a line typed by hand. */
+    totals?: ReadTotals | null;
 };
 
 /** The card as the editor sends it to the server. */
@@ -29,12 +40,14 @@ export type RoundCard = {
     holes: RoundCardHole[];
     /** The lines of players in the order of the card. */
     lines: RoundCardLine[];
+    /** The totals of the par read on the card; absent or `null` for a card typed by hand. */
+    parTotals?: ReadTotals | null;
 };
 
 /**
  * A problem and the cells to highlight. Cell keys: `courseName`, `tees`, `playedOn`;
- * `<row>:<hole 1..18>` with `<row>` = `par`, `strokeIndex`, `distance` or `player<n>`
- * (n = position of the line, from 0); `player<n>:player` for the player of a line.
+ * `<row>:<hole 1..18 | out | in | total>` with `<row>` = `par`, `strokeIndex`, `distance` or
+ * `player<n>` (n = position of the line, from 0); `player<n>:player` for the player of a line.
  */
 export type Problem = { message: string; cells: string[] };
 
@@ -119,6 +132,62 @@ function strokeIndexProblems(indexes: readonly CellValue[]): Problem[] {
     return problems;
 }
 
+const sum = (values: readonly CellValue[]): CellValue =>
+    values.every((value) => value !== null)
+        ? values.reduce<number>((total, value) => total + (value ?? 0), 0)
+        : null;
+
+const SUM_CHECKS = [
+    { label: 'Somme aller', from: 0, total: 'out', printed: 'OUT' },
+    { label: 'Somme retour', from: 9, total: 'in', printed: 'IN' },
+] as const;
+
+/**
+ * The totals read on the card: an empty total is an empty cell, and the sum of holes 1 to 9
+ * must equal OUT, that of holes 10 to 18 IN, and OUT + IN must equal TOT. A sum with an empty
+ * cell is not compared. No totals read: no problem.
+ */
+function readTotalProblems(
+    row: string,
+    holes: readonly CellValue[],
+    totals: ReadTotals | null | undefined,
+): Problem[] {
+    if (totals === null || totals === undefined) {
+        return [];
+    }
+
+    const problems: Problem[] = (['out', 'in', 'total'] as const)
+        .filter((total) => totals[total] === null)
+        .map((total) => ({ message: EMPTY, cells: [`${row}:${total}`] }));
+
+    for (const { label, from, total, printed } of SUM_CHECKS) {
+        const range = holes.slice(from, from + 9);
+        const computed = sum(range);
+        const read = totals[total];
+
+        if (computed !== null && read !== null && computed !== read) {
+            problems.push({
+                message: `${label} ${computed} ≠ ${printed} ${read}`,
+                cells: [
+                    ...range.map((_, hole) => holeKey(row, from + hole)),
+                    `${row}:${total}`,
+                ],
+            });
+        }
+    }
+
+    const outIn = sum([totals.out, totals.in]);
+
+    if (outIn !== null && totals.total !== null && outIn !== totals.total) {
+        problems.push({
+            message: `OUT + IN ${outIn} ≠ TOT ${totals.total}`,
+            cells: [`${row}:out`, `${row}:in`, `${row}:total`],
+        });
+    }
+
+    return problems;
+}
+
 type TextField = 'courseName' | 'tees' | 'playedOn';
 
 function fieldProblems(
@@ -181,22 +250,27 @@ export function checkRoundCard(card: RoundCard): Problem[] {
             card.holes.map((hole) => hole.par),
             PAR_RANGE,
         ),
+        ...readTotalProblems(
+            'par',
+            card.holes.map((hole) => hole.par),
+            card.parTotals,
+        ),
         ...strokeIndexProblems(card.holes.map((hole) => hole.strokeIndex)),
         ...distanceProblems(card.holes.map((hole) => hole.distance)),
         ...playerCountProblems(card.lines.length),
-        ...card.lines.flatMap((line, position) =>
-            cellProblems(`player${position}`, line.strokes, SCORE_RANGE),
-        ),
+        ...card.lines.flatMap((line, position) => [
+            ...cellProblems(`player${position}`, line.strokes, SCORE_RANGE),
+            ...readTotalProblems(
+                `player${position}`,
+                line.strokes,
+                line.totals,
+            ),
+        ]),
         ...fieldProblems(card, ['playedOn']),
         ...unassignedLineProblems(card.lines),
         ...duplicatePlayerProblems(card.lines),
     ];
 }
-
-const sum = (values: readonly CellValue[]): CellValue =>
-    values.every((value) => value !== null)
-        ? values.reduce<number>((total, value) => total + (value ?? 0), 0)
-        : null;
 
 /** A row of 18 values with its OUT, IN and TOT totals, `null` when a hole is empty. */
 export function withTotals(holes: readonly CellValue[]): HoleRow {
