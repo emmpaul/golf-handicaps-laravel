@@ -18,6 +18,7 @@
  * - the guard of the pending status removed (StartCourseRatingLookup): the job run twice on the
  *   same row prompts twice;
  * - failed() that writes nothing: after two 503 the row stays pending;
+ * - failed() that logs nothing, or without the id of the row: no warning names the row;
  * - $timeout at 420: the bounds of the job are 420 / 2 / 30;
  * - the ConnectionException of SgtClient let through: the delay passed is not SgtUnavailable.
  */
@@ -33,6 +34,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 
 const SGT_COURSES_URL = 'https://simulatorgolftour.com/courses';
 const SGT_SCORECARDS_URL = 'https://simulatorgolftour.com/public/assets/courseImages/scorecards/';
@@ -335,6 +337,20 @@ test('through the queue, two 503 end the lookup in failure', function () {
 
     expect(lookupOutcomeOf($rating))->toBe([CourseRatingStatus::Failed, 'SGT injoignable', null, null, null, null, null]);
     Http::assertSentCount(2);
+});
+
+test('the failure of the lookup is logged with its row and its exception', function () {
+    Log::spy();
+    $rating = pendingLookupOn('BETHPAGE BLACK', 'Red');
+    $exception = new SgtUnavailable('SGT unreachable: HTTP request returned status code 503');
+
+    (new LookUpCourseRating($rating->id))->failed($exception);
+
+    Log::shouldHaveReceived('warning')->once()->with('SGT rating lookup failed', [
+        'course_rating_id' => $rating->id,
+        'exception' => $exception,
+    ]);
+    expect($rating->refresh()->status)->toBe(CourseRatingStatus::Failed);
 });
 
 test('the job run twice on the same row calls the AI once', function () {
