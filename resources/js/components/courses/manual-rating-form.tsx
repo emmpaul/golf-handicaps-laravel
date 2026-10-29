@@ -5,6 +5,10 @@ import {
     destroy,
     update,
 } from '@/actions/App/Http/Controllers/CourseRatingController';
+import {
+    COURSE_ACTION_PENDING,
+    useCourseActionSending,
+} from '@/components/courses/course-action';
 import { Button } from '@/components/ui/button';
 import { Field, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
@@ -24,7 +28,9 @@ const PENDING_LABEL = {
  * précédent. Le serveur contrôle les bornes et renvoie
  * « Rating entre 40,0 et 90,0 » ou « Slope entre 55 et 155 » sous le champ en
  * cause. « Retirer la rating » n'apparaît que sur une ligne qui a une rating,
- * sans confirmation : une nouvelle saisie défait le retrait.
+ * sans confirmation : une nouvelle saisie défait le retrait. Sa région
+ * d'attente est celle de la ligne : elle dit aussi l'attente d'une action de
+ * la recherche (`CourseAction`), qui désactive ses boutons.
  */
 export function ManualRatingForm({
     courseName,
@@ -51,6 +57,15 @@ export function ManualRatingForm({
     });
     const [sending, setSending] = useState<keyof typeof PENDING_LABEL>('save');
     const rated = ratingT !== null && slope !== null;
+    const actionSending = useCourseActionSending();
+    const busy = form.processing || actionSending !== null;
+    let pendingLabel: string | null = null;
+
+    if (form.processing) {
+        pendingLabel = PENDING_LABEL[sending];
+    } else if (actionSending !== null) {
+        pendingLabel = COURSE_ACTION_PENDING[actionSending];
+    }
 
     function save(event: FormEvent<HTMLFormElement>) {
         event.preventDefault();
@@ -118,18 +133,14 @@ export function ManualRatingForm({
                         placeholder="ex. 144"
                     />
                 </Field>
-                <Button
-                    type="submit"
-                    variant="outline"
-                    disabled={form.processing}
-                >
+                <Button type="submit" variant="outline" disabled={busy}>
                     Enregistrer
                 </Button>
                 {rated ? (
                     <Button
                         type="button"
                         variant="secondary"
-                        disabled={form.processing}
+                        disabled={busy}
                         aria-label={`Retirer la rating de ${course}`}
                         onClick={remove}
                     >
@@ -137,10 +148,7 @@ export function ManualRatingForm({
                     </Button>
                 ) : null}
             </div>
-            <Pending
-                label={form.processing ? PENDING_LABEL[sending] : null}
-                orb="save"
-            />
+            <Pending label={pendingLabel} orb="save" />
             {form.errors.rating ? (
                 <p
                     id={ratingErrorId}
