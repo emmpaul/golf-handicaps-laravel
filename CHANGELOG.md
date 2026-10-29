@@ -92,6 +92,9 @@ All notable changes to this application, version by version. The format follows 
 - Test guard: `phpunit.xml` empties `ANTHROPIC_API_KEY` and every test that boots the application fakes the AI agent and refuses stray prompts and HTTP requests.
 - Demonstration data: `DemoImportsSeeder` adds a ready import with the read line JULIEN, a failed one on the budget, a waiting one, each with its photo, and three AI usage rows of the current month.
 - ADR 0011 (scorecard reading by AI and WebP photos) and an Import des cartes section in `ARCHITECTURE.md`.
+- Home dashboard: the index of each player with the delta of his latest round and the provisional mark, the latest round with its gross scores and net winners, and the imports to review with a link to the latest.
+- Handicaps page: one player at a time, chosen in `?joueur=`, with his index, his delta and the history of his rounds, the differentials that count in the current index marked.
+- Match strokes page: the course handicap of 2 to 4 players on a known course, in the « Écart » or « Complet » mode, and the strokes of each hole on a two-row grid, computed in the browser; the shared case table `tests/fixtures/course-handicap.json` is read by Pest and Vitest.
 
 ### Changed
 
@@ -122,6 +125,7 @@ All notable changes to this application, version by version. The format follows 
 - The kit's `ExampleTest` files and the authentication types in `resources/js` (`auth.ts`, shared `auth` prop).
 - `rounds/round-gross` component, replaced by the net leaderboard.
 - The starter kit welcome page (`welcome.tsx`) and the kit's `favicon.ico`.
+- The "Section à venir" placeholder page (`section-placeholder.tsx`) and its fallback routes; `/handicaps` and `/strokes` serve their own pages and an unknown sub-address answers 404.
 
 ### Fixed
 
