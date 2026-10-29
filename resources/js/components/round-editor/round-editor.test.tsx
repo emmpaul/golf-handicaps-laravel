@@ -37,12 +37,25 @@ import {
 
 // Spec rounds « Saisie manuelle neuve sans alerte », « Contrôles de
 // cohérence », « Totaux calculés », « Pré-remplissage depuis un parcours
-// connu », « Lignes de joueur », « Grille de saisie sur téléphone »,
+// connu », « Lignes de joueur », « Lignes de joueur groupées sur téléphone »,
+// « Grille de saisie sur téléphone », « Mise en page de l'éditeur »,
 // « Détection de doublon », « Marques sur le champ de date » and
 // loading-feedback « Attentes de l'éditeur de round ». The router's verbs are
 // stubbed (jsdom cannot run a visit); the visit callbacks they receive are
-// played by hand, in the order Inertia plays them. jsdom has no matchMedia nor
-// ResizeObserver; the orb paints on a canvas jsdom cannot draw.
+// played by hand, in the order Inertia plays them. jsdom has no matchMedia
+// (read by the orb for reduced motion); the orb paints on a canvas jsdom
+// cannot draw.
+// Mutations of the layout (task 6.1):
+// - the « RET. » row dropped → the totals rows test goes red;
+// - an untouched empty score cell painted amber (the empty-cell classes keyed
+//   on the problem instead of the cell shown in error) → the fresh entry cell
+//   test goes red;
+// - the read name put on its own row above the line → the read name test
+//   goes red;
+// - the distance problems dropped while the « Distances » block is closed →
+//   the closed block test goes red;
+// - the name of a line in the grid head painted `text-ink` instead of its
+//   player's colour → the grid head test goes red.
 // Mutations:
 // - the created player matched with its case (`player.name === name`) →
 //   « julien » finds no « Julien » and the association test goes red;
@@ -65,7 +78,11 @@ vi.mock('thinking-orbs', () => ({
     ThinkingOrb: () => <canvas data-testid="orb" />,
 }));
 
-const JULIEN = { id: '0190a6b2-7c3e-7000-8000-000000000009', name: 'Julien' };
+const JULIEN = {
+    id: '0190a6b2-7c3e-7000-8000-000000000009',
+    name: 'Julien',
+    colorSlot: 3,
+};
 
 const course: KnownCourse = {
     courseName: 'Bethpage Black',
@@ -75,31 +92,15 @@ const course: KnownCourse = {
     distances: DISTANCES,
 };
 
-let wide = false;
-const mediaListeners = new Set<() => void>();
 let post: MockInstance<typeof router.post>;
 let put: MockInstance<typeof router.put>;
 
 beforeEach(() => {
-    wide = false;
-    mediaListeners.clear();
     vi.stubGlobal('matchMedia', () => ({
-        get matches() {
-            return wide;
-        },
-        addEventListener: (_: string, listener: () => void) =>
-            mediaListeners.add(listener),
-        removeEventListener: (_: string, listener: () => void) =>
-            mediaListeners.delete(listener),
+        matches: false,
+        addEventListener: () => {},
+        removeEventListener: () => {},
     }));
-    vi.stubGlobal(
-        'ResizeObserver',
-        class {
-            observe() {}
-
-            disconnect() {}
-        },
-    );
     window.history.replaceState({}, '', '/rounds/new');
     post = vi.spyOn(router, 'post').mockImplementation(() => {});
     put = vi.spyOn(router, 'put').mockImplementation(() => {});
@@ -137,10 +138,16 @@ const saveButton = () =>
         name: /^(Enregistrer|\d+ problèmes? à corriger)$/,
     });
 
+/** The messages of the save bar, joined there by « · ». */
 const problemMessages = () =>
-    within(screen.getByRole('list', { name: 'Problèmes' }))
-        .getAllByRole('listitem')
-        .map((item) => item.textContent);
+    (screen.queryByTestId('problem-messages')?.textContent ?? '')
+        .split(' · ')
+        .filter(Boolean);
+
+/** Opens the « Distances » block under the grid. */
+async function openDistances() {
+    await userEvent.click(screen.getByText('Distances'));
+}
 
 /** The options of the n-th call of a stubbed router verb. */
 const visitOptions = (verb: MockInstance<typeof router.post>, call = 0) =>
@@ -253,6 +260,7 @@ describe('RoundEditor, known course', () => {
             screen.getByRole('combobox', { name: 'Parcours connu' }),
             'Bethpage Black / Red',
         );
+        await openDistances();
 
         const row = (label: string) =>
             Array.from(
@@ -591,36 +599,6 @@ describe('RoundEditor, date field', () => {
     });
 });
 
-describe('RoundEditor, grid layouts', () => {
-    it('keeps the name, the value and the check of « Ligne 1 trou 9 » from the narrow to the wide grid', async () => {
-        const { container } = render(editor());
-
-        expect(container.querySelector('[data-slot="wide-grid"]')).toBeNull();
-
-        await userEvent.type(cell('Ligne 1 trou 9'), '16');
-
-        expect(cell('Ligne 1 trou 9').getAttribute('aria-invalid')).toBe(
-            'true',
-        );
-
-        act(() => {
-            wide = true;
-            mediaListeners.forEach((listener) => listener());
-        });
-
-        expect(
-            container.querySelector('[data-slot="wide-grid"]'),
-        ).not.toBeNull();
-        expect(
-            screen.getAllByRole('textbox', { name: 'Ligne 1 trou 9' }),
-        ).toHaveLength(1);
-        expect(cell('Ligne 1 trou 9').value).toBe('16');
-        expect(cell('Ligne 1 trou 9').getAttribute('aria-invalid')).toBe(
-            'true',
-        );
-    });
-});
-
 // Spec scorecard-import « Repère de lecture par l'IA », « Nom lu sur chaque
 // ligne », « Contrôle des totaux lus » and design D7: the card of an import
 // carries the names and totals read; the editor of an import gets its
@@ -634,7 +612,9 @@ describe('RoundEditor, grid layouts', () => {
 // - « lu « … » » shown for every line (`line.readName ?? ''`) → the added
 //   line test finds « lu « » » and goes red;
 // - the mark shown without `readByAi` → the failed import test goes red;
-// - the straight apostrophe in « l'IA » → the mark test goes red.
+// - the straight apostrophe in « l'IA » → the mark test goes red;
+// - the mark painted `text-ink-2` instead of `text-info` → the mark test goes
+//   red.
 
 const READ_GAB = [5, 5, 3, 5, 4, 4, 4, 3, 3, 4, 4, 4, 4, 3, 4, 5, 3, 3];
 
@@ -681,15 +661,24 @@ function importEditor(readByAi = true) {
 }
 
 describe('RoundEditor, card of an import', () => {
-    it('shows « Carte lue par l’IA, vérifie chaque case » first, in the AI colour', () => {
-        const { container } = render(importEditor());
+    it('shows « Carte lue par l’IA, vérifie chaque case » under the photo, in `info`', () => {
+        render(importEditor());
 
         const mark = screen.getByText(
             'Carte lue par l’IA, vérifie chaque case',
         );
 
-        expect(mark.className).toContain('text-ai');
-        expect(container.firstElementChild?.firstElementChild).toBe(mark);
+        expect(mark).toHaveClass('text-info');
+        expect(
+            screen
+                .getByRole('img', { name: 'Photo de la carte importée' })
+                .compareDocumentPosition(mark) &
+                Node.DOCUMENT_POSITION_FOLLOWING,
+        ).toBeTruthy();
+        expect(
+            mark.compareDocumentPosition(cell('Parcours')) &
+                Node.DOCUMENT_POSITION_FOLLOWING,
+        ).toBeTruthy();
     });
 
     it('shows no mark when the AI gave no draft', () => {
@@ -708,23 +697,26 @@ describe('RoundEditor, card of an import', () => {
         ).toBeNull();
     });
 
-    it('shows « lu « GAB » » on the row of « Ligne 1 », the player list and its remove button on the next', () => {
+    it('shows « L1 », the player list, « lu « GAB » » and the remove button on one row', () => {
         render(importEditor());
 
         const group = screen.getByRole('group', { name: 'Ligne 1' });
-        const read = within(group).getByText('lu « GAB »');
+        const number = within(group).getByText('L1');
         // The list sits in the wrapper that draws its chevron.
         const select = within(group)
             .getByRole('combobox', { name: 'Joueur de la ligne 1' })
             .closest('[data-slot="native-select-wrapper"]');
+        const read = within(group).getByText('lu « GAB »');
+        const remove = within(group).getByRole('button', {
+            name: 'Retirer la ligne 1',
+        });
 
-        expect(read.parentElement).toBe(
-            within(group).getByText('Ligne 1').parentElement,
-        );
-        expect(read.parentElement?.nextElementSibling).toBe(select);
-        expect(select?.nextElementSibling).toBe(
-            within(group).getByRole('button', { name: 'Retirer la ligne 1' }),
-        );
+        expect([...(number.parentElement?.children ?? [])]).toEqual([
+            number,
+            select,
+            read,
+            remove,
+        ]);
         expect(
             within(screen.getByRole('group', { name: 'Ligne 2' })).getByText(
                 'lu « MANU »',
@@ -787,5 +779,254 @@ describe('RoundEditor, card of an import', () => {
 
         expect(problemMessages()).not.toContain('Somme aller 36 ≠ OUT 38');
         expect(cell('Ligne 1 OUT').getAttribute('aria-invalid')).toBeNull();
+    });
+});
+
+describe('RoundEditor, layout of the design', () => {
+    it('puts PARCOURS and TEES on one row, DATE under them', () => {
+        render(editor());
+
+        const course = cell('Parcours').closest('[data-slot="field"]');
+        const tees = cell('Tees').closest('[data-slot="field"]');
+        const date = screen
+            .getByRole('button', { name: 'Date' })
+            .closest('[data-slot="field"]');
+
+        expect(course?.parentElement).toBe(tees?.parentElement);
+        expect(course?.parentElement).toHaveClass('grid-cols-[1fr_110px]');
+        expect(date?.parentElement).not.toBe(course?.parentElement);
+        // The date drawn as the other fields: surface-1, Geist 500 16 px.
+        expect(screen.getByRole('button', { name: 'Date' })).toHaveClass(
+            'bg-surface-1',
+            'text-body-l',
+        );
+    });
+
+    it('draws the list of a line without player with an amber border and « Choisir un joueur »', () => {
+        render(
+            editor({
+                initial: cardEditorState({
+                    ...REFERENCE_CARD,
+                    lines: [
+                        {
+                            playerId: null,
+                            strokes: REFERENCE_CARD.lines[0].strokes,
+                        },
+                        REFERENCE_CARD.lines[1],
+                    ],
+                }),
+            }),
+        );
+
+        const unassigned = screen.getByRole('combobox', {
+            name: 'Joueur de la ligne 1',
+        }) as HTMLSelectElement;
+        const assigned = screen.getByRole('combobox', {
+            name: 'Joueur de la ligne 2',
+        });
+
+        expect(unassigned.selectedOptions[0].textContent).toBe(
+            'Choisir un joueur',
+        );
+        expect(
+            unassigned.closest('[data-slot="native-select-wrapper"]'),
+        ).toHaveClass('*:data-[slot=native-select]:border-accent');
+        expect(
+            assigned.closest('[data-slot="native-select-wrapper"]'),
+        ).not.toHaveClass('*:data-[slot=native-select]:border-accent');
+    });
+
+    it('heads the grid with the name of each line in its player colour, amber without player', () => {
+        render(
+            editor({
+                initial: cardEditorState({
+                    ...REFERENCE_CARD,
+                    lines: [
+                        ...REFERENCE_CARD.lines,
+                        { playerId: null, strokes: Array(18).fill(null) },
+                    ],
+                }),
+            }),
+        );
+
+        const names = [
+            ...screen
+                .getByTestId('grid-head')
+                .querySelectorAll('[data-slot="grid-line-name"]'),
+        ];
+
+        expect(names.map((name) => name.textContent)).toEqual([
+            'Gab',
+            'Manu',
+            'L3',
+        ]);
+        expect(names[0]).toHaveClass('text-player-1');
+        expect(names[1]).toHaveClass('text-player-2');
+        expect(names[2]).toHaveClass('text-accent');
+    });
+
+    it('shows the rows ALL. after hole 9, RET. and TOT. after hole 18, with their totals', () => {
+        render(editor({ initial: cardEditorState(REFERENCE_CARD) }));
+
+        const rows = [
+            ...screen
+                .getByRole('region', { name: 'Carte à corriger' })
+                .querySelectorAll('[data-slot="grid-row"]'),
+        ].map(
+            (row) =>
+                row.querySelector('[data-slot="grid-row-label"]')?.textContent,
+        );
+
+        expect(rows).toEqual([
+            '1',
+            '2',
+            '3',
+            '4',
+            '5',
+            '6',
+            '7',
+            '8',
+            '9',
+            'ALL.',
+            '10',
+            '11',
+            '12',
+            '13',
+            '14',
+            '15',
+            '16',
+            '17',
+            '18',
+            'RET.',
+            'TOT.',
+        ]);
+        expect(cell('Ligne 1 OUT').value).toBe('38');
+        expect(cell('Ligne 1 IN').value).toBe('34');
+        expect(cell('Ligne 1 TOT').value).toBe('72');
+        expect(cell('Par OUT').value).toBe('36');
+        expect(cell('Par TOT').value).toBe('71');
+    });
+
+    it('paints a score under par in `signal`, a score at par on `surface-1`', () => {
+        render(
+            editor({
+                initial: cardEditorState({
+                    ...REFERENCE_CARD,
+                    lines: [
+                        {
+                            playerId: GAB,
+                            strokes: [
+                                null,
+                                ...REFERENCE_CARD.lines[0].strokes.slice(1),
+                            ],
+                        },
+                    ],
+                }),
+            }),
+        );
+
+        // Gab's 4 at hole 7, par 5: under par.
+        expect(cell('Ligne 1 trou 7')).toHaveClass(
+            'bg-signal/22',
+            'border-signal/50',
+        );
+        expect(cell('Ligne 1 trou 2')).toHaveClass(
+            'bg-surface-1',
+            'border-rule',
+        );
+    });
+
+    it('paints an empty score of a saved round in amber from the opening', () => {
+        render(
+            <RoundEditor
+                initial={cardEditorState({
+                    ...REFERENCE_CARD,
+                    lines: [
+                        {
+                            playerId: GAB,
+                            strokes: [
+                                null,
+                                ...REFERENCE_CARD.lines[0].strokes.slice(1),
+                            ],
+                        },
+                    ],
+                })}
+                players={PLAYERS}
+                courses={[]}
+                action={store()}
+                flagUntouchedEmpty
+            />,
+        );
+
+        expect(cell('Ligne 1 trou 1')).toHaveClass(
+            'bg-accent/8',
+            'border-accent/60',
+        );
+    });
+
+    it('leaves the untouched empty cells of a fresh entry without the error background', () => {
+        render(editor());
+
+        expect(cell('Ligne 1 trou 1')).not.toHaveClass('bg-accent/8');
+        expect(cell('Ligne 1 trou 1')).toHaveClass('bg-surface-1');
+        expect(cell('Par trou 1')).not.toHaveClass('bg-accent/8');
+    });
+
+    it('draws the par and index cells with the `rule` outline (DO23)', () => {
+        render(editor({ initial: cardEditorState(REFERENCE_CARD) }));
+
+        expect(cell('Par trou 1')).toHaveClass('border-rule');
+        expect(cell('Index trou 1')).toHaveClass('border-rule');
+        expect(cell('Par trou 1')).not.toHaveClass('border-rule-soft');
+    });
+
+    it('keeps the distances in the « Distances » block, closed under the grid', async () => {
+        render(editor({ initial: cardEditorState(REFERENCE_CARD) }));
+
+        const block = screen
+            .getByText('Distances')
+            .closest('details') as HTMLDetailsElement;
+
+        expect(block.open).toBe(false);
+        expect(
+            screen
+                .getByRole('region', { name: 'Carte à corriger' })
+                .compareDocumentPosition(block) &
+                Node.DOCUMENT_POSITION_FOLLOWING,
+        ).toBeTruthy();
+
+        await openDistances();
+
+        expect(block.open).toBe(true);
+        expect(
+            within(block)
+                .getAllByRole('textbox')
+                .map((input) => input.getAttribute('aria-label')),
+        ).toEqual(
+            Array.from(
+                { length: 18 },
+                (_, hole) => `Distance trou ${hole + 1}`,
+            ),
+        );
+        expect(cell('Distance trou 1').value).toBe('420');
+    });
+
+    it('still counts and lists a distance of 1200 once the block is closed', async () => {
+        render(editor({ initial: cardEditorState(REFERENCE_CARD) }));
+
+        await openDistances();
+        await userEvent.clear(cell('Distance trou 3'));
+        await userEvent.type(cell('Distance trou 3'), '1200');
+        await openDistances();
+
+        expect(
+            (
+                screen
+                    .getByText('Distances')
+                    .closest('details') as HTMLDetailsElement
+            ).open,
+        ).toBe(false);
+        expect(problemMessages()).toEqual(['Distance 1200 hors de 1 à 999']);
+        expect(saveButton().textContent).toBe('1 problème à corriger');
     });
 });

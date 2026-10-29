@@ -40,8 +40,9 @@ export const REFERENCE_CARD = {
     ],
 };
 
+/** The players of the editor, as PlayerList sends them (colour slot by creation, D6). */
 export const PLAYERS = [
-    { id: GAB, name: 'Gab' },
-    { id: MANU, name: 'Manu' },
-    { id: SEAN, name: 'Sean' },
+    { id: GAB, name: 'Gab', colorSlot: 0 },
+    { id: MANU, name: 'Manu', colorSlot: 1 },
+    { id: SEAN, name: 'Sean', colorSlot: 2 },
 ];

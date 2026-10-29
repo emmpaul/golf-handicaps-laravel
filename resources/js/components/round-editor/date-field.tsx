@@ -50,7 +50,10 @@ function DayButton({ modifiers, ...props }: DayButtonProps) {
  * ouvre un calendrier en français, semaine au lundi, mois et année au choix.
  * `value` et `onChange` restent en ISO `YYYY-MM-DD`, lus et écrits comme jour
  * civil (spec « Choix de la date au calendrier »). Échap ferme sans rien
- * changer ; le focus revient sur le champ.
+ * changer ; le focus revient sur le champ. Le bouton est dessiné comme les
+ * autres champs de l'éditeur (48 px, `surface-1`, Geist 500, 16 px) ; en
+ * erreur, il prend l'ambre des cases (spec `rounds`, « Mise en page de
+ * l'éditeur »).
  */
 export function DateField({
     id,
@@ -77,7 +80,7 @@ export function DateField({
                         id={id}
                         variant="outline"
                         aria-invalid={invalid || undefined}
-                        className="w-full justify-start font-normal"
+                        className="w-full justify-start bg-surface-1 px-3.5 text-body-l aria-invalid:border-accent/60 aria-invalid:bg-accent/8"
                         onBlur={onBlur}
                     />
                 }

@@ -13,6 +13,16 @@ export const PLAYER_BG = [
     'bg-player-6',
 ] as const;
 
+/** Texte de chaque rang de couleur (noms des lignes de l'éditeur), écrit en entier. */
+export const PLAYER_TEXT = [
+    'text-player-1',
+    'text-player-2',
+    'text-player-3',
+    'text-player-4',
+    'text-player-5',
+    'text-player-6',
+] as const;
+
 const SIZES = {
     6: 'size-1.5 rounded-2',
     8: 'size-2 rounded-2',

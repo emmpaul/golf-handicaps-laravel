@@ -20,7 +20,8 @@ export type KnownCourse = {
     distances: (number | null)[];
 };
 
-export type PlayerOption = { id: string; name: string };
+/** Joueur proposé aux lignes, avec son rang de couleur (D6, PlayerList). */
+export type PlayerOption = { id: string; name: string; colorSlot: number };
 
 /**
  * Ligne de joueur de l'éditeur : la ligne de la carte et une `key` stable,
@@ -251,18 +252,6 @@ export const courseLabel = ({
     courseName: string;
     tees: string;
 }) => `${courseName} / ${tees}`;
-
-/** Libellé d'une ligne dans la grille : le joueur associé, sinon « Ligne n » (`position` part de 0). */
-export function lineLabel(
-    line: Pick<EditorLine, 'playerId'>,
-    position: number,
-    players: readonly PlayerOption[],
-): string {
-    return (
-        players.find(({ id }) => id === line.playerId)?.name ??
-        `Ligne ${position + 1}`
-    );
-}
 
 /**
  * Le joueur créé depuis une ligne, retrouvé dans les props rechargées : le nom

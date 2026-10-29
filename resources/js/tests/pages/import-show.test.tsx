@@ -39,6 +39,13 @@ import {
 // - the round sent to RoundController.store → the saving test reads
 //   `/rounds` and goes red;
 // - the photo of the round (RoundPhotoController) → the photo test goes red.
+// Spec scorecard-import « Mise en page de l'écran de vérification » and
+// app-shell « Navigation masquée pendant l'édition » (task 6.3):
+// - a « Recadrer la photo » link rendered → the no crop test goes red;
+// - the photo without its 16/10 frame → the layout test goes red;
+// - the mark painted `text-ink-2` → the layout test goes red;
+// - the saving status left in `text-sm` → the layout test goes red;
+// - `layout` dropped from the page → the chrome test goes red.
 
 vi.mock('thinking-orbs', () => ({
     ThinkingOrb: () => <canvas data-testid="orb" />,
@@ -49,6 +56,7 @@ const IMPORT = '0190a6b2-7c3e-7000-8000-0000000000c1';
 vi.mock('@inertiajs/react', async (importOriginal) => ({
     ...(await importOriginal<typeof import('@inertiajs/react')>()),
     Head: () => null,
+    usePage: () => ({ url: `/imports/${IMPORT}`, props: {} }),
 }));
 
 const readyImport: ImportSummary = {
@@ -108,14 +116,6 @@ beforeEach(() => {
         addEventListener: () => {},
         removeEventListener: () => {},
     }));
-    vi.stubGlobal(
-        'ResizeObserver',
-        class {
-            observe() {}
-
-            disconnect() {}
-        },
-    );
     fetchMock = vi.fn<typeof fetch>(
         async () => new Response(null, { status: 204 }),
     );
@@ -149,9 +149,8 @@ describe('Correction screen of an import read by the AI', () => {
         render(page(readyImport, fromReading));
 
         expect(
-            screen.getByText('Carte lue par l’IA, vérifie chaque case')
-                .className,
-        ).toContain('text-ai');
+            screen.getByText('Carte lue par l’IA, vérifie chaque case'),
+        ).toHaveClass('text-info');
         expect(
             screen
                 .getByRole('img', { name: 'Photo de la carte importée' })
@@ -268,5 +267,44 @@ describe('Empty correction screen of a failed import', () => {
         expect(
             screen.getAllByRole('combobox', { name: /^Joueur de la ligne/ }),
         ).toHaveLength(1);
+    });
+});
+
+describe('Layout of the verification screen', () => {
+    it('titles « Vérifier la carte » under the back link « Importer », the photo in its 16/10 frame below', () => {
+        render(page(readyImport, fromReading));
+
+        const topRow = document.querySelector(
+            '[data-slot="page-top-row"]',
+        ) as HTMLElement;
+        const title = screen.getByRole('heading', { level: 1 });
+        const photo = screen.getByRole('img', {
+            name: 'Photo de la carte importée',
+        });
+
+        expect(within(topRow).getByRole('link').textContent).toBe('Importer');
+        expect(within(topRow).getByRole('link').getAttribute('href')).toBe(
+            '/import',
+        );
+        expect(title.textContent).toBe('Vérifier la carte');
+        expect(
+            title.compareDocumentPosition(photo) &
+                Node.DOCUMENT_POSITION_FOLLOWING,
+        ).toBeTruthy();
+        expect(photo).toHaveClass('aspect-[16/10]', 'rounded-12');
+        expect(screen.getByTestId('autosave-status')).toHaveClass(
+            'font-mono',
+            'text-ink-2',
+        );
+    });
+
+    it('offers neither « Recadrer » nor « Recadrer la photo »', () => {
+        render(page(readyImport, fromReading));
+
+        expect(screen.queryByText(/Recadrer/)).toBeNull();
+    });
+
+    it('declares the editor chrome of the layout', () => {
+        expect(ImportShow.layout).toEqual({ chrome: 'editor' });
     });
 });

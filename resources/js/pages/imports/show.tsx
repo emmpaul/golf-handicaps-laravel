@@ -1,8 +1,9 @@
 import { Head } from '@inertiajs/react';
 import ImportPhotoController from '@/actions/App/Http/Controllers/ImportPhotoController';
 import ImportRoundController from '@/actions/App/Http/Controllers/ImportRoundController';
+import ImportController from '@/actions/App/Http/Controllers/ImportController';
 import type { ImportStatus } from '@/components/import/import-list';
-import { PageTitle } from '@/components/page-title';
+import { PageTopRow } from '@/components/page-top-row';
 import { cardEditorState } from '@/components/round-editor/form-state';
 import type {
     KnownCourse,
@@ -31,9 +32,11 @@ export type ImportEditor = {
 };
 
 /**
- * Écran de correction d'un import (spec `scorecard-import`) : l'éditeur de
- * round pré-rempli, la photo à côté, la sauvegarde automatique de chaque
- * modification, puis l'enregistrement du round par `ImportRoundController`.
+ * Écran de vérification d'un import (spec `scorecard-import`, « Mise en page
+ * de l'écran de vérification ») : lien de retour « Importer », titre
+ * « Vérifier la carte », puis l'éditeur de round pré-rempli, la photo sous le
+ * titre, la sauvegarde automatique de chaque modification et l'enregistrement
+ * du round par `ImportRoundController`. Sans barre d'onglets (`layout`).
  */
 export default function ImportShow({
     import: summary,
@@ -49,7 +52,10 @@ export default function ImportShow({
     return (
         <>
             <Head title="Vérifier la carte" />
-            <PageTitle>Vérifier la carte</PageTitle>
+            <PageTopRow
+                back={{ href: ImportController.index.url(), label: 'Importer' }}
+            />
+            <h1 className="text-title">Vérifier la carte</h1>
             <RoundEditor
                 initial={cardEditorState(editor.card)}
                 players={players}
@@ -66,3 +72,6 @@ export default function ImportShow({
         </>
     );
 }
+
+/** Barre d'enregistrement à la place des onglets (spec app-shell, « Navigation masquée pendant l'édition »). */
+ImportShow.layout = { chrome: 'editor' };

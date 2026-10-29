@@ -1,82 +1,85 @@
-import { useSyncExternalStore } from 'react';
+import { Fragment } from 'react';
 import type { CellValue } from '@/lib/round-checks';
 import { cn } from '@/lib/utils';
 import { parseCell } from './form-state';
 import type { TotalColumn } from './form-state';
 
-export type GridColumn = number | 'out' | 'in' | 'total';
-
 /**
- * Une ligne de la grille ; `key` est le préfixe des clés de case des contrôles.
- * `cellLabel` préfixe le nom accessible des cases (`label` par défaut) : il
- * reste stable quand le libellé affiché change, par exemple « Ligne 1 » pour
- * la ligne affichée « Gab ». `totals` : OUT, IN et TOT calculés, en lecture
- * seule (spec `rounds`, « Totaux calculés ») ; lus sur la carte d'un import,
- * modifiables (`readTotals`, spec « Contrôle des totaux lus »).
+ * Une ligne de la carte dans la grille ; `key` est le préfixe des clés de case
+ * des contrôles (`par`, `strokeIndex`, `player<n>`). `cellLabel` préfixe le
+ * nom accessible des cases (`label` par défaut) : il reste stable quand le nom
+ * affiché change, par exemple « Ligne 1 » pour la ligne de Gab. `headClass` :
+ * la couleur du nom en tête de colonne. `totals` : OUT, IN et TOT calculés, en
+ * lecture seule (spec `rounds`, « Totaux calculés ») ; lus sur la carte d'un
+ * import, modifiables (`readTotals`, spec « Contrôle des totaux lus »).
  */
 export type GridRow = {
     key: string;
     label: string;
     cellLabel?: string;
+    headClass?: string;
     holes: CellValue[];
     totals?: { out: CellValue; in: CellValue; total: CellValue };
     readTotals?: boolean;
 };
 
-const TOTAL_LABELS = { out: 'OUT', in: 'IN', total: 'TOT' } as const;
+/** Noms accessibles des totaux, gardés de la grille d'avant (« Ligne 1 OUT »). */
+const TOTAL_NAMES = { out: 'OUT', in: 'IN', total: 'TOT' } as const;
 
-const COLUMNS: GridColumn[] = [
-    ...Array.from({ length: 9 }, (_, i) => i + 1),
-    'out',
-    ...Array.from({ length: 9 }, (_, i) => i + 10),
-    'in',
-    'total',
-];
+const cellKey = (row: GridRow, column: number | TotalColumn) =>
+    `${row.key}:${column}`;
 
-/** Ligne de la carte dont la valeur se place sous le numéro du trou en grille de téléphone. */
-const DISTANCE_ROW = 'distance';
+const cellName = (row: GridRow, column: number | TotalColumn) =>
+    typeof column === 'number'
+        ? `${row.cellLabel ?? row.label} trou ${column}`
+        : `${row.cellLabel ?? row.label} ${TOTAL_NAMES[column]}`;
 
-/** Grille large (une colonne par trou) à partir de 768 px ; une ligne par trou en dessous. */
-const WIDE_QUERY = '(width >= 48rem)';
+/** Focus au clavier : contour d'encre de 2 px décalé de 2 px (spec visual-theme). */
+const FOCUS =
+    'outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-solid focus-visible:outline-ring';
+/** Case de 44 px, rayon 8 px, Geist Mono 16 px. */
+const CELL = cn(
+    FOCUS,
+    'h-11 min-w-0 rounded-8 border px-0.5 text-center font-mono text-num-m-16 transition-[background-color,border-color] duration-(--dur-press)',
+);
+/** Case en erreur (spec « Mise en page de l'éditeur ») : fond et bordure ambre. */
+const CELL_ERROR = 'border-accent/60 bg-accent/8';
 
-function subscribeWide(onChange: () => void) {
-    const query = window.matchMedia(WIDE_QUERY);
-    query.addEventListener('change', onChange);
-
-    return () => query.removeEventListener('change', onChange);
-}
-
-/** Disposition rendue (design D9) : une seule à la fois, pour ne pas dupliquer les champs. */
-function useWideGrid() {
-    return useSyncExternalStore(
-        subscribeWide,
-        () => window.matchMedia(WIDE_QUERY).matches,
-        () => false,
+/** Champ d'une case : texte saisi lu par `parseCell`. */
+export function GridInput({
+    label,
+    value,
+    invalid,
+    readOnly = false,
+    onChange,
+    onBlur,
+    className,
+}: {
+    label: string;
+    value: CellValue;
+    invalid: boolean;
+    readOnly?: boolean;
+    onChange: (value: CellValue) => void;
+    onBlur: () => void;
+    className?: string;
+}) {
+    return (
+        <input
+            aria-label={label}
+            aria-invalid={invalid || undefined}
+            inputMode="numeric"
+            autoComplete="off"
+            readOnly={readOnly}
+            value={value ?? ''}
+            onChange={(event) => onChange(parseCell(event.currentTarget.value))}
+            onBlur={onBlur}
+            className={className}
+        />
     );
 }
 
-const columnTitle = (column: GridColumn) =>
-    typeof column === 'number' ? String(column) : TOTAL_LABELS[column];
-
-const cellKey = (row: GridRow, column: GridColumn) => `${row.key}:${column}`;
-
-function cellValue(row: GridRow, column: GridColumn): CellValue | undefined {
-    if (typeof column === 'number') {
-        return row.holes[column - 1];
-    }
-
-    return row.totals?.[column];
-}
-
-function cellName(row: GridRow, column: GridColumn) {
-    const prefix = row.cellLabel ?? row.label;
-
-    return typeof column === 'number'
-        ? `${prefix} trou ${column}`
-        : `${prefix} ${TOTAL_LABELS[column]}`;
-}
-
 type GridProps = {
+    /** Par, index, puis une ligne par joueur. */
     rows: GridRow[];
     invalid: ReadonlySet<string>;
     onCell: (row: string, hole: number, value: CellValue) => void;
@@ -85,278 +88,188 @@ type GridProps = {
     onLeave?: (cell: string) => void;
 };
 
+/** Rangées des sous-totaux : après le trou 9, puis après le trou 18. */
+const TOTAL_ROWS: { after: number; column: TotalColumn; label: string }[] = [
+    { after: 9, column: 'out', label: 'ALL.' },
+    { after: 18, column: 'in', label: 'RET.' },
+    { after: 18, column: 'total', label: 'TOT.' },
+];
+
 /**
- * Case de la grille, ou rien quand la ligne n'a pas de valeur dans cette
- * colonne (index des totaux). Même nom accessible et même clé dans les deux
- * dispositions. Un total calculé est en lecture seule ; un total lu se modifie.
+ * Grille de saisie (spec `rounds`, « Grille de saisie sur téléphone »,
+ * « Mise en page de l'éditeur ») : une rangée par trou, numéro, par, index
+ * (cases à contour `rule`, DO23), puis le score de chaque ligne de joueur ;
+ * « ALL. » après le trou 9, « RET. » et « TOT. » après le 18. La rangée des
+ * noms reste collée en haut pendant le défilement, chaque nom dans la couleur
+ * de son joueur. Une seule disposition à toute largeur : quatre lignes tiennent
+ * à 320 px, les cases de score se partagent la largeur restante. Une case de
+ * score sous le par prend le fond `signal` ; une case en erreur, l'ambre.
  */
-function GridCell({
-    row,
-    column,
+export function ScoreGrid({
+    rows,
     invalid,
     onCell,
     onTotal,
     onLeave,
-    className,
-}: Omit<GridProps, 'rows'> & {
-    row: GridRow;
-    column: GridColumn;
-    className?: string;
-}) {
-    const value = cellValue(row, column);
+}: GridProps) {
+    const [par, strokeIndex, ...players] = rows;
 
-    if (value === undefined) {
-        return null;
+    function holeCell(row: GridRow, hole: number, className: string) {
+        const key = cellKey(row, hole);
+
+        return (
+            <GridInput
+                label={cellName(row, hole)}
+                value={row.holes[hole - 1]}
+                invalid={invalid.has(key)}
+                onChange={(value) => onCell(row.key, hole, value)}
+                onBlur={() => onLeave?.(key)}
+                className={className}
+            />
+        );
     }
 
-    const key = cellKey(row, column);
+    function scoreClass(row: GridRow, hole: number) {
+        const strokes = row.holes[hole - 1];
+        const holePar = par.holes[hole - 1];
 
-    return (
-        <CellInput
-            label={cellName(row, column)}
-            value={value}
-            invalid={invalid.has(key)}
-            readOnly={typeof column !== 'number' && !row.readTotals}
-            onChange={(next) => {
-                if (typeof column === 'number') {
-                    onCell(row.key, column, next);
-                } else {
-                    onTotal?.(row.key, column, next);
-                }
-            }}
-            onBlur={() => onLeave?.(key)}
-            className={className}
-        />
-    );
-}
+        if (invalid.has(cellKey(row, hole))) {
+            return CELL_ERROR;
+        }
 
-/** Champ d'une case : texte saisi lu par `parseCell`. */
-function CellInput({
-    label,
-    value,
-    invalid,
-    readOnly,
-    onChange,
-    onBlur,
-    className,
-}: {
-    label: string;
-    value: CellValue;
-    invalid: boolean;
-    readOnly: boolean;
-    onChange: (value: CellValue) => void;
-    onBlur: () => void;
-    className?: string;
-}) {
-    return (
-        <span className="relative block">
-            <input
-                aria-label={label}
-                aria-invalid={invalid || undefined}
-                inputMode="numeric"
-                autoComplete="off"
-                readOnly={readOnly}
-                value={value ?? ''}
-                onChange={(event) =>
-                    onChange(parseCell(event.currentTarget.value))
-                }
-                onBlur={onBlur}
+        return strokes !== null && holePar !== null && strokes < holePar
+            ? 'border-signal/50 bg-signal/22'
+            : 'border-rule bg-surface-1';
+    }
+
+    function totalCell(row: GridRow, column: TotalColumn, className: string) {
+        const value = row.totals?.[column];
+
+        if (value === undefined) {
+            return <span className={className} />;
+        }
+
+        const key = cellKey(row, column);
+        const error = invalid.has(key);
+
+        return (
+            <GridInput
+                label={cellName(row, column)}
+                value={value}
+                invalid={error}
+                readOnly={!row.readTotals}
+                onChange={(next) => onTotal?.(row.key, column, next)}
+                onBlur={() => onLeave?.(key)}
                 className={cn(
-                    'font-heading text-base block w-full min-w-0 rounded-none border border-input bg-transparent px-0.5 text-center font-semibold tabular-nums',
-                    'transition-[background-color,border-color] duration-(--dur-micro) ease-out outline-none',
-                    'hover:not-read-only:border-foreground focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring focus-visible:outline-solid',
-                    'aria-invalid:border-destructive aria-invalid:bg-destructive/10',
-                    readOnly && 'border-transparent bg-muted font-extrabold',
                     className,
+                    row.readTotals
+                        ? cn(
+                              CELL,
+                              error ? CELL_ERROR : 'border-rule bg-surface-1',
+                          )
+                        : cn(FOCUS, 'min-w-0 bg-transparent text-center'),
+                    !row.readTotals && error && 'text-accent',
                 )}
             />
-        </span>
-    );
-}
-
-/** Grille large : une rangée par ligne de la carte, colonnes 1-9, OUT, 10-18, IN, TOT. */
-function WideGrid({ rows, ...cell }: GridProps) {
-    return (
-        // Focusable so that keyboard users can scroll the table, until the
-        // single-column grid of the redesign replaces it (task 6.1).
-        <section
-            data-slot="wide-grid"
-            aria-label="Carte à corriger"
-            tabIndex={0}
-            className="max-w-full min-w-0 overflow-x-auto"
-        >
-            <table className="text-sm border-separate border-spacing-0.5 p-1 tabular-nums lg:w-full">
-                <thead>
-                    <tr>
-                        <th
-                            scope="col"
-                            className="sticky left-0 z-10 w-24 max-w-24 min-w-24 truncate bg-background px-2 text-left font-medium"
-                        >
-                            Trou
-                        </th>
-                        {COLUMNS.map((column) => (
-                            <th
-                                key={column}
-                                scope="col"
-                                className="font-heading text-base px-0.5 text-center font-extrabold"
-                            >
-                                {columnTitle(column)}
-                            </th>
-                        ))}
-                    </tr>
-                </thead>
-                <tbody>
-                    {rows.map((row) => (
-                        <tr key={row.key}>
-                            <th
-                                scope="row"
-                                className={cn(
-                                    'sticky left-0 z-10 w-24 max-w-24 min-w-24 truncate bg-background px-2 text-left whitespace-nowrap',
-                                    row.key.startsWith('player')
-                                        ? 'font-heading text-base font-semibold'
-                                        : 'font-medium text-muted-foreground',
-                                )}
-                            >
-                                {row.label}
-                            </th>
-                            {COLUMNS.map((column) => (
-                                <td key={column}>
-                                    <GridCell
-                                        row={row}
-                                        column={column}
-                                        className="h-8 w-11 lg:w-full"
-                                        {...cell}
-                                    />
-                                </td>
-                            ))}
-                        </tr>
-                    ))}
-                </tbody>
-            </table>
-        </section>
-    );
-}
-
-/**
- * Grille de téléphone (spec « Grille de saisie sur téléphone ») : une ligne par
- * trou, la distance sous le numéro, puis par, index et une colonne par ligne
- * de joueur ; OUT après le 9, IN et TOT après le 18. La rangée des noms reste
- * collée sous l'en-tête de l'app.
- */
-function PhoneGrid({ rows, ...cell }: GridProps) {
-    const distance = rows.find((row) => row.key === DISTANCE_ROW);
-    const columns = rows.filter((row) => row !== distance);
-    // Têtes posées en bas, sur une même ligne de 20 px : la dernière ligne de
-    // « Trou / Dist. », « Par », « Index » (texte 12 px) et les noms des
-    // joueurs (condensé 16 px) tombe sur une même ligne de base.
-    const head =
-        'sticky top-(--top-chrome) z-10 bg-band px-0.5 py-1.5 align-bottom leading-5 text-band-ink';
-    const smallHead = 'text-xs leading-5 font-medium';
+        );
+    }
 
     return (
-        <section aria-label="Carte à corriger" className="min-w-0">
-            <table className="w-full table-fixed border-separate border-spacing-0 tabular-nums">
-                <thead>
-                    <tr>
-                        {/* La case de distance se pose sous le numéro du trou : la tête nomme les deux. */}
-                        <th
-                            scope="col"
-                            className={cn(head, smallHead, 'w-11 text-left')}
+        <section aria-label="Carte à corriger" className="mt-[26px] min-w-0">
+            <div
+                data-testid="grid-head"
+                className="sticky top-(--safe-top) z-10 flex items-center gap-1.5 border-b border-rule bg-bg pt-2 pb-2 font-mono text-caption text-ink-2 uppercase"
+            >
+                <span className="w-[30px] flex-none">Trou</span>
+                <span className="w-11 flex-none text-center">Par</span>
+                <span className="w-11 flex-none text-center">Idx</span>
+                {players.map((row) => (
+                    <span
+                        key={row.key}
+                        data-slot="grid-line-name"
+                        className={cn(
+                            'min-w-0 flex-1 truncate text-center',
+                            row.headClass,
+                        )}
+                    >
+                        {row.label}
+                    </span>
+                ))}
+            </div>
+            {Array.from({ length: 18 }, (_, i) => i + 1).map((hole) => (
+                <Fragment key={hole}>
+                    <div
+                        data-slot="grid-row"
+                        className="flex items-center gap-1.5 border-b border-rule-soft py-1"
+                    >
+                        <span
+                            data-slot="grid-row-label"
+                            className="w-[30px] flex-none font-mono text-num-m-15"
                         >
-                            Trou{' '}
-                            <abbr
-                                title="Distance"
-                                className="block no-underline"
-                            >
-                                Dist.
-                            </abbr>
-                        </th>
-                        {columns.map((row) => (
-                            <th
-                                key={row.key}
-                                scope="col"
+                            {hole}
+                        </span>
+                        {[par, strokeIndex].map((row) => (
+                            <Fragment key={row.key}>
+                                {holeCell(
+                                    row,
+                                    hole,
+                                    cn(
+                                        CELL,
+                                        'w-11 flex-none text-ink-2',
+                                        invalid.has(cellKey(row, hole))
+                                            ? CELL_ERROR
+                                            : 'border-rule bg-transparent',
+                                    ),
+                                )}
+                            </Fragment>
+                        ))}
+                        {players.map((row) => (
+                            <Fragment key={row.key}>
+                                {holeCell(
+                                    row,
+                                    hole,
+                                    cn(
+                                        CELL,
+                                        'flex-1 text-ink',
+                                        scoreClass(row, hole),
+                                    ),
+                                )}
+                            </Fragment>
+                        ))}
+                    </div>
+                    {TOTAL_ROWS.filter(({ after }) => after === hole).map(
+                        ({ column, label }) => (
+                            <div
+                                key={column}
+                                data-slot="grid-row"
+                                // Totaux en 16 px : une case lue, même en lecture seule, ne fait pas zoomer iOS.
                                 className={cn(
-                                    head,
-                                    'text-center',
-                                    row.key.startsWith('player')
-                                        ? 'font-heading text-base leading-5 font-semibold [overflow-wrap:anywhere]'
-                                        : smallHead,
+                                    'flex items-center gap-1.5 py-1 font-mono text-num-m-16 text-ink',
+                                    column === 'total' ? 'min-h-10' : 'min-h-9',
                                 )}
                             >
-                                {row.label}
-                            </th>
-                        ))}
-                    </tr>
-                </thead>
-                <tbody>
-                    {COLUMNS.map((column) => {
-                        const total = typeof column !== 'number';
-
-                        return (
-                            <tr
-                                key={column}
-                                className={cn(total && 'bg-muted')}
-                            >
-                                <th
-                                    scope="row"
-                                    className={cn(
-                                        'border-b px-0.5 pt-1.5 pb-1 text-left align-bottom',
-                                        (column === 9 || column === 18) &&
-                                            'border-b-2 border-b-foreground',
-                                    )}
+                                <span
+                                    data-slot="grid-row-label"
+                                    className="w-[30px] flex-none text-section tracking-normal text-ink-2"
                                 >
-                                    <span
-                                        className={cn(
-                                            'font-heading block leading-none',
-                                            total
-                                                ? 'text-sm font-extrabold'
-                                                : 'text-lg font-extrabold',
-                                        )}
-                                    >
-                                        {columnTitle(column)}
-                                    </span>
-                                    {distance ? (
-                                        <GridCell
-                                            row={distance}
-                                            column={column}
-                                            className="text-sm mt-1 h-11 font-medium text-muted-foreground"
-                                            {...cell}
-                                        />
-                                    ) : null}
-                                </th>
-                                {columns.map((row) => (
-                                    <td
-                                        key={row.key}
-                                        className={cn(
-                                            'border-b px-0.5 pb-1 align-bottom',
-                                            (column === 9 || column === 18) &&
-                                                'border-b-2 border-b-foreground',
-                                        )}
-                                    >
-                                        <GridCell
-                                            row={row}
-                                            column={column}
-                                            className="h-11"
-                                            {...cell}
-                                        />
-                                    </td>
+                                    {label}
+                                </span>
+                                {totalCell(
+                                    par,
+                                    column,
+                                    'w-11 flex-none text-ink-2',
+                                )}
+                                <span className="w-11 flex-none" />
+                                {players.map((row) => (
+                                    <Fragment key={row.key}>
+                                        {totalCell(row, column, 'flex-1')}
+                                    </Fragment>
                                 ))}
-                            </tr>
-                        );
-                    })}
-                </tbody>
-            </table>
+                            </div>
+                        ),
+                    )}
+                </Fragment>
+            ))}
         </section>
     );
-}
-
-/**
- * Grille de la carte, en une seule disposition rendue à la fois : colonnes 1-9,
- * OUT, 10-18, IN, TOT à partir de 768 px (le cadre défile s'il le faut, avec
- * ses fondus), une ligne par trou en dessous, sans défilement de côté. Les
- * cases gardent leur nom (« Ligne 1 trou 9 ») et leur clé dans les deux.
- * `onLeave` reçoit la clé d'une case quand elle perd le focus.
- */
-export function ScoreGrid(props: GridProps) {
-    return useWideGrid() ? <WideGrid {...props} /> : <PhoneGrid {...props} />;
 }

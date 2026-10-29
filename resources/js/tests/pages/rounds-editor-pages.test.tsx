@@ -1,6 +1,6 @@
 import { router } from '@inertiajs/react';
 import type { MockInstance } from 'vite-plus/test';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import {
     afterEach,
@@ -32,10 +32,17 @@ import {
 // stubbed (jsdom cannot run a visit). Head renders nothing outside
 // createInertiaApp; jsdom has no matchMedia nor ResizeObserver; the orb paints
 // on a canvas jsdom cannot draw.
+// Spec rounds « Mise en page de l'éditeur » and app-shell « Navigation masquée
+// pendant l'édition »: titles « Nouveau round » and « Modifier le round »,
+// back links « Rounds » and « Round », the pages declared in the editor
+// chrome of the layout (no tab bar, no Importer).
 // Mutations: `edit` sending in POST (`{ url: update.url(id), method: 'post' }`) → the edit test
 // sees no PUT and goes red; `create` starting from a fixed date instead of
 // `today` → the create test goes red; `edit` starting from an empty editor →
-// the edit test loses its two lines.
+// the edit test loses its two lines; the title « Saisie manuelle » kept → the
+// create title test goes red; the back link of the correction pointed at
+// /rounds → the edit back link test goes red; `layout` dropped from a page →
+// its chrome test reads undefined and goes red.
 
 vi.mock('thinking-orbs', () => ({
     ThinkingOrb: () => <canvas data-testid="orb" />,
@@ -44,7 +51,13 @@ vi.mock('thinking-orbs', () => ({
 vi.mock('@inertiajs/react', async (importOriginal) => ({
     ...(await importOriginal<typeof import('@inertiajs/react')>()),
     Head: () => null,
+    usePage: () => ({ url: '/rounds/new', props: {} }),
 }));
+
+const backLink = () =>
+    within(
+        document.querySelector('[data-slot="page-top-row"]') as HTMLElement,
+    ).getByRole('link');
 
 let post: MockInstance<typeof router.post>;
 let put: MockInstance<typeof router.put>;
@@ -55,14 +68,6 @@ beforeEach(() => {
         addEventListener: () => {},
         removeEventListener: () => {},
     }));
-    vi.stubGlobal(
-        'ResizeObserver',
-        class {
-            observe() {}
-
-            disconnect() {}
-        },
-    );
     post = vi.spyOn(router, 'post').mockImplementation(() => {});
     put = vi.spyOn(router, 'put').mockImplementation(() => {});
 });
@@ -86,8 +91,10 @@ describe('Manual entry page', () => {
         );
 
         expect(screen.getByRole('heading', { level: 1 }).textContent).toBe(
-            'Saisie manuelle',
+            'Nouveau round',
         );
+        expect(backLink().textContent).toBe('Rounds');
+        expect(backLink().getAttribute('href')).toBe('/rounds');
         expect(screen.getByRole('button', { name: 'Date' }).textContent).toBe(
             '12 octobre 2026',
         );
@@ -167,6 +174,8 @@ describe('Correction page', () => {
         expect(screen.getByRole('heading', { level: 1 }).textContent).toBe(
             'Modifier le round',
         );
+        expect(backLink().textContent).toBe('Round');
+        expect(backLink().getAttribute('href')).toBe(`/rounds/${ROUND}`);
         expect(screen.getByRole('button', { name: 'Date' }).textContent).toBe(
             '17 octobre 2026',
         );
@@ -207,5 +216,12 @@ describe('Correction page', () => {
             ...REFERENCE_CARD,
             force: false,
         });
+    });
+});
+
+describe('Chrome of the editor pages', () => {
+    it('declares the editor chrome of the layout on both pages', () => {
+        expect(RoundsCreate.layout).toEqual({ chrome: 'editor' });
+        expect(RoundsEdit.layout).toEqual({ chrome: 'editor' });
     });
 });
