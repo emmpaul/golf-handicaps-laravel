@@ -15,15 +15,33 @@ La page Joueurs SHALL lister tous les joueurs par nom, sans tenir compte de la c
 - **WHEN** l'utilisateur ouvre `/players`
 - **THEN** la ligne d'Alex affiche « ALIAS » puis « Aucun alias »
 
+### Requirement: Index sur la page Joueurs
+Sur la page Joueurs, chaque joueur SHALL afficher à droite son index actuel, celui d'après son dernier round par date de jeu puis par date d'enregistrement (spec `handicap-index`), au-dessus de son état : « 10,0 » et « INDEX », « 14,5 » et « PROVISOIRE » pour un index provisoire, ou « — » et « PAS D'INDEX » sans round.
+
+#### Scenario: Index établi
+- **GIVEN** Gab avec trois rounds de différentiels 17,0, 12,0 et 20,0
+- **WHEN** l'utilisateur ouvre `/players`
+- **THEN** la ligne de Gab affiche « 10,0 » et « INDEX »
+
+#### Scenario: Index provisoire
+- **GIVEN** Manu avec deux rounds de différentiels 17,0 et 12,0
+- **WHEN** l'utilisateur ouvre `/players`
+- **THEN** la ligne de Manu affiche « 14,5 » et « PROVISOIRE »
+
+#### Scenario: Joueur sans round
+- **GIVEN** Sean sans round
+- **WHEN** l'utilisateur ouvre `/players`
+- **THEN** la ligne de Sean affiche « — » et « PAS D'INDEX »
+
+#### Scenario: Round ajouté avant les autres
+- **GIVEN** Gab avec des rounds le 2026-10-10 (17,0) et le 2026-10-17 (12,0)
+- **WHEN** l'utilisateur enregistre un round de Gab le 2026-10-01 (20,0) puis ouvre `/players`
+- **THEN** la ligne de Gab affiche « 10,0 », l'index d'après le round du 2026-10-17
+
 ## ADDED Requirements
 
 ### Requirement: Mise en page de la page Joueurs
 À 390 px, la page Joueurs SHALL suivre le design : titre « Joueurs », puis 20 px dessous le champ « Nouveau joueur » et le bouton plein « Ajouter » côte à côte (48 px), un filet 24 px dessous, puis une ligne par joueur avec 16 px de marge verticale : pastille de 10 px, nom en Geist 600, 20 px, et à droite l'index en Geist Mono 500, 22 px, au-dessus de son état en Geist Mono 500, 10 px, gris.
-
-#### Scenario: Index d'un joueur
-- **GIVEN** Gab avec un index de 10,0 sur 3 rounds ou plus, Manu à 14,5 provisoire, Alex sans round
-- **WHEN** l'utilisateur ouvre `/players`
-- **THEN** Gab montre « 10,0 » et « INDEX », Manu « 14,5 » et « PROVISOIRE », Alex « — » et « PAS D'INDEX »
 
 #### Scenario: Pastille d'alias
 - **WHEN** la ligne de Manu s'affiche à 390 px

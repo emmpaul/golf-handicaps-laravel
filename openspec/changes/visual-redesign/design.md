@@ -5,7 +5,7 @@
 - Le thème vit dans `resources/css/tokens.css` (palette fermée sous `@theme static`, couleurs sombres sous `prefers-color-scheme`), `app.css` (variables shadcn, zones sûres, `.scroll-frame`) et `base.css` (mouvement réduit). Les polices sont servies par deux `fontsource()` de `vite.config.ts`. Les primitives base-ui de `resources/js/components/ui/` sont possédées par le projet (ADR 0006).
 - Garde-fous existants : `theme-sources.test.ts` (aucune couleur en dur, aucune transition globale), `theme-contrast.test.ts` (littéraux hex de la spec et contrastes), `tabular-figures.test.ts`, `reduced-motion.test.ts`, et côté Pest `DocumentHeadTest`, `WebManifestTest`, `AppIconsTest`, `PageAssetsTest`.
 - La source du design est `Golf App.dc.html` (voir proposition, « Source du design »). Ses valeurs sont en ligne ; ce document les range en tokens. Les captures `ref/*-light.png` montrent l'ancienne interface et ne servent pas de cible.
-- Ce changement s'applique après l'archivage de 6, 7, 8 et 9. Les specs de 7 et 9 n'existent pas encore ; les exigences de mise en page de leurs pages sont écrites ici en ADDED et réconciliées avant l'apply (D12).
+- Ce changement s'applique après l'archivage de 6, 7, 8 et 9, fait le 2026-10-29. Les deltas ont été réconciliés avec leurs specs archivées par la tâche 1.2 (D12) ; les arbitrages sont listés dans « Décisions par défaut (orchestrateur) ».
 
 ## Goals / Non-Goals
 
@@ -15,7 +15,7 @@
 - Les garde-fous existants restent verts et sont réécrits avec les nouveaux littéraux.
 
 **Non-Goals :**
-- Aucune route ni Action ne change, et le calcul de l'index non plus. S'ajoutent trois lectures : le compte d'imports partagé (D7), le rang de couleur des joueurs (D6) et les statistiques du bloc STATS (D13).
+- Aucune route ni Action ne change, et le calcul de l'index non plus. S'ajoutent quatre lectures : le compte d'imports partagé (D7), le rang de couleur des joueurs (D6), les statistiques du bloc STATS (D13) et le nombre de rounds par parcours de la page Parcours (D14).
 - Pas de thème clair (décision Q1), pas de Sentient (décision Q2).
 
 ## Decisions
@@ -131,7 +131,18 @@ Le mainteneur a choisi le pixel près pour trois cas exactement, sous les seuils
 
 ### D12. Réconciliation avec 6 à 9
 
-Avant le premier code, `/opsx:update` réécrit les deltas sur les specs archivées : chaque ADDED « Mise en page… » qui contredit une exigence archivée de 6, 7, 8 ou 9 (ordre du classement net, gagnant en rouge, disposition d'« Une action principale à l'import », « Nom lu sur chaque ligne », libellés de 7) devient un MODIFIED de cette exigence ; les autres restent ADDED. `openspec validate --strict` doit rester vert. Si 7 ou 9 ont changé une page au point que le design ne s'applique plus, l'apply s'arrête.
+Avant le premier code, les deltas sont réécrits sur les specs archivées : chaque ADDED qui contredit une exigence archivée de 6, 7, 8 ou 9 devient un MODIFIED complet de cette exigence, scénarios archivés gardés sous leur nom et adaptés ; les exigences de pure mise en page restent ADDED. `openspec validate --strict` doit rester vert. Si 7 ou 9 ont changé une page au point que le design ne s'applique plus, l'apply s'arrête.
+
+Fait le 2026-10-29 (tâche 1.2, à la main faute de `/opsx:update` dans la session). Aucune page n'a changé au point d'écarter le design. Exigences passées en MODIFIED :
+
+- `app-shell` : « Adresses des sections » (les cinq sections existent, plus de « Section à venir », sous-adresse inconnue en 404).
+- `course-ratings` : « Page Parcours » (bloc « · Red », « PAR 71 », pastille, « 3 rounds », quatre onglets) ; la recherche de 9 est ajoutée en ADDED « Recherche SGT dans le bloc d'un parcours », sans rien retirer de ses exigences.
+- `handicap-index` : « Résumé de l'index d'un joueur » (absorbe l'ancien ADDED « Tendance de l'index »), « Liste des rounds d'un joueur » (absorbe « Historique de la page Handicaps »), « Marque « Compte » sur la ligne du round » (point de couleur nommé « Compte »).
+- `home-dashboard` : « Action d'import en tête », « Index des joueurs » (absorbe « Classement des index de l'accueil »), « Dernier round » (absorbe « Dernier round de l'accueil »), « Imports à vérifier ».
+- `match-strokes` : « Préparation d'une partie », « Handicap de jeu négatif », « Total des coups d'un joueur », « Grille des coups par trou », « Rating du parcours choisi ».
+- `players` : « Index sur la page Joueurs ».
+- `rounds` : « Classement net d'un round » et « Classement lisible sur téléphone » (absorbent « Présentation du classement net »), « Rating affichée sur le round ».
+- `scorecard-import` : « Une action principale à l'import », « Repère de lecture par l'IA » (token `--color-info` au lieu de `--color-ai`), « Nom lu sur chaque ligne ».
 
 ### D13. Statistiques du bloc STATS (décision Q8)
 
@@ -144,15 +155,40 @@ La prop est différée (`Inertia::defer`) avec le graphique, pour ne pas retarde
 - *Alternative* : stocker les comptes dans `player_round_stats`. Rejetée : la table appartient au calcul de l'index et à la comparaison de l'import SQLite (entrée 10) ; une requête d'agrégats sur au plus quelques centaines de rounds suffit.
 - *Alternative* : calculer en TypeScript depuis tous les scores du joueur. Rejetée : envoie toutes les cartes au navigateur pour cinq nombres.
 
+### D14. Nombre de rounds par parcours
+
+Le bloc d'un parcours montre « 3 rounds » (design). La Query de la page Parcours ajoute à chaque paire nom et tees le compte de ses rounds, groupé sans tenir compte de la casse ni des espaces autour, comme la rating. Aucune colonne ni route.
+
+## Décisions par défaut (orchestrateur)
+
+Arbitrages pris pendant la tâche 1.2 et l'unité 1, mainteneur absent ; chacun suit le principe de la proposition (le design prime quand il change clairement un libellé, un format ou un enchaînement ; ce que la spec exige et que le design ne dessine pas est gardé dans son style).
+
+| # | Sujet | Arbitrage |
+| --- | --- | --- |
+| DO1 | Captures de la cible (tâche 1.3) | L'archive ne contient pas les neuf captures sombres, seulement `ref/*-light.png`. Rien n'est copié ; la passe 12.2 compare aux valeurs de la spec et le dit. |
+| DO2 | Ordre des joueurs de l'accueil (DP2 de 7) | Par index croissant, puis par nom à index égal, sans index à la fin par nom (design). |
+| DO3 | Lien « N imports à vérifier » (DP10 de 7) | Vers `/import` (design), non plus vers l'écran de correction du plus récent. |
+| DO4 | Un joueur à la fois (DP4 de 7) | Inchangé : déjà la règle à toute largeur ; les onglets de joueur du design sont ce sélecteur. |
+| DO5 | Écart de l'accueil et de la page Handicaps (« −0,3 », « Écart +0,3 » de 7) | Remplacé par la tendance du design (« ▼ 0,3 », « ▲ 0,3 », « = STABLE » / « = stable »), même calcul. Le nom du joueur n'est plus répété dans la section Handicaps (il est sur l'onglet courant) ; « Aucun round pour l’instant. » devient le texte du design. |
+| DO6 | Dernier round de l'accueil | Joueurs rangés par net comme la page d'un round ; joueur sans index en fin, « {brut} · pas encore d'index », « — » ; aucun résultat « Net · » sans joueur classé ; bloc absent sans round au lieu de « Aucun round enregistré ». |
+| DO7 | Page Coups, parcours | La liste s'ouvre sur le premier parcours connu (le design n'a pas d'état « aucun parcours choisi ») ; message unique « Choisissez au moins 2 joueurs avec un index. » (vouvoiement du design, DP11 de 7). |
+| DO8 | Page Coups, rating | Libellés du design, « rating 71,4 · slope 144 » et « sans rating (slope 113) », au lieu de ceux de la page d'un round (DP6 de 7), qui elle-même passe à « 71,4 / 144 » / « SANS RATING » dans sa méta. |
+| DO9 | Page Coups, cases sans coup et coups rendus | Case sans coup : « · » caché aux lecteurs d'écran (design), annonce « Trou 3 : aucun coup » gardée. Coups rendus (non dessinés) : « rend {S} coups » et « −1 », dans le style du bloc. |
+| DO10 | Page Parcours, recherche SGT de 9 | Gardée entièrement dans le bloc du parcours : pastille de statut (cyan en recherche, ambre pour un choix à faire, rouge en échec, neutre sinon), note, parcours SGT, liens, proposition, tees, candidats, relecture de 2 s. La pastille de rating porte « · CONFIRMÉ » seulement quand le statut est « Confirmé » ; une rating confirmée dont la recherche relancée attend une proposition montre « 71,4 / 144 » seul et la pastille « Proposition à confirmer ». |
+| DO11 | Nombre de rounds par parcours | Nouvelle lecture (D14), sans schéma ni route. |
+| DO12 | Page de connexion (`app-access`) | Spec inchangée : la tâche 8.4 recompose `/login` avec les éléments du design en gardant marque, titre « Handicaps golf », champ et bouton ; aucun libellé ne change. |
+| DO13 | Noms des tokens (D2, D1) | Échelle `--text-*` : un token par variante de D2, la variante principale sous le nom de D2, les autres suffixées de leur taille (`--text-label-14`, `--text-num-m-17`…), plus `--text-name-l-course` (22 / 1,1 / −0,02 em) et `--text-meta-round` (12 / 1,4). Graisses dans `--text-*--font-weight` ; famille par `font-sans` / `font-mono`. Rayons nommés par leur valeur (`--radius-22` … `--radius-2`) et `--radius-pill` (999 px). Courbes `--ease-design`, `--ease-pop` sous `@theme`, durées `--dur-*` dans `:root`. |
+| DO14 | Intermédiaire de l'unité 1 | Le remplacement des tokens retire `paper`, `band`, `error`, `ai`, `focus`… : les composants pas encore restylés perdent ces couleurs jusqu'à leurs tâches (3 à 10). `base.css` est repointé sur les nouveaux tokens pour que le fond, le texte et le focus restent définis. |
+
 ## Risks / Trade-offs
 
 - [Le design ne montre qu'un téléphone de 390 px] → colonne de 390 px à toute largeur (décision Q3) ; la passe vérifie 320 px.
 - [Trois paires sous les seuils de contraste (D9)] → décision du mainteneur, consignée dans l'ADR ; le test empêche toute quatrième exception.
-- [Pas de captures de la cible dans l'archive] → le mainteneur les fournit (tâche 1.3) ; sans elles, la passe ne compare qu'aux valeurs de la spec et le dit.
+- [Pas de captures de la cible dans l'archive] → confirmé à la tâche 1.3 (DO1) : la passe 12.2 ne compare qu'aux valeurs de la spec et le dit.
 - [Couleurs de joueur hors gamut sRGB] → rendu différent selon l'écran (P3 ou sRGB) ; les tests comparent la chaîne OKLCH, pas un hex.
 - [Contraste des couleurs de joueur en texte (violet 4,10:1)] → le nom accompagne toujours la couleur ; accepté et noté (E28).
 - [Changement large] → tâches en groupes revus l'un après l'autre ; une seule PR de code, comme les autres entrées.
-- [Specs de 7 et 9 inconnues] → D12 ; l'apply s'arrête si la réconciliation trouve un conflit de fond.
+- [Specs de 7 et 9 réconciliées après coup] → D12 et DO2 à DO12 ; aucun conflit de fond trouvé.
 - [Prop partagée `pendingImports` sur chaque visite] → une requête `count` indexée, différée.
 
 ## Migration Plan

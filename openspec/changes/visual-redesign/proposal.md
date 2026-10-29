@@ -125,7 +125,7 @@ Aucune capacité nouvelle.
 - `rounds` : liste, en-tête, carte de score, suppression, lignes de l'éditeur et mise en page de l'éditeur et des pages Rounds et Round.
 - `players` : mise en page de la page Joueurs.
 - `handicap-index` (créée par 6) : bloc STATS de la page Handicaps (fonctionnalité nouvelle : statistiques, règles de calcul, répartition, moyennes par par), tendance, graphique et historique, mise en page.
-- `course-ratings` (créée par 6), `scorecard-import` (créée par 8), `home-dashboard` et `match-strokes` (à créer par 7) : une exigence de mise en page par page. Ces exigences sont écrites ici en ADDED ; la tâche 1.2 les réconcilie avec les specs archivées de 6 à 9 avant l'apply. Elles sont écrites ici en ADDED ; la tâche 1.2 les réconcilie avec les specs archivées de 6 à 9 avant l'apply.
+- `course-ratings` (créée par 6), `scorecard-import` (créée par 8), `home-dashboard` et `match-strokes` (à créer par 7) : une exigence de mise en page par page. Réconciliées le 2026-10-29 par la tâche 1.2 avec les specs archivées de 6 à 9 : les exigences contredites sont en MODIFIED, la mise en page en ADDED (D12 et « Décisions par défaut (orchestrateur) » de `design.md`).
 
 ## Impact
 

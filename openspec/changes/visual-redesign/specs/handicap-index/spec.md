@@ -4,41 +4,88 @@
 
 Calculer l'index de handicap de chaque joueur selon le WHS et le montrer sur la page Handicaps, joueur par joueur, avec l'historique de ses différentiels.
 
-## ADDED Requirements
+## MODIFIED Requirements
 
-### Requirement: Mise en page de la page Handicaps
-À 390 px, la page Handicaps SHALL suivre le design : titre « Handicaps », un onglet en pilule par joueur, « INDEX ACTUEL », l'index du joueur choisi en grand, sa tendance et son résumé, le graphique des différentiels, puis l'historique. Cette exigence est réconciliée par la tâche 1.2 avec celles que l'entrée 7 écrit pour cette page.
+### Requirement: Résumé de l'index d'un joueur
+Sous les onglets de joueur, la page Handicaps SHALL afficher pour le joueur choisi « INDEX ACTUEL », suivi de la pastille « PROVISOIRE » pour un index provisoire, puis son index actuel en Geist Mono 500, 88 px, et à sa droite la tendance : l'écart entre l'index d'après son dernier round et celui d'après l'avant-dernier, « ▼ 0,4 » pour une baisse, « ▲ 0,4 » pour une hausse, « = stable » sans écart, en Geist Mono 500, 13 px, dans la couleur du joueur, absente avant le deuxième round. Dessous, un résumé dit « {n} rounds · {règle}. » (« 1 round » au singulier), la règle étant « moyenne des {k} différentiels » ou « moyenne de 1 différentiel » pour un index provisoire, sinon « {k} meilleurs différentiels sur {m} » (« meilleur différentiel sur {m} » pour un seul), suivie de « − {ajustement} » quand un ajustement s'applique, {m} étant le nombre de rounds retenus, au plus 20. Le résumé MUST NOT donner de handicap de jeu. Un joueur sans round affiche « — » à la place de l'index et « Pas encore d'index. Un premier round donne un index provisoire. », sans tendance ni pastille.
 
-#### Scenario: Onglets de joueur
-- **WHEN** l'utilisateur ouvre `/handicaps` avec Gab, Manu et Sean, Gab choisi
-- **THEN** chaque onglet fait 44 px de haut, rayon 999 px, Geist 600, 14 px, avec la pastille de 8 px du joueur ; celui de Gab a le fond et la bordure `oklch(0.97 0.003 260)` et le texte `oklch(0.13 0.005 260)`, les autres un fond transparent, la bordure `oklch(0.27 0.008 260)` et le texte gris
-
-#### Scenario: Index provisoire
-- **GIVEN** Gab avec 2 rounds et un index de 1,0
-- **WHEN** l'utilisateur ouvre `/handicaps` sur Gab
-- **THEN** « INDEX ACTUEL » est suivi de la pastille « PROVISOIRE », « 1,0 » s'affiche en Geist Mono 500, 88 px, et le résumé dit « 2 rounds · moyenne des 2 différentiels. »
-
-#### Scenario: Index établi
-- **GIVEN** Manu avec 20 rounds
+#### Scenario: Résumé de Manu
+- **GIVEN** Manu avait un index de 15,5 avant son dernier round et de 15,8 après
 - **WHEN** l'utilisateur choisit Manu
-- **THEN** le résumé dit « 20 rounds · 8 meilleurs différentiels sur 20. »
+- **THEN** la section montre « 15,8 » et « ▲ 0,3 »
 
-#### Scenario: Joueur sans index
-- **WHEN** l'utilisateur choisit Sean, qui n'a aucun round
-- **THEN** la page montre « — » en Geist Mono 500, 88 px, et « Pas encore d'index. Un premier round donne un index provisoire. »
-
-### Requirement: Tendance de l'index
-À côté de l'index, la page Handicaps SHALL afficher l'écart entre l'index après le dernier round du joueur et celui d'après l'avant-dernier : « ▼ 0,4 » pour une baisse, « ▲ 0,4 » pour une hausse, « = stable » sans écart, en Geist Mono 500, 13 px, dans la couleur du joueur. Avec moins de deux rounds, rien ne s'affiche.
-
-#### Scenario: Baisse
+#### Scenario: Tendance en baisse
 - **GIVEN** l'index de Gab est passé de 3,0 à 2,6 avec son dernier round
 - **WHEN** l'utilisateur ouvre `/handicaps` sur Gab
 - **THEN** « ▼ 0,4 » s'affiche à droite de « 2,6 »
 
-#### Scenario: Premier round
-- **GIVEN** Sean n'a qu'un round
+#### Scenario: Index provisoire
+- **GIVEN** Sean avec 2 rounds de différentiels 17,0 et 12,0
 - **WHEN** l'utilisateur choisit Sean
-- **THEN** aucune tendance ne s'affiche
+- **THEN** « INDEX ACTUEL » est suivi de la pastille « PROVISOIRE », « 14,5 » s'affiche avec « ▼ 2,5 », et le résumé dit « 2 rounds · moyenne des 2 différentiels. »
+
+#### Scenario: Premier round
+- **GIVEN** Sean n'a qu'un round, de différentiel 17,0
+- **WHEN** l'utilisateur choisit Sean
+- **THEN** « 17,0 » s'affiche sans tendance, et le résumé dit « 1 round · moyenne de 1 différentiel. »
+
+#### Scenario: Ajustement
+- **GIVEN** Gab avec 3 rounds de différentiels 17,0, 12,0 et 20,0
+- **WHEN** l'utilisateur ouvre `/handicaps` sur Gab
+- **THEN** « 10,0 » s'affiche et le résumé dit « 3 rounds · meilleur différentiel sur 3 − 2,0. »
+
+#### Scenario: Index établi
+- **GIVEN** Manu avec 20 rounds
+- **WHEN** l'utilisateur choisit Manu
+- **THEN** le résumé dit « 20 rounds · 8 meilleurs différentiels sur 20. » et ne contient pas « hcp de jeu »
+
+#### Scenario: Joueur sans round
+- **GIVEN** Sean sans round
+- **WHEN** l'utilisateur choisit Sean
+- **THEN** la section montre « — » en Geist Mono 500, 88 px, et « Pas encore d'index. Un premier round donne un index provisoire. », sans tendance
+
+### Requirement: Liste des rounds d'un joueur
+Sous « DATE · PARCOURS », « DIFF. » et « APRÈS », la page Handicaps SHALL lister tous les rounds du joueur choisi, du plus récent au plus ancien par date de jeu, puis par date d'enregistrement : la date (« 17 oct. 2026 »), dessous le parcours et ses tees joints par « · », coupés par « … » s'ils sont trop longs, puis le différentiel et l'index juste après ce round en Geist Mono. Les rounds dont le différentiel compte dans l'index actuel (spec `handicap-index`, « Historique de l'index ») portent la marque « Compte » (spec ci-dessous). Chaque ligne MUST mener à la page de son round.
+
+#### Scenario: Lignes de Gab
+- **GIVEN** Gab avec des rounds le 2026-10-01 (différentiel 20,0), le 2026-10-10 (17,0) et le 2026-10-17 (12,0), sans rating
+- **WHEN** l'utilisateur ouvre `/handicaps` sur Gab
+- **THEN** les lignes sont, dans l'ordre, « 17 oct. 2026 », « 12,0 », « 10,0 » avec la marque « Compte » ; « 10 oct. 2026 », « 17,0 », « 18,5 » sans marque ; « 1 oct. 2026 », « 20,0 », « 20,0 » sans marque
+
+#### Scenario: Parcours sur la ligne
+- **GIVEN** la carte `IMG_3064` sur « BETHPAGE BLACK / Red », premier round de Gab, différentiel 1,0, index après 1,0
+- **WHEN** l'utilisateur ouvre `/handicaps` sur Gab
+- **THEN** la ligne montre « 17 oct. 2026 » et la marque « Compte », « BETHPAGE BLACK · Red » en Geist 400, 12 px, gris, puis « 1,0 » et « 1,0 » (l'index après en gris), sur 52 px de haut au moins
+
+#### Scenario: Vers la page du round
+- **WHEN** l'utilisateur touche la ligne du round du 2026-10-17 de Gab
+- **THEN** la page de ce round s'ouvre
+
+#### Scenario: Plus de 20 rounds
+- **GIVEN** Manu avec 21 rounds
+- **WHEN** l'utilisateur ouvre `/handicaps` sur Manu
+- **THEN** les 21 lignes s'affichent, et le round le plus ancien ne porte pas la marque « Compte »
+
+### Requirement: Marque « Compte » sur la ligne du round
+Dans la liste des rounds d'un joueur, la marque « Compte » SHALL être un point de 6 px à la couleur du joueur, juste après la date, au nom accessible « Compte » ; elle MUST rester sur la même ligne que la date dès 320 px de large, et la liste MUST NOT faire défiler la page horizontalement.
+
+#### Scenario: Ligne d'un différentiel retenu à 320 px
+- **WHEN** la liste des rounds de Gab s'affiche sur un écran de 320 px
+- **THEN** la date « 17 oct. 2026 » et son point « Compte » sont à la même hauteur, sur une seule ligne, et la page ne défile pas horizontalement
+
+#### Scenario: Couleur du point
+- **GIVEN** Gab, premier joueur créé, et un round qui compte dans son index
+- **WHEN** la ligne de ce round s'affiche
+- **THEN** son point est `oklch(0.72 0.24 145)` et les lecteurs d'écran le lisent « Compte »
+
+## ADDED Requirements
+
+### Requirement: Mise en page de la page Handicaps
+À 390 px, la page Handicaps SHALL suivre le design : titre « Handicaps », un onglet en pilule par joueur (le sélecteur de « Un joueur à la fois sur la page Handicaps »), « INDEX ACTUEL », l'index du joueur choisi en grand, sa tendance et son résumé, le graphique des différentiels, le bloc STATS, l'historique, puis l'explication repliée du calcul.
+
+#### Scenario: Onglets de joueur
+- **WHEN** l'utilisateur ouvre `/handicaps` avec Gab, Manu et Sean, Gab choisi
+- **THEN** chaque onglet fait 44 px de haut, rayon 999 px, Geist 600, 14 px, avec la pastille de 8 px du joueur ; celui de Gab a le fond et la bordure `oklch(0.97 0.003 260)` et le texte `oklch(0.13 0.005 260)`, les autres un fond transparent, la bordure `oklch(0.27 0.008 260)` et le texte gris
 
 ### Requirement: Graphique des différentiels
 La page Handicaps SHALL montrer, sous « DIFFÉRENTIELS » et « COMPTE », une barre par round pour les 20 derniers rounds du joueur, du plus ancien au plus récent, dans 150 px de haut : différentiel au-dessus, date « J/M » dessous. Une barre qui compte dans l'index prend la couleur du joueur, les autres `oklch(0.3 0.008 260)`. Un différentiel nul ou négatif donne une barre de 4 px.
@@ -52,14 +99,6 @@ La page Handicaps SHALL montrer, sous « DIFFÉRENTIELS » et « COMPTE », une 
 - **GIVEN** le round du 17 octobre 2026 compte dans l'index de Gab
 - **WHEN** le graphique de Gab s'affiche
 - **THEN** sa barre a la couleur `oklch(0.72 0.24 145)` et la date « 17/10 » dessous
-
-### Requirement: Historique de la page Handicaps
-Sous « DATE · PARCOURS », « DIFF. » et « APRÈS », la page Handicaps SHALL lister les rounds du joueur du plus récent au plus ancien : date « 17 oct. 2026 » suivie d'un point de 6 px à la couleur du joueur si le round compte, parcours et tees en dessous (coupés par « … »), différentiel et index d'après en Geist Mono. Chaque ligne mène à la page du round.
-
-#### Scenario: Ligne d'historique
-- **GIVEN** le round de référence compte dans l'index de Gab, différentiel 1,0, index après 1,0
-- **WHEN** l'utilisateur ouvre `/handicaps` sur Gab
-- **THEN** la ligne montre « 17 oct. 2026 » et le point de couleur, « BETHPAGE BLACK · Red » en Geist 400, 12 px, gris, puis « 1,0 » et « 1,0 » gris, sur 52 px de haut au moins
 
 ### Requirement: Statistiques de jeu d'un joueur
 Sous le graphique des différentiels, la page Handicaps SHALL montrer « STATS » et le nombre de trous joués, puis trois valeurs : « MOY. BRUT », moyenne des bruts arrondie au dixième ; « MEILLEUR BRUT », le plus petit brut ; « PAR OU MIEUX », la part des trous joués en par ou mieux, en pour cent entier. Elles portent sur tous les rounds enregistrés du joueur, tous parcours, sans limite de nombre, rating ignorée ; un round compte 18 trous.
