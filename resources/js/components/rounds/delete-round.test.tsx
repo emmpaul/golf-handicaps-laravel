@@ -1,6 +1,6 @@
 import { router } from '@inertiajs/react';
 import type { MockInstance } from 'vite-plus/test';
-import { act, render, screen, within } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import {
     afterEach,
@@ -105,6 +105,21 @@ describe('DeleteRound', () => {
         expect(
             within(dialog).getByRole('button', { name: 'Supprimer' }),
         ).toBeDisabled();
+    });
+
+    // B3, DO33: « Supprimer » then Enter must not delete the round.
+    // Mutation: `initialFocus` dropped from AlertDialogContent → the focus is
+    // on « Supprimer », this test goes red.
+    it('opens with the focus on « Annuler »', async () => {
+        sheet();
+
+        const dialog = await openSheet();
+
+        await waitFor(() => {
+            expect(document.activeElement).toBe(
+                within(dialog).getByRole('button', { name: 'Annuler' }),
+            );
+        });
     });
 
     it('sends nothing when « Annuler » is touched', async () => {

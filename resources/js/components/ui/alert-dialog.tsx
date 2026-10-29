@@ -42,14 +42,27 @@ function AlertDialogOverlay({
 
 function AlertDialogContent({
   className,
+  initialFocus,
   ...props
 }: DialogPrimitive.Popup.Props) {
+  const popup = React.useRef<HTMLDivElement>(null)
+
   return (
     <AlertDialogPortal>
       <AlertDialogOverlay />
       <DialogPrimitive.Popup
         data-slot="alert-dialog-content"
         role="alertdialog"
+        ref={popup}
+        // Focus initial sur « Annuler » (DO33) : sinon base-ui prend le premier bouton, l'action
+        // destructive, et Entrée puis Entrée supprimait. Sans « Annuler », comportement de base-ui.
+        initialFocus={
+          initialFocus ??
+          (() =>
+            popup.current?.querySelector<HTMLElement>(
+              '[data-slot="alert-dialog-cancel"]'
+            ) ?? true)
+        }
         className={cn(
           // Monte du bas de l'écran en 400 ms dans la colonne de 390 px ; coins du haut de 22 px,
           // marges 24 px 20 px 34 px plus la zone sûre du bas.

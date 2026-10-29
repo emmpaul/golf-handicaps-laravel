@@ -87,6 +87,30 @@ describe('confirmation sheet', () => {
         expect(action).toHaveClass('bg-signal', 'text-on-signal');
     });
 
+    // B3, DO33: a destructive sheet opens on « Annuler », so Enter then Enter
+    // from the keyboard never confirms. Mutation: `initialFocus` dropped from
+    // AlertDialogContent (base-ui focuses the first button, the action) →
+    // this test goes red.
+    it('puts the focus on « Annuler » when opened from the keyboard, Enter then cancelling', async () => {
+        const onConfirm = vi.fn();
+        render(<Sheet onConfirm={onConfirm} />);
+        trigger().focus();
+
+        await userEvent.keyboard('{Enter}');
+        const sheet = await screen.findByRole('alertdialog');
+
+        await waitFor(() => {
+            expect(document.activeElement).toBe(
+                sheet.querySelector('[data-slot="alert-dialog-cancel"]'),
+            );
+        });
+        await userEvent.keyboard('{Enter}');
+        await waitFor(() => {
+            expect(screen.queryByRole('alertdialog')).toBeNull();
+        });
+        expect(onConfirm).not.toHaveBeenCalled();
+    });
+
     it('closes on Escape without the action, focus back on the trigger', async () => {
         const { onConfirm } = await open();
 
