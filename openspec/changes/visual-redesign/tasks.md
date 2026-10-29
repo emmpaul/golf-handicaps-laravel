@@ -75,7 +75,7 @@ Avant de commencer : relire `proposal.md` (source du design, écarts E1 à E34, 
 
 ## 12. Vérification finale
 
-- [ ] 12.1 Lancer `make check` ; corriger chaque échec à sa cause (lire `reports/check/<étape>.log`), sans affaiblir de règle ; vérifier vert
+- [x] 12.1 Lancer `make check` ; corriger chaque échec à sa cause (lire `reports/check/<étape>.log`), sans affaiblir de règle ; vérifier vert
 - [ ] 12.2 Passe navigateur : `make up`, `make demo`, `make dev`, `make browser`, puis le skill `browser-use` sur `http://localhost` ; à 390 × 844, ouvrir chacun des neuf écrans et le comparer côte à côte à sa capture de `reference/` (sans capture fournie, comparer aux valeurs de la spec et le dire) ; relever par `getComputedStyle` les marges de 20 px, la hauteur de 60 px de la barre, les 48 px des champs, les tailles 28, 44 et 88 px ; à 320 px, vérifier l'absence de défilement horizontal sur chaque page et sur un round de quatre joueurs ; à 1440 px, la colonne de 390 px centrée ; ouvrir la feuille de suppression, un toast de confirmation et d'erreur, passer d'un onglet à l'autre et d'un joueur à l'autre pour voir les animations, puis activer « réduire les animations » ; lire la console ; finir par `make dev-stop` ; rapporter ce qui a été vu et chaque écart restant
 - [ ] 12.3 Relire chaque scénario des dix deltas et cocher ceux couverts par un test ou par la passe ; lister dans la PR ceux qui ne le sont pas et pourquoi ; relire le tableau E1 à E34 et confirmer chaque choix appliqué
 
