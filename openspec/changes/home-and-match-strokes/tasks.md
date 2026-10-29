@@ -37,7 +37,7 @@ Avant de commencer : relire `proposal.md` (tableau des requirements Next, sujets
 
 ## 6. Données de démonstration
 
-- [ ] 6.1 Étendre `tests/Feature/Seeders/DemoDatabaseSeederTest.php` : après `seed(DemoDatabaseSeeder::class)`, `PlayerStandings` donne un `indexT` non nul à Gab, Manu et Sean, `PendingImports` donne `count` 1 (l'import « Prêt à vérifier » de 8), `RoundList::get(1)` rend un round, et `CourseOverview` rend trois parcours dont un avec rating ; mutation nommée : `DemoImportsSeeder` retiré de `DemoDatabaseSeeder` ; aucun modèle nouveau, donc aucune fabrique ni seeder à ajouter ; vérifier vert
+- [x] 6.1 Étendre `tests/Feature/Seeders/DemoDatabaseSeederTest.php` : après `seed(DemoDatabaseSeeder::class)`, `PlayerStandings` donne un `indexT` non nul à Gab, Manu et Sean, `PendingImports` donne `count` 1 (l'import « Prêt à vérifier » de 8), `RoundList::get(1)` rend un round, et `CourseOverview` rend trois parcours dont un avec rating ; mutation nommée : `DemoImportsSeeder` retiré de `DemoDatabaseSeeder` ; aucun modèle nouveau, donc aucune fabrique ni seeder à ajouter ; vérifier vert
 
 ## 7. Documentation
 
