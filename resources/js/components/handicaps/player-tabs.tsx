@@ -7,7 +7,8 @@ import { PlayerSwatch } from '@/components/player-swatch';
  * Handicaps », D5) : une pilule de 44 px par joueur, lien vers
  * `/handicaps?joueur=<id>`, avec sa pastille de 8 px. L'onglet courant, plein
  * d'encre, porte `aria-current="page"` ; les autres ont un contour `rule` et
- * un texte gris. La visite ne relit que le joueur choisi et son historique.
+ * un texte gris. La visite garde la page (l’index change sur place, D8) et ne
+ * relit que le joueur choisi, son historique et ses statistiques.
  */
 export function PlayerTabs({
     players,
@@ -25,7 +26,8 @@ export function PlayerTabs({
                 <Link
                     key={player.id}
                     href={handicapsIndex({ query: { joueur: player.id } })}
-                    only={['selectedPlayerId', 'history']}
+                    only={['selectedPlayerId', 'history', 'scoringStats']}
+                    preserveState
                     preserveScroll
                     aria-current={
                         player.id === selectedPlayerId ? 'page' : undefined

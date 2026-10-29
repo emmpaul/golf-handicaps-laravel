@@ -14,6 +14,7 @@ import { PageTopRow } from '@/components/page-top-row';
 import { PLAYER_TEXT } from '@/components/player-swatch';
 import { Badge } from '@/components/ui/badge';
 import { formatTenths, NO_VALUE } from '@/lib/format';
+import { useSwap } from '@/lib/motion';
 import { cn } from '@/lib/utils';
 import type { PlayerStanding } from '@/pages/home';
 
@@ -128,15 +129,21 @@ function PlayerSection({
     scoringStats: ScoringStatsData | null;
 }) {
     const playerTrend = trend(player.deltaT);
+    // The index of the former player fades out, the new one comes 140 ms later (D8).
+    const index = useSwap(
+        player.id,
+        player.indexT === null ? NO_VALUE : formatTenths(player.indexT),
+    );
 
     if (player.indexT === null) {
         return (
             <section aria-label={player.name} className="mt-10">
                 <p
                     data-testid="player-index"
+                    style={index.style}
                     className="font-mono text-display-xl text-ink-2"
                 >
-                    {NO_VALUE}
+                    {index.shown}
                 </p>
                 <p className="mt-3.5 text-body text-ink-2">
                     Pas encore d'index. Un premier round donne un index
@@ -162,9 +169,10 @@ function PlayerSection({
             <div className="mt-2 flex items-baseline gap-3">
                 <span
                     data-testid="player-index"
+                    style={index.style}
                     className="inline-block font-mono text-display-xl"
                 >
-                    {formatTenths(player.indexT)}
+                    {index.shown}
                 </span>
                 {playerTrend !== null ? (
                     <span
@@ -187,10 +195,11 @@ function PlayerSection({
             {history.length > 0 ? (
                 <>
                     <DifferentialBars
+                        key={player.id}
                         history={history}
                         colorSlot={player.colorSlot}
                     />
-                    <ScoringStats stats={scoringStats} />
+                    <ScoringStats key={player.id} stats={scoringStats} />
                     <RoundHistory
                         name={player.name}
                         history={history}

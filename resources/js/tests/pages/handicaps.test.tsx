@@ -1,4 +1,11 @@
-import { render, screen, within } from '@testing-library/react';
+import { router } from '@inertiajs/react';
+import {
+    fireEvent,
+    render,
+    screen,
+    waitFor,
+    within,
+} from '@testing-library/react';
 import { describe, expect, it, vi } from 'vite-plus/test';
 
 import HandicapsIndex from '@/pages/handicaps/index';
@@ -318,7 +325,9 @@ describe('Handicaps page', () => {
         expect(rows()).toHaveLength(21);
     });
 
-    it('draws the differentials 2,0, 5,5 and 11,0 as bars of 20, 55 and 110 px, oldest first, the counting one in the colour of the player', () => {
+    // The bars grow from 4 px over two frames (D8, motion.test.tsx): their
+    // heights are read once grown.
+    it('draws the differentials 2,0, 5,5 and 11,0 as bars of 20, 55 and 110 px, oldest first, the counting one in the colour of the player', async () => {
         render(
             <HandicapsIndex
                 players={players}
@@ -334,18 +343,20 @@ describe('Handicaps page', () => {
         const chart = screen.getByRole('list', { name: 'Différentiels' });
         const bars = within(chart).getAllByRole('listitem');
 
-        expect(
-            bars.map((bar) => [
-                bar.querySelector('[data-part="value"]')?.textContent,
-                (bar.querySelector('[data-part="bar"]') as HTMLElement).style
-                    .height,
-                bar.querySelector('[data-part="date"]')?.textContent,
+        await waitFor(() =>
+            expect(
+                bars.map((bar) => [
+                    bar.querySelector('[data-part="value"]')?.textContent,
+                    (bar.querySelector('[data-part="bar"]') as HTMLElement)
+                        .style.height,
+                    bar.querySelector('[data-part="date"]')?.textContent,
+                ]),
+            ).toEqual([
+                ['2', '20px', '1/10'],
+                ['5,5', '55px', '10/10'],
+                ['11', '110px', '17/10'],
             ]),
-        ).toEqual([
-            ['2', '20px', '1/10'],
-            ['5,5', '55px', '10/10'],
-            ['11', '110px', '17/10'],
-        ]);
+        );
         expect(
             bars.map(
                 (bar) => bar.querySelector('[data-part="bar"]')?.className,
@@ -357,7 +368,7 @@ describe('Handicaps page', () => {
         ]);
     });
 
-    it('gives a zero or negative differential a bar of 4 px', () => {
+    it('gives a zero or negative differential a bar of 4 px', async () => {
         render(
             <HandicapsIndex
                 players={players}
@@ -370,15 +381,20 @@ describe('Handicaps page', () => {
             />,
         );
 
-        expect(
-            within(screen.getByRole('list', { name: 'Différentiels' }))
-                .getAllByRole('listitem')
-                .map(
-                    (bar) =>
-                        (bar.querySelector('[data-part="bar"]') as HTMLElement)
-                            .style.height,
-                ),
-        ).toEqual(['110px', '4px', '4px']);
+        await waitFor(() =>
+            expect(
+                within(screen.getByRole('list', { name: 'Différentiels' }))
+                    .getAllByRole('listitem')
+                    .map(
+                        (bar) =>
+                            (
+                                bar.querySelector(
+                                    '[data-part="bar"]',
+                                ) as HTMLElement
+                            ).style.height,
+                    ),
+            ).toEqual(['110px', '4px', '4px']),
+        );
     });
 
     it('lists the rounds newest first, « Compte » on the counting ones only', () => {
@@ -500,6 +516,33 @@ describe('Handicaps page', () => {
         expect(
             screen.queryByText(/différentiel = score ajusté − par/),
         ).toBeNull();
+    });
+
+    // Spec « Un joueur à la fois sur la page Handicaps » and « Changement de
+    // joueur sur la page Handicaps » (D8, D13): the visit keeps the page (its
+    // index swaps in place) and reloads the history and the stats of the new
+    // player. Mutations: `scoringStats` left out of `only` (the stats of the
+    // former player stay) or `preserveState` removed (the page remounts and
+    // the swap never plays) → this test goes red.
+    it('reloads the history and the stats of the chosen player, keeping the page', () => {
+        const visit = vi.spyOn(router, 'visit').mockImplementation(() => {});
+        render(
+            <HandicapsIndex
+                players={players}
+                selectedPlayerId={GAB}
+                history={gabHistory}
+            />,
+        );
+
+        fireEvent.click(screen.getByRole('link', { name: /Manu/ }));
+
+        expect(visit).toHaveBeenCalledTimes(1);
+        expect(visit.mock.calls[0][1]).toMatchObject({
+            only: ['selectedPlayerId', 'history', 'scoringStats'],
+            preserveState: true,
+            preserveScroll: true,
+        });
+        visit.mockRestore();
     });
 
     // Spec « Mise en page de la page Handicaps »: the STATS block sits between

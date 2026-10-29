@@ -1,5 +1,6 @@
 import { SectionLabel } from '@/components/section-label';
 import { formatTenths } from '@/lib/format';
+import { useEntered } from '@/lib/motion';
 import { cn } from '@/lib/utils';
 
 /** Teinte d'un écart par par, décidée par le serveur avant arrondi (D13). */
@@ -56,9 +57,12 @@ const share = (count: number, holes: number) =>
  * page du bloc STATS » ; D13) : trois valeurs, la barre des proportions, une
  * ligne par classe (« Eagle ou mieux » seulement s'il compte un trou), puis
  * une case par par joué. Le serveur arrondit et teinte ; ce bloc formate.
- * Sans round (`null`), rien n'est rendu.
+ * Sans round (`null`), rien n'est rendu. Les segments partent d'une largeur
+ * nulle et s'élargissent en 700 ms (D8).
  */
 export function ScoringStats({ stats }: { stats: ScoringStatsData | null }) {
+    const entered = useEntered();
+
     if (stats === null) {
         return null;
     }
@@ -100,8 +104,15 @@ export function ScoringStats({ stats }: { stats: ScoringStatsData | null }) {
                     <span
                         key={entry.mark}
                         data-part="segment"
-                        className={cn('h-full', entry.segment)}
-                        style={{ width: share(entry.count, stats.holes) }}
+                        className={cn(
+                            'h-full transition-[width] duration-700 ease-(--ease-design)',
+                            entry.segment,
+                        )}
+                        style={{
+                            width: entered
+                                ? share(entry.count, stats.holes)
+                                : '0%',
+                        }}
                     />
                 ))}
             </div>
