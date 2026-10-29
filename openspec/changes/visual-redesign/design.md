@@ -30,8 +30,8 @@
 | `--color-surface-1` | `0.17 0.006 260` | `#0E0F12` | champs, listes, sous-totaux, feuille, tuiles, sélecteur |
 | `--color-surface-2` | `0.2 0.006 260` | `#141619` | barre d'onglets, pastille d'alias, survol de tuile, fond de photo |
 | `--color-surface-3` | `0.22 0.006 260` | `#191B1D` | case de coups, pastille neutre, bouton d'enregistrement bloqué |
-| `--color-rule` | `0.27 0.008 260` | `#24272A` | filet sous un libellé de section, bordure de bouton à contour, pointillés, **contour de champ** (exception de contraste, D9) |
-| `--color-rule-soft` | `0.21 0.006 260` | `#17181B` | filet entre deux lignes, bordure des cases par et index |
+| `--color-rule` | `0.27 0.008 260` | `#24272A` | filet sous un libellé de section, bordure de bouton à contour, pointillés, **contour de champ** (exception de contraste, D9), bordure des cases par et index (DO23) |
+| `--color-rule-soft` | `0.21 0.006 260` | `#17181B` | filet entre deux lignes |
 | `--color-bar` | `0.3 0.008 260` | `#2B2E32` | barre de différentiel qui ne compte pas |
 | `--color-ink` | `0.97 0.003 260` | `#F4F5F7` | texte, bouton principal, onglet courant, toast |
 | `--color-ink-2` | `0.68 0.01 260` | `#95989F` | texte secondaire, libellés, métas |
@@ -186,22 +186,6 @@ Arbitrages pris pendant la tâche 1.2 et l'unité 1, mainteneur absent ; chacun 
 | DO19 | `cn` et l'échelle du design | `tailwind-merge` est étendu avec les styles `--text-*`, les rayons et l'ombre de `tokens.css` : sans cela `cn('text-bg', 'text-label')` retirait la couleur. `lib/utils.test.ts` lit `tokens.css` et échoue si un style manque. |
 | DO20 | Pastille d'Importer et lecteurs d'écran | Le lien garde le nom « Importer » ; la pastille est cachée et un texte masqué « 1 import à vérifier » / « N imports à vérifier » est relié par `aria-describedby`. `pendingImports` n'est partagé qu'avec une session ouverte (`/login` n'en dit rien). |
 | DO21 | Couleur de joueur, portée de 4.3 | Le scope `Player::withColorSlot()` (et `Player::colorSlots()` pour les jointures en Query Builder) porte le calcul de D6. 4.3 l'ajoute à `PlayerOverview` (page Joueurs) et à `RoundDetail` / `RoundLeaderboard` (classement et carte d'un round), que le test couvre ; les Query des autres pages (accueil, Rounds, Handicaps, Coups, éditeur) l'ajoutent avec leur tâche de page et leur test. |
-
-## Risks / Trade-offs
-
-- [Le design ne montre qu'un téléphone de 390 px] → colonne de 390 px à toute largeur (décision Q3) ; la passe vérifie 320 px.
-- [Trois paires sous les seuils de contraste (D9)] → décision du mainteneur, consignée dans l'ADR ; le test empêche toute quatrième exception.
-- [Pas de captures de la cible dans l'archive] → confirmé à la tâche 1.3 (DO1) : la passe 12.2 ne compare qu'aux valeurs de la spec et le dit.
-- [Couleurs de joueur hors gamut sRGB] → rendu différent selon l'écran (P3 ou sRGB) ; les tests comparent la chaîne OKLCH, pas un hex.
-- [Contraste des couleurs de joueur en texte (violet 4,10:1)] → le nom accompagne toujours la couleur ; accepté et noté (E28).
-- [Changement large] → tâches en groupes revus l'un après l'autre ; une seule PR de code, comme les autres entrées.
-- [Specs de 7 et 9 réconciliées après coup] → D12 et DO2 à DO12 ; aucun conflit de fond trouvé.
-- [Prop partagée `pendingImports` sur chaque visite] → une requête `count` indexée, différée.
-
-## Migration Plan
-
-Aucune donnée ni migration. Déploiement par l'image habituelle ; les icônes PNG régénérées sont versionnées. Retour arrière : revert de la PR de code et nouvelle image.
-
-## Open Questions
-
-Aucune question ne change la spec : les décisions du mainteneur sont consignées dans la proposition. Les paquets sont `@fontsource/geist` et `@fontsource/geist-mono` (5.3.0, OFL-1.1), vérifiés dans le registre à la tâche 2.2.
+| DO22 | Marque doublée d'un texte (amende DO15) | Une marque graphique dont l'information est aussi donnée en texte est un usage permis de `ink-4` et `bar` : le segment « Double bogey + » de la répartition en `ink-4`, dont le compte et la part sont écrits sur sa ligne, et la barre d'un différentiel qui ne compte pas en `bar`, l'historique portant « Compte ». `theme-contrast.test.ts` le dit dans l'usage de ces deux tokens de sa liste « hors paires » ; le delta `visual-theme` l'écrit dans « Couleurs hors des paires de contraste » (scénario « Marque doublée d'un texte »). |
+| DO23 | Cases par et index de l'éditeur | Elles prennent le contour `rule`, celui des champs (exception Q4, 1,34:1), et non `rule-soft` du design : ce sont des champs modifiables, pas un trait de décor. |
+| DO24 | Indicateur d'attente (delta `loading-feedback`) | Appliqué à l'unité 3 (tâche 6.4) : `ui/pending.tsx` écrit son texte en Geist Mono 500, 12 px, `ink-2` (`text-meta-12`) et dessine l'orbe en variante sombre (`theme="dark"`) quel que soit le réglage de l'appareil. `ui/alert.tsx` et `ui/table.tsx` reprennent des tailles de l'échelle (`text-body-13`, `text-body-12`, titre `text-label-14`) : `text-sm` ne produisait plus aucun style sur l'échelle fermée. |

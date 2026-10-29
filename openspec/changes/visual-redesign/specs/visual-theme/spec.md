@@ -95,11 +95,15 @@ Le texte courant et le texte secondaire MUST garder au moins 4,5:1 avec chacun d
 - **THEN** seules les trois paires exemptées passent sous leur seuil, et une quatrième paire sous le seuil le fait échouer en la nommant
 
 ### Requirement: Couleurs hors des paires de contraste
-Quatre gris du thème SHALL rester hors des paires de contraste et MUST NOT servir de texte lisible : `oklch(0.5 0.01 260)` sert seulement à un contrôle désactivé (exempté par WCAG 1.4.3) ou au décor ; `oklch(0.4 0.01 260)`, `oklch(0.3 0.008 260)` et `oklch(0.21 0.006 260)` au décor masqué aux lecteurs d'écran et aux traits non porteurs d'information. Un texte indicatif lisible prend au moins `oklch(0.68 0.01 260)`.
+Quatre gris SHALL rester hors des paires de contraste et MUST NOT servir de texte lisible : `oklch(0.5 0.01 260)` sert seulement à un contrôle désactivé (exempté par WCAG 1.4.3) ou au décor ; `oklch(0.4 0.01 260)`, `oklch(0.3 0.008 260)` et `oklch(0.21 0.006 260)` au décor masqué aux lecteurs d'écran, aux traits non porteurs d'information et, pour les deux premiers, à une marque doublée d'un texte (DO22). Un texte indicatif lisible prend au moins `oklch(0.68 0.01 260)`.
 
 #### Scenario: Indication d'un champ
 - **WHEN** le champ « RATING » de la page Parcours affiche son indication « ex. 71,4 » sur la surface `oklch(0.17 0.006 260)`
 - **THEN** l'indication est en `oklch(0.68 0.01 260)`, à au moins 4,5:1, et jamais en `oklch(0.5 0.01 260)` ni `oklch(0.4 0.01 260)`
+
+#### Scenario: Marque doublée d'un texte
+- **WHEN** la page Handicaps dessine la barre d'un différentiel qui ne compte pas en `oklch(0.3 0.008 260)` et le segment « Double bogey + » en `oklch(0.4 0.01 260)`
+- **THEN** l'historique porte « Compte » sur les seuls rounds qui comptent, et la ligne « Double bogey + » écrit son compte et sa part : aucune information ne tient à la seule couleur
 
 #### Scenario: Couleurs hors des paires
 - **WHEN** un composant écrit un texte actif, une indication de champ ou une méta en `oklch(0.5 0.01 260)` ou `oklch(0.4 0.01 260)`
