@@ -233,6 +233,26 @@ final class LegacySqliteFixture
     }
 
     /**
+     * Two players, ids 1 and 2, who play the reference card IMG_3064 on 2026-10-17 (round 1,
+     * created at 1792251843742 ms, its photo at $photoPath), with the statistics Next computed
+     * for their first round: 72 / 72 / 10 / none / 10 / yes, then 88 / 88 / 170 / none / 170 / yes.
+     */
+    public static function referenceRound(string $first = 'Gab', string $second = 'Manu', ?string $photoPath = null): self
+    {
+        $card = referenceCardData(null, null);
+
+        return self::atLevel()
+            ->player(1, $first, 1791400000000)
+            ->player(2, $second, 1791500000000)
+            ->round(1, 'BETHPAGE BLACK', 'Red', '2026-10-17', 1792251843742, $card['holes'], [
+                [1, $card['lines'][0]['strokes']],
+                [2, $card['lines'][1]['strokes']],
+            ], $photoPath)
+            ->stats(1, 1, 72, 72, 10, null, 10, true)
+            ->stats(1, 2, 88, 88, 170, null, 170, true);
+    }
+
+    /**
      * The base of the spec « Comptes identiques »: 3 players, 7 aliases, 2 rounds of two
      * players (36 holes, 4 lines, 72 scores) with the statistics Next computed, 2 ratings, 2
      * imports, 3 rows of ai_usage and 5 jobs; the photos of the round and of the imports in the

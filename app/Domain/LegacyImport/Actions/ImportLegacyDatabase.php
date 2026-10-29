@@ -3,16 +3,24 @@
 namespace App\Domain\LegacyImport\Actions;
 
 use App\Domain\Handicaps\Actions\RecomputePlayerStats;
+use App\Domain\Imports\ImportStatus;
+use App\Domain\Imports\ScorecardDraft;
+use App\Domain\LegacyImport\Exceptions\DryRunCancelled;
 use App\Domain\LegacyImport\Exceptions\LegacyImportFailed;
 use App\Domain\LegacyImport\IdMap;
 use App\Domain\LegacyImport\ImportReport;
 use App\Domain\LegacyImport\LegacyDatabase;
+use App\Domain\LegacyImport\LegacyImportCorrection;
+use App\Domain\LegacyImport\LegacyPhotos;
 use App\Domain\LegacyImport\LegacyRow;
 use App\Domain\LegacyImport\LegacySchema;
+use App\Domain\LegacyImport\TargetTables;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Throwable;
 
 /**
  * Imports once the SQLite base of the Next application (design D3): checks without any write,
@@ -28,36 +36,83 @@ final class ImportLegacyDatabase
 
     private ImportReport $report;
 
+    private LegacyPhotos $photos;
+
     /** The instant of the import, one for the whole command. */
     private string $now;
 
     public function __construct(private readonly RecomputePlayerStats $recomputePlayerStats) {}
 
     /**
+     * @param  bool  $force  the operator confirmed the emptying of the target tables
+     * @param  bool  $dryRun  everything is done, then cancelled: nothing written, nothing queued
+     *
      * @throws LegacyImportFailed
      */
     public function handle(string $dbPath, ?string $uploadsDir, bool $force, bool $dryRun): ImportReport
     {
         $this->legacy = LegacyDatabase::open($dbPath);
         LegacySchema::check($this->legacy);
+        $nonEmpty = TargetTables::nonEmpty();
+        if ($nonEmpty !== [] && ! $force) {
+            throw new LegacyImportFailed('Tables non vides : '.TargetTables::describe($nonEmpty).'. Relancer avec --force pour les vider.');
+        }
+        $this->photos = LegacyPhotos::check($this->legacy, $uploadsDir);
 
         $this->ids = new IdMap;
         $this->now = CarbonImmutable::now('UTC')->format('Y-m-d H:i:s');
-        $this->report = new ImportReport;
+        $this->report = new ImportReport($dryRun);
+        $this->report->unreferencedFiles = $this->photos->unreferencedFiles();
 
-        DB::transaction(function (): void {
-            $this->importPlayers();
-            $this->importRounds();
-            $this->importCourseRatings();
-            $this->importImports();
-            $this->importAiUsage();
+        // The photos of the rows emptied by --force, deleted once the import is committed.
+        $emptiedPhotos = [];
 
-            // player_round_stats is not copied: the history is replayed by the computation of
-            // the port (design D7, D11).
-            $this->recomputePlayerStats->handle(DB::table('round_players')->distinct()->pluck('player_id')->all());
-        });
+        try {
+            DB::transaction(function () use ($nonEmpty, $dryRun, &$emptiedPhotos): void {
+                if ($nonEmpty !== []) {
+                    $emptiedPhotos = self::targetPhotos();
+                    TargetTables::truncate();
+                }
+
+                $this->importPlayers();
+                $this->importRounds();
+                $this->importCourseRatings();
+                $this->importImports();
+                $this->importAiUsage();
+                $this->report->photos = $this->photos->copy($dryRun);
+
+                // player_round_stats is not copied: the history is replayed by the computation
+                // of the port (design D7, D11).
+                $this->recomputePlayerStats->handle(DB::table('round_players')->distinct()->pluck('player_id')->all());
+
+                if ($dryRun) {
+                    throw new DryRunCancelled;
+                }
+            });
+        } catch (DryRunCancelled) {
+            return $this->report;
+        } catch (Throwable $exception) {
+            $this->photos->undo();
+
+            throw $exception;
+        }
+
+        Storage::disk(LegacyPhotos::DISK)->delete(array_values(array_diff($emptiedPhotos, $this->photos->destinations())));
 
         return $this->report;
+    }
+
+    /**
+     * The photos of the rounds and imports of the target base.
+     *
+     * @return list<string>
+     */
+    private static function targetPhotos(): array
+    {
+        return array_values(array_unique(array_filter([
+            ...DB::table('rounds')->pluck('photo_path')->all(),
+            ...DB::table('imports')->pluck('photo_path')->all(),
+        ], is_string(...))));
     }
 
     private function importPlayers(): void
@@ -93,7 +148,7 @@ final class ImportLegacyDatabase
                 'course_name' => $round->string('course_name'),
                 'tees' => $round->string('tees'),
                 'played_on' => $round->string('played_on'),
-                'photo_path' => self::photoPath($round->nullableString('photo_path')),
+                'photo_path' => LegacyPhotos::destination($round->nullableString('photo_path')),
                 'created_at' => $createdAt,
                 'updated_at' => $createdAt,
             ]);
@@ -161,19 +216,81 @@ final class ImportLegacyDatabase
     private function importImports(): void
     {
         foreach ($this->rowsWithIds('imports') as $import) {
+            $id = $import->int('id');
+            $roundId = $import->nullableInt('round_id');
+            [$status, $failure] = self::statusOfImport($import);
             $createdAt = self::instant($import->int('created_at'));
-            $this->insert('imports', "import {$import->int('id')}", [
-                'id' => $this->ids->uuid('imports', $import->int('id'), "imports, import {$import->int('id')}"),
-                'status' => $import->string('status'),
-                'photo_path' => self::photoPath($import->nullableString('photo_path')),
-                'draft' => $import->nullableString('draft'),
-                'round_id' => $import->nullableInt('round_id') === null
-                    ? null
-                    : $this->ids->uuid('rounds', $import->int('round_id'), "imports, import {$import->int('id')}, round {$import->int('round_id')}"),
+            $this->insert('imports', "import {$id}", [
+                'id' => $this->ids->uuid('imports', $id, "imports, import {$id}"),
+                'status' => $status,
+                'photo_path' => LegacyPhotos::destination($import->nullableString('photo_path')),
+                'draft' => self::draft($import, $status),
+                'correction' => $this->correction($import->nullableString('correction'), $roundId !== null),
+                'failure' => $failure,
+                'round_id' => $roundId === null ? null : $this->ids->uuid('rounds', $roundId, "imports, import {$id}, round {$roundId}"),
                 'created_at' => $createdAt,
                 'updated_at' => $createdAt,
             ]);
         }
+    }
+
+    /**
+     * The status of an import and the reason of its failure (design D10): a reading cut by the
+     * migration fails, a failure of Next keeps its note or the only failure Next had.
+     *
+     * @return array{string, string|null}
+     */
+    private static function statusOfImport(LegacyRow $import): array
+    {
+        $status = $import->string('status');
+
+        return match ($status) {
+            ImportStatus::Queued->value, ImportStatus::Reading->value => [ImportStatus::Failed->value, 'Import interrompu par la migration'],
+            ImportStatus::Failed->value => [$status, $import->nullableString('ai_note') ?? 'Panneau introuvable sur la photo'],
+            default => [$status, null],
+        };
+    }
+
+    /**
+     * The draft of an import as ScorecardDraft writes it; a ready import needs one.
+     *
+     * @throws LegacyImportFailed when the draft is out of shape
+     */
+    private static function draft(LegacyRow $import, string $status): ?string
+    {
+        $json = $import->nullableString('draft');
+        if ($json === null && $status !== ImportStatus::Ready->value) {
+            return null;
+        }
+
+        $decoded = $json === null ? null : json_decode($json, true);
+        $draft = is_array($decoded) ? ScorecardDraft::fromArray($decoded) : null;
+        if ($draft === null) {
+            throw new LegacyImportFailed("Brouillon illisible : import {$import->int('id')}");
+        }
+
+        return (string) json_encode($draft->toArray());
+    }
+
+    /**
+     * The correction of Next in the shape of the port; dropped and counted on an import saved
+     * as a round, or when it cannot be read.
+     */
+    private function correction(?string $json, bool $saved): ?string
+    {
+        if ($json === null) {
+            return null;
+        }
+
+        $decoded = $saved ? null : json_decode($json, true);
+        $correction = is_array($decoded) ? LegacyImportCorrection::translate($decoded, $this->ids) : null;
+        if ($correction === null) {
+            $this->report->correctionsDropped++;
+
+            return null;
+        }
+
+        return (string) json_encode($correction);
     }
 
     private function importAiUsage(): void
@@ -251,14 +368,6 @@ final class ImportLegacyDatabase
         } catch (QueryException $exception) {
             throw new LegacyImportFailed("Ligne refusée : {$table}, {$sqliteKey} : ".($exception->errorInfo[2] ?? $exception->getMessage()));
         }
-    }
-
-    /**
-     * The path on the photos disk of a photo of Next, uploads/<name> (design D9).
-     */
-    private static function photoPath(?string $path): ?string
-    {
-        return $path !== null ? 'imports/'.pathinfo($path, PATHINFO_FILENAME).'.webp' : null;
     }
 
     /**

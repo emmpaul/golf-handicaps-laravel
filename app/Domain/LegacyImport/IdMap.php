@@ -42,4 +42,12 @@ final class IdMap
     {
         return $this->uuids[$table][$id] ?? throw new LegacyImportFailed("Référence absente : {$reference}");
     }
+
+    /**
+     * The UUID of the SQLite id of $table, null when the id has no row there.
+     */
+    public function find(string $table, int $id): ?string
+    {
+        return $this->uuids[$table][$id] ?? null;
+    }
 }

@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Domain\LegacyImport\Actions\ImportLegacyDatabase;
 use App\Domain\LegacyImport\Exceptions\LegacyImportFailed;
+use App\Domain\LegacyImport\TargetTables;
 use Illuminate\Console\Attributes\Description;
 use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
@@ -19,12 +20,21 @@ class ImportSqliteCommand extends Command
     public function handle(ImportLegacyDatabase $importLegacyDatabase): int
     {
         $uploads = $this->option('uploads');
+        $force = (bool) $this->option('force');
+
+        // Without a terminal (--no-interaction), the answer is the default: no.
+        $nonEmpty = TargetTables::nonEmpty();
+        if ($force && $nonEmpty !== [] && ! $this->confirm('Vider '.TargetTables::describe($nonEmpty).' avant l\'import ?', false)) {
+            $this->error('Import abandonné.');
+
+            return self::FAILURE;
+        }
 
         try {
             $report = $importLegacyDatabase->handle(
                 (string) $this->argument('db'),
                 is_string($uploads) ? $uploads : null,
-                (bool) $this->option('force'),
+                $force,
                 (bool) $this->option('dry-run'),
             );
         } catch (LegacyImportFailed $failure) {
