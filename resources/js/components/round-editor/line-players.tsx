@@ -8,6 +8,7 @@ import {
     NativeSelectOption,
 } from '@/components/ui/native-select';
 import { Pending } from '@/components/ui/pending';
+import { cn } from '@/lib/utils';
 import type { EditorLine, PlayerOption } from './form-state';
 
 /** Valeur de l'option « Nouveau joueur… » du choix du joueur. */
@@ -45,7 +46,7 @@ function NewPlayerForm({
     return (
         <form
             onSubmit={(event) => void submit(event)}
-            className="col-span-2 flex min-w-0 flex-col gap-1"
+            className="flex min-w-0 flex-col gap-1 pl-8"
         >
             <div className="flex gap-2">
                 <Input
@@ -74,7 +75,7 @@ function NewPlayerForm({
                 <p
                     id={errorId}
                     role="alert"
-                    className="text-sm text-destructive"
+                    className="text-body-12 text-signal"
                 >
                     {error}
                 </p>
@@ -106,7 +107,6 @@ function LinePlayer({
 }) {
     const [creating, setCreating] = useState(false);
     const number = position + 1;
-    const titleId = useId();
 
     async function create(name: string) {
         const error = await onCreate(line.key, name);
@@ -118,63 +118,71 @@ function LinePlayer({
         return error;
     }
 
-    // Un bloc par ligne (spec « Lignes de joueur groupées sur téléphone ») : le
-    // numéro sur une rangée, la liste et le bouton de retrait côte à côte sur
-    // la suivante, jamais le bouton seul.
+    // Une rangée par ligne (spec « Lignes de joueur groupées sur téléphone ») :
+    // « L1 », la liste, le nom lu sur la carte s'il y en a un, puis le bouton de
+    // retrait de 44 px, jamais seul sur sa rangée. Une liste sans joueur a la
+    // bordure ambre ; ce n'est pas une erreur annoncée tant qu'elle n'est pas
+    // quittée (« Saisie manuelle neuve sans alerte »).
     return (
         <div
             role="group"
-            aria-labelledby={titleId}
-            className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2"
+            aria-label={`Ligne ${number}`}
+            className="flex flex-col gap-2"
         >
-            <div className="col-span-2 flex flex-wrap items-baseline gap-x-2">
-                <span id={titleId} className="text-sm w-16 font-medium">
-                    Ligne {number}
+            <div className="flex items-center gap-2">
+                <span className="w-6 flex-none font-mono text-meta text-ink-2">
+                    L{number}
                 </span>
+                <NativeSelect
+                    className={cn(
+                        'min-w-0 flex-1',
+                        line.playerId === null &&
+                            !creating &&
+                            '*:data-[slot=native-select]:border-accent',
+                    )}
+                    aria-label={`Joueur de la ligne ${number}`}
+                    aria-invalid={invalid || undefined}
+                    onBlur={() => onLeave?.(`player${position}:player`)}
+                    value={creating ? NEW_PLAYER : (line.playerId ?? '')}
+                    onChange={(event) => {
+                        const { value } = event.currentTarget;
+                        setCreating(value === NEW_PLAYER);
+
+                        if (value !== NEW_PLAYER) {
+                            onAssociate(line.key, value || null);
+                        }
+                    }}
+                >
+                    <NativeSelectOption value="">
+                        Choisir un joueur
+                    </NativeSelectOption>
+                    {players.map((player) => (
+                        <NativeSelectOption key={player.id} value={player.id}>
+                            {player.name}
+                        </NativeSelectOption>
+                    ))}
+                    <NativeSelectOption value={NEW_PLAYER}>
+                        Nouveau joueur…
+                    </NativeSelectOption>
+                </NativeSelect>
                 {/* Nom lu sur la carte d'un import ; rien pour une ligne ajoutée à la main. */}
                 {line.readName ? (
-                    <span className="text-sm text-muted-foreground">
-                        lu « {line.readName} »
+                    // « lu » au-dessus de « « GAB » » : un seul texte, coupé par le saut de ligne.
+                    <span className="w-16 flex-none font-mono text-section leading-[1.2] tracking-normal [overflow-wrap:anywhere] whitespace-pre-line text-ink-2">
+                        {`lu\n« ${line.readName} »`}
                     </span>
                 ) : null}
+                {canRemove ? (
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        aria-label={`Retirer la ligne ${number}`}
+                        onClick={() => onRemove(line.key)}
+                    >
+                        <XIcon strokeWidth={2.4} />
+                    </Button>
+                ) : null}
             </div>
-            <NativeSelect
-                className="w-full min-w-0"
-                aria-label={`Joueur de la ligne ${number}`}
-                aria-invalid={invalid || undefined}
-                onBlur={() => onLeave?.(`player${position}:player`)}
-                value={creating ? NEW_PLAYER : (line.playerId ?? '')}
-                onChange={(event) => {
-                    const { value } = event.currentTarget;
-                    setCreating(value === NEW_PLAYER);
-
-                    if (value !== NEW_PLAYER) {
-                        onAssociate(line.key, value || null);
-                    }
-                }}
-            >
-                <NativeSelectOption value="">
-                    Choisir un joueur
-                </NativeSelectOption>
-                {players.map((player) => (
-                    <NativeSelectOption key={player.id} value={player.id}>
-                        {player.name}
-                    </NativeSelectOption>
-                ))}
-                <NativeSelectOption value={NEW_PLAYER}>
-                    Nouveau joueur…
-                </NativeSelectOption>
-            </NativeSelect>
-            {canRemove ? (
-                <Button
-                    variant="ghost"
-                    size="icon"
-                    aria-label={`Retirer la ligne ${number}`}
-                    onClick={() => onRemove(line.key)}
-                >
-                    <XIcon />
-                </Button>
-            ) : null}
             {creating ? (
                 <NewPlayerForm number={number} onCreate={create} />
             ) : null}
@@ -209,6 +217,9 @@ export function LinePlayers({
 }) {
     return (
         <div className="flex flex-col gap-2">
+            <h2 className="mt-6 font-mono text-section text-ink-2 uppercase">
+                Lignes de la carte
+            </h2>
             {lines.map((line, position) => (
                 <LinePlayer
                     key={line.key}
@@ -224,13 +235,14 @@ export function LinePlayers({
                 />
             ))}
             {canAdd ? (
-                <Button
-                    variant="outline"
-                    className="self-start"
+                <button
+                    type="button"
                     onClick={onAdd}
+                    className="flex h-11 items-center justify-center gap-1 rounded-10 border border-dashed border-rule text-link text-ink-2 outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring focus-visible:outline-solid"
                 >
+                    <span aria-hidden="true">+</span>
                     Ajouter une ligne
-                </Button>
+                </button>
             ) : null}
         </div>
     );

@@ -53,11 +53,6 @@
     /* Zones sûres (encoche, barre d'accueil) : 0 hors plein écran. */
     --safe-top: env(safe-area-inset-top, 0px);
     --safe-bottom: env(safe-area-inset-bottom, 0px);
-    /* Haut et bas du cadre pour les barres collées de l'éditeur, retirés avec
-     * lui (tâches 6.1 et 6.2) : plus d'en-tête collé, barre flottante de
-     * 60 px à 28 px du bas de la zone sûre (D3). */
-    --top-chrome: var(--safe-top);
-    --bottom-chrome: calc(88px + var(--safe-bottom));
     color-scheme: dark;
 }
 

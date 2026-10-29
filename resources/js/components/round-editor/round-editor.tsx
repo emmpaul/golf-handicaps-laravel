@@ -11,22 +11,20 @@ import {
     NativeSelect,
     NativeSelectOption,
 } from '@/components/ui/native-select';
-import { ORB_FOR, Pending, PendingOrb } from '@/components/ui/pending';
-import {
-    checkRoundCard,
-    problemCountLabel,
-    withTotals,
-} from '@/lib/round-checks';
+import { PLAYER_TEXT } from '@/components/player-swatch';
+import { ORB_FOR, PendingOrb } from '@/components/ui/pending';
+import { checkRoundCard, withTotals } from '@/lib/round-checks';
 import type { CellValue, HoleRow, ReadTotals } from '@/lib/round-checks';
 import { cn } from '@/lib/utils';
 import type { RouteDefinition } from '@/wayfinder';
 import { SAVING, useCorrectionAutosave } from './autosave';
 import { DateField } from './date-field';
+import { DistancesBlock } from './distances-block';
+import { EditorSaveBar } from './editor-save-bar';
 import {
     courseLabel,
     createdPlayer,
     editorReducer,
-    lineLabel,
     MAX_LINES,
     shownInvalidCells,
     toRoundCard,
@@ -39,7 +37,6 @@ import type {
     TextField,
 } from './form-state';
 import { LinePlayers } from './line-players';
-import { ProblemList } from './problem-list';
 import { ScoreGrid } from './score-grid';
 import type { GridRow } from './score-grid';
 
@@ -72,12 +69,15 @@ const totals = (row: HoleRow) => ({
 const rowTotals = (row: HoleRow, read: ReadTotals | null | undefined) =>
     read ? { totals: { ...read }, readTotals: true } : { totals: totals(row) };
 
+/**
+ * Lignes de la grille : par, index, puis une par ligne de joueur, nommée en
+ * tête par son joueur dans sa couleur, sinon par le nom lu ou « L3 » en ambre.
+ */
 function gridRows(
     state: EditorState,
     players: readonly PlayerOption[],
 ): GridRow[] {
     const par = withTotals(state.holes.map((hole) => hole.par));
-    const distance = withTotals(state.holes.map((hole) => hole.distance));
 
     return [
         {
@@ -91,18 +91,16 @@ function gridRows(
             label: 'Index',
             holes: state.holes.map((hole) => hole.strokeIndex),
         },
-        {
-            key: 'distance',
-            label: 'Distance',
-            holes: distance.holes,
-            totals: totals(distance),
-        },
         ...state.lines.map((line, i) => {
             const strokes = withTotals(line.strokes);
+            const player = players.find(({ id }) => id === line.playerId);
 
             return {
                 key: `player${i}`,
-                label: lineLabel(line, i, players),
+                label: player?.name ?? line.readName ?? `L${i + 1}`,
+                headClass: player
+                    ? PLAYER_TEXT[player.colorSlot]
+                    : 'text-accent',
                 cellLabel: `Ligne ${i + 1}`,
                 holes: strokes.holes,
                 ...rowTotals(strokes, line.totals),
@@ -255,137 +253,129 @@ export function RoundEditor({
     }
 
     return (
-        <div className="flex min-w-0 flex-col gap-4">
-            {importContext?.readByAi ? (
-                <p className="text-ai font-medium">
-                    Carte lue par l’IA, vérifie chaque case
-                </p>
-            ) : null}
-            {importContext?.failure ? (
-                <Alert variant="destructive">
-                    <AlertTitle>{importContext.failure}</AlertTitle>
-                </Alert>
-            ) : null}
-            {/* Sur ordinateur, la photo se place à côté des champs : la grille tient sans défiler. */}
-            <div className="flex min-w-0 flex-col gap-4 lg:flex-row lg:items-start">
-                {importContext ? (
+        <div className="flex min-w-0 flex-col">
+            {importContext ? (
+                <>
                     <a
                         href={importContext.photoUrl}
                         target="_blank"
                         rel="noreferrer"
-                        className="self-start lg:shrink-0"
+                        className="mt-[18px] block"
                     >
                         <img
                             src={importContext.photoUrl}
                             alt="Photo de la carte importée"
-                            className="max-h-72 w-full border object-contain lg:h-72 lg:w-auto"
+                            className="aspect-[16/10] w-full rounded-12 bg-surface-2 object-cover"
                         />
                     </a>
-                ) : null}
-                <div className="flex min-w-0 flex-1 flex-col gap-4">
-                    <FieldGroup className="gap-4">
-                        <div
+                    <div className="mt-3 flex min-h-5 items-center justify-between gap-3">
+                        {importContext.readByAi ? (
+                            <p className="text-body-13 text-info">
+                                Carte lue par l’IA, vérifie chaque case
+                            </p>
+                        ) : (
+                            <span />
+                        )}
+                        <p
+                            role="status"
+                            data-testid="autosave-status"
                             className={cn(
-                                'grid grid-cols-1 gap-4 sm:grid-cols-3',
-                                courses.length > 0 &&
-                                    'lg:grid-cols-[minmax(0,1.5fr)_repeat(3,minmax(0,1fr))]',
+                                'inline-flex flex-none items-center gap-2 font-mono text-section tracking-normal',
+                                autosave.status.error
+                                    ? 'text-signal'
+                                    : 'text-ink-2',
                             )}
                         >
-                            {/* Sur ordinateur, le parcours connu se place sur la même ligne que les champs. */}
-                            {courses.length > 0 ? (
-                                <Field className="sm:col-span-3 lg:col-span-1">
-                                    <FieldLabel htmlFor="known-course">
-                                        Parcours connu
-                                    </FieldLabel>
-                                    <NativeSelect
-                                        id="known-course"
-                                        defaultValue=""
-                                        onChange={(event) => {
-                                            const course =
-                                                courses[
-                                                    Number(
-                                                        event.currentTarget
-                                                            .value,
-                                                    )
-                                                ];
-
-                                            if (
-                                                event.currentTarget.value !==
-                                                    '' &&
-                                                course
-                                            ) {
-                                                change({
-                                                    type: 'course',
-                                                    course,
-                                                });
-                                            }
-                                        }}
-                                    >
-                                        <NativeSelectOption value="">
-                                            Choisir un parcours
-                                        </NativeSelectOption>
-                                        {courses.map((course, i) => (
-                                            <NativeSelectOption
-                                                key={courseLabel(course)}
-                                                value={i}
-                                            >
-                                                {courseLabel(course)}
-                                            </NativeSelectOption>
-                                        ))}
-                                    </NativeSelect>
-                                </Field>
+                            {autosave.status.message === SAVING ? (
+                                <PendingOrb state={ORB_FOR.save} />
                             ) : null}
-                            {TEXT_FIELDS.map(({ field, label }) => (
-                                <Field key={field}>
-                                    <FieldLabel htmlFor={field}>
-                                        {label}
-                                    </FieldLabel>
-                                    <Input
-                                        id={field}
-                                        value={state[field] ?? ''}
-                                        aria-invalid={
-                                            invalid.has(field) || undefined
-                                        }
-                                        onChange={(event) =>
-                                            setField(
-                                                field,
-                                                event.currentTarget.value,
-                                            )
-                                        }
-                                        onBlur={() => leave(field)}
-                                    />
-                                </Field>
+                            {autosave.status.message}
+                        </p>
+                    </div>
+                    {importContext.failure ? (
+                        <Alert variant="destructive" className="mt-3">
+                            <AlertTitle>{importContext.failure}</AlertTitle>
+                        </Alert>
+                    ) : null}
+                </>
+            ) : null}
+            <FieldGroup className="mt-4 gap-3">
+                {/* Parcours connu : pré-remplit parcours, tees, pars, index et distances. */}
+                {courses.length > 0 ? (
+                    <Field className="gap-1.5">
+                        <FieldLabel htmlFor="known-course">
+                            Parcours connu
+                        </FieldLabel>
+                        <NativeSelect
+                            id="known-course"
+                            className="w-full"
+                            defaultValue=""
+                            onChange={(event) => {
+                                const course =
+                                    courses[Number(event.currentTarget.value)];
+
+                                if (
+                                    event.currentTarget.value !== '' &&
+                                    course
+                                ) {
+                                    change({ type: 'course', course });
+                                }
+                            }}
+                        >
+                            <NativeSelectOption value="">
+                                Choisir un parcours
+                            </NativeSelectOption>
+                            {courses.map((course, i) => (
+                                <NativeSelectOption
+                                    key={courseLabel(course)}
+                                    value={i}
+                                >
+                                    {courseLabel(course)}
+                                </NativeSelectOption>
                             ))}
-                            <Field>
-                                <FieldLabel htmlFor="playedOn">Date</FieldLabel>
-                                <DateField
-                                    id="playedOn"
-                                    value={state.playedOn}
-                                    invalid={invalid.has('playedOn')}
-                                    onChange={(iso) =>
-                                        setField('playedOn', iso)
-                                    }
-                                    onBlur={() => leave('playedOn')}
-                                />
-                            </Field>
-                        </div>
-                    </FieldGroup>
-                    <LinePlayers
-                        lines={state.lines}
-                        players={players}
-                        invalid={invalid}
-                        canAdd={state.lines.length < MAX_LINES}
-                        onAssociate={(key, playerId) =>
-                            change({ type: 'associate', key, playerId })
-                        }
-                        onLeave={leave}
-                        onCreate={createPlayer}
-                        onRemove={(key) => change({ type: 'removeLine', key })}
-                        onAdd={() => change({ type: 'addLine' })}
-                    />
+                        </NativeSelect>
+                    </Field>
+                ) : null}
+                <div className="grid grid-cols-[1fr_110px] gap-2">
+                    {TEXT_FIELDS.map(({ field, label }) => (
+                        <Field key={field} className="min-w-0 gap-1.5">
+                            <FieldLabel htmlFor={field}>{label}</FieldLabel>
+                            <Input
+                                id={field}
+                                value={state[field] ?? ''}
+                                aria-invalid={invalid.has(field) || undefined}
+                                onChange={(event) =>
+                                    setField(field, event.currentTarget.value)
+                                }
+                                onBlur={() => leave(field)}
+                            />
+                        </Field>
+                    ))}
                 </div>
-            </div>
-            <ProblemList problems={problems} />
+                <Field className="gap-1.5">
+                    <FieldLabel htmlFor="playedOn">Date</FieldLabel>
+                    <DateField
+                        id="playedOn"
+                        value={state.playedOn}
+                        invalid={invalid.has('playedOn')}
+                        onChange={(iso) => setField('playedOn', iso)}
+                        onBlur={() => leave('playedOn')}
+                    />
+                </Field>
+            </FieldGroup>
+            <LinePlayers
+                lines={state.lines}
+                players={players}
+                invalid={invalid}
+                canAdd={state.lines.length < MAX_LINES}
+                onAssociate={(key, playerId) =>
+                    change({ type: 'associate', key, playerId })
+                }
+                onLeave={leave}
+                onCreate={createPlayer}
+                onRemove={(key) => change({ type: 'removeLine', key })}
+                onAdd={() => change({ type: 'addLine' })}
+            />
             <ScoreGrid
                 rows={gridRows(state, players)}
                 invalid={invalid}
@@ -397,8 +387,16 @@ export function RoundEditor({
                 }
                 onLeave={leave}
             />
+            <DistancesBlock
+                distances={state.holes.map((hole) => hole.distance)}
+                invalid={invalid}
+                onCell={(row, hole, value) =>
+                    change({ type: 'cell', row, hole, value })
+                }
+                onLeave={leave}
+            />
             {duplicateOf !== null ? (
-                <Alert>
+                <Alert className="mt-6">
                     <AlertTitle>Ce round semble déjà enregistré</AlertTitle>
                     <AlertDescription>
                         <p>
@@ -423,42 +421,11 @@ export function RoundEditor({
                     </AlertDescription>
                 </Alert>
             ) : null}
-            {/* Collée juste au-dessus des onglets sous `md`, au-dessus de la barre d'accueil au-delà ;
-                déborde de `main` jusqu'au bord de l'écran sous `lg` seulement ; à partir de `lg`, le
-                bouton s'aligne sur le bord du conteneur, comme les champs et la grille. */}
-            <div className="sticky bottom-(--bottom-chrome) z-20 flex flex-col gap-2 border-t bg-background px-4 py-2 max-lg:-mx-4 sm:flex-row sm:items-center md:pt-3 md:pb-[calc(--spacing(3)+var(--safe-bottom))] lg:px-0">
-                <Button
-                    size="lg"
-                    className="w-full sm:w-auto"
-                    disabled={problems.length > 0 || saving}
-                    onClick={() => submit(false)}
-                >
-                    {problems.length > 0
-                        ? problemCountLabel(problems.length)
-                        : 'Enregistrer'}
-                </Button>
-                <Pending
-                    label={saving ? 'Enregistrement du round…' : null}
-                    orb="save"
-                />
-                {importContext ? (
-                    <p
-                        role="status"
-                        data-testid="autosave-status"
-                        className={cn(
-                            'text-sm inline-flex items-center gap-2',
-                            autosave.status.error
-                                ? 'text-destructive'
-                                : 'text-muted-foreground',
-                        )}
-                    >
-                        {autosave.status.message === SAVING ? (
-                            <PendingOrb state={ORB_FOR.save} />
-                        ) : null}
-                        {autosave.status.message}
-                    </p>
-                ) : null}
-            </div>
+            <EditorSaveBar
+                problems={problems}
+                saving={saving}
+                onSave={() => submit(false)}
+            />
         </div>
     );
 }
