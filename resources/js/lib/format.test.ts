@@ -3,6 +3,8 @@ import { describe, expect, it } from 'vite-plus/test';
 import {
     formatIndex,
     formatPlayedOn,
+    formatShortPlayedOn,
+    formatSignedTenths,
     formatTenths,
     isoToLocalDate,
     localDateToIso,
@@ -67,5 +69,45 @@ describe('formatIndex', () => {
 
     it('writes no index as « — »', () => {
         expect(formatIndex(null, false)).toBe('—');
+    });
+});
+
+// Spec home-dashboard « Index des joueurs »: signed delta in tenths, « = » when
+// nothing moved, the typographic minus U+2212 for a fall (formatSignedTenths of
+// the Next.js application).
+// Mutation: hyphen-minus « - » instead of U+2212 → the negative tests go red.
+// Mutation: « 0 » instead of « = » → the zero test goes red.
+describe('formatSignedTenths', () => {
+    it('writes 3 tenths as « +0,3 »', () => {
+        expect(formatSignedTenths(3)).toBe('+0,3');
+    });
+
+    it('writes -3 tenths as « −0,3 » with U+2212', () => {
+        const signed = formatSignedTenths(-3);
+
+        expect(signed.charCodeAt(0)).toBe(0x2212);
+        expect(signed).toBe('−0,3');
+    });
+
+    it('writes 0 tenths as « = »', () => {
+        expect(formatSignedTenths(0)).toBe('=');
+    });
+
+    it('writes -25 tenths as « −2,5 »', () => {
+        expect(formatSignedTenths(-25)).toBe('−2,5');
+    });
+});
+
+// Spec handicap-index « Liste des rounds d'un joueur »: short date of a row, a
+// civil day under TZ=America/Montreal.
+// Mutation: date read through `new Date('2026-10-17')` (midnight UTC) →
+// « 16 oct. 2026 », the first test goes red.
+describe('formatShortPlayedOn', () => {
+    it('reads 2026-10-17 as « 17 oct. 2026 »', () => {
+        expect(formatShortPlayedOn('2026-10-17')).toBe('17 oct. 2026');
+    });
+
+    it('reads 2026-10-01 as « 1 oct. 2026 »', () => {
+        expect(formatShortPlayedOn('2026-10-01')).toBe('1 oct. 2026');
     });
 });

@@ -10,6 +10,12 @@ const playedOnFormat = new Intl.DateTimeFormat('fr-FR', {
     year: 'numeric',
 });
 
+const shortPlayedOnFormat = new Intl.DateTimeFormat('fr-FR', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+});
+
 /** ISO date `2026-10-17` to the 17th of October at midnight, local time. */
 export function isoToLocalDate(iso: string): Date {
     const [year, month, day] = iso.split('-').map(Number);
@@ -28,6 +34,11 @@ export function localDateToIso(date: Date): string {
 /** Date of play `2026-10-17` to « 17 octobre 2026 ». */
 export function formatPlayedOn(playedOn: string): string {
     return playedOnFormat.format(isoToLocalDate(playedOn));
+}
+
+/** Date of play `2026-10-17` to « 17 oct. 2026 », a civil day as `formatPlayedOn`. */
+export function formatShortPlayedOn(playedOn: string): string {
+    return shortPlayedOnFormat.format(isoToLocalDate(playedOn));
 }
 
 /** An empty value in a table: a name or a figure that does not exist yet. */
@@ -53,4 +64,13 @@ export function formatIndex(
     return provisional
         ? `${formatTenths(indexT)} (provisoire)`
         : formatTenths(indexT);
+}
+
+/** Delta in tenths: « +0,3 », « −0,3 » with the typographic minus U+2212, or « = ». */
+export function formatSignedTenths(tenths: number): string {
+    if (tenths === 0) {
+        return '=';
+    }
+
+    return `${tenths < 0 ? '\u2212' : '+'}${formatTenths(Math.abs(tenths))}`;
 }
