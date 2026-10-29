@@ -5,12 +5,16 @@ import type { OrbState } from 'thinking-orbs';
 import { useReducedMotion } from '@/hooks/use-reduced-motion';
 
 /**
- * Animation de l'orbe selon le type d'attente. Les attentes de l'import
- * (`queued`, `reading`) arrivent avec scorecard-ai-import (design D9).
+ * Animation de l'orbe selon le type d'attente : `prepare` pour la photo
+ * décodée dans le navigateur, `queued` et `reading` pour un import qui attend
+ * sa lecture.
  */
 export const ORB_FOR = {
+    prepare: 'working',
     send: 'working',
     save: 'working',
+    queued: 'breathing',
+    reading: 'searching',
 } as const satisfies Record<string, OrbState>;
 
 export type PendingKind = keyof typeof ORB_FOR;
