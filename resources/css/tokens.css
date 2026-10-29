@@ -54,7 +54,7 @@
     --color-under: var(--color-signal);
     --color-over: var(--color-ink-2);
     --color-error: oklch(0.52 0.12 58);
-    --color-ai: oklch(0.55 0.095 210);
+    --color-ai: oklch(0.54 0.095 210);
     --color-focus: oklch(0.53 0.19 258);
     /* Self-hosted by the fontsource() fonts of vite.config.ts (design D3). */
     --font-display:
