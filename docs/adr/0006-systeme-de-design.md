@@ -2,7 +2,7 @@
 
 ## Statut
 
-Acceptée, 2026-10-27 (changement OpenSpec `visual-theme-port`).
+Acceptée, 2026-10-27 (changement OpenSpec `visual-theme-port`). Remplacée en partie par [0013](0013-refonte-visuelle.md), 2026-10-29 : la palette scoreboard (tokens et palette fermée, pour les valeurs), le mode sombre par le système, les polices Sofia Sans Condensed et IBM Plex Sans, les couleurs de la palette claire des icônes et la marque d'en-tête. Restent en vigueur : les primitives base-ui possédées, le garde-fou `theme-sources`, les icônes statiques générées et le toast par le flash d'Inertia.
 
 ## Contexte
 
