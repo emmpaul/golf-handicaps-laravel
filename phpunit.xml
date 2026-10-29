@@ -24,6 +24,10 @@
         <env name="APP_ENV" value="testing"/>
         <!-- Design D9: no test inherits the Anthropic key of the development .env. -->
         <env name="ANTHROPIC_API_KEY" value="" force="true"/>
+        <!-- The prices and budget tests count on the defaults, whatever the development .env says. -->
+        <env name="AI_MODEL" value="claude-sonnet-5-5" force="true"/>
+        <env name="AI_MONTHLY_BUDGET_USD" value="5" force="true"/>
+        <env name="AI_BUDGET_TIME_ZONE" value="America/Montreal" force="true"/>
         <env name="APP_PASSCODE" value="birdie-2026"/>
         <env name="APP_MAINTENANCE_DRIVER" value="file"/>
         <env name="BCRYPT_ROUNDS" value="4"/>
