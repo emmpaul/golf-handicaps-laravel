@@ -3,12 +3,14 @@
 use App\Domain\AiUsage\AiBudget;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Tests\Support\LegacySqlite\LegacySqliteFixture;
 
 beforeEach(function () {
+    Storage::fake('photos');
     $this->travelTo(CarbonImmutable::parse('2026-10-29 03:12:45', 'UTC'));
     $this->base = LegacySqliteFixture::countsSet();
-    [$this->exitCode, $this->lines] = importSqlite($this->base->path);
+    [$this->exitCode, $this->lines] = importSqlite($this->base->path, ['--uploads' => $this->base->uploads]);
 });
 
 // Spec « Comptes identiques ».

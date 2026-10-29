@@ -87,3 +87,21 @@ test('a value of the wrong type in the base fails and names its column', functio
         ->and($lines)->toBe(['Valeur illisible : rounds.created_at'])
         ->and(nonEmptyTargetTables())->toBe([]);
 });
+
+// Spec « Import en une seule transaction »: the photos already copied go with the rows.
+// uploads/a.webp is copied first, then uploads/b.jpg cannot be decoded.
+// Mutation that turns it red: a photo written by the import not deleted on failure.
+test('a failure after a photo is copied deletes the photo', function () {
+    $base = baseWithReferenceRound(fn (array $holes): array => $holes)
+        ->import(1, 'uploads/a.webp', 1792251800000, ['round_id' => 1])
+        ->import(2, 'uploads/b.jpg', 1792251900000)
+        ->webpPhoto('a.webp');
+    file_put_contents($base->uploads.'/b.jpg', 'not an image');
+
+    [$exitCode, $lines] = importSqlite($base->path, ['--uploads' => $base->uploads]);
+
+    expect($exitCode)->toBe(1)
+        ->and($lines)->toBe(['Photo illisible : uploads/b.jpg'])
+        ->and(nonEmptyTargetTables())->toBe([])
+        ->and(Storage::disk('photos')->allFiles())->toBe([]);
+});
