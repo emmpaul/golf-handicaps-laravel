@@ -1,5 +1,5 @@
 import { Head } from '@inertiajs/react';
-import { PageTitle } from '@/components/page-title';
+import { PageTopRow } from '@/components/page-top-row';
 import {
     type PlannerPlayer,
     StrokesPlanner,
@@ -7,9 +7,9 @@ import {
 import type { CourseOverview } from '@/pages/courses/index';
 
 /**
- * Strokes page (spec `match-strokes`): the current index of each player and the
- * known courses with their rating and stroke indexes; the strokes are computed
- * in the browser (design D5).
+ * Strokes page (spec `match-strokes`, « Mise en page de la page Coups »): the
+ * current index of each player and the known courses with their rating and
+ * stroke indexes; the strokes are computed in the browser (design D5).
  */
 export default function StrokesIndex({
     players,
@@ -21,7 +21,8 @@ export default function StrokesIndex({
     return (
         <>
             <Head title="Coups" />
-            <PageTitle>Coups à donner</PageTitle>
+            <PageTopRow />
+            <h1 className="text-title">Coups à donner</h1>
             <StrokesPlanner players={players} courses={courses} />
         </>
     );
