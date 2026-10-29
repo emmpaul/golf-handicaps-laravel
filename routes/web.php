@@ -3,6 +3,7 @@
 use App\Http\Controllers\CourseController;
 use App\Http\Controllers\CourseRatingController;
 use App\Http\Controllers\ImportController;
+use App\Http\Controllers\ImportPhotoController;
 use App\Http\Controllers\LoginController;
 use App\Http\Controllers\PlayerAliasController;
 use App\Http\Controllers\PlayerController;
@@ -35,6 +36,7 @@ Route::inertia('/strokes/{path?}', 'section-placeholder', ['section' => 'Coups']
 
 // Imports (scorecard-ai-import, design D6).
 Route::post('/imports', [ImportController::class, 'store'])->name('imports.store');
+Route::get('/imports/{import}/photo', ImportPhotoController::class)->whereUuid('import')->name('imports.photo');
 
 // Rounds (design D8): /rounds/new before /rounds/{round}; a {round} that is not a UUID, such as
 // /rounds/12, falls to the 404 below without any query.
