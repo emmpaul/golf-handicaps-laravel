@@ -1,17 +1,8 @@
-import { router } from '@inertiajs/react';
-import type { MockInstance } from 'vite-plus/test';
-import { act, render, screen, within } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import {
-    afterEach,
-    beforeEach,
-    describe,
-    expect,
-    it,
-    vi,
-} from 'vite-plus/test';
+import { render, screen, within } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vite-plus/test';
 
 import RoundsShow from '@/pages/rounds/show';
+import type { RoundDetail } from '@/pages/rounds/show';
 import {
     GAB,
     GAB_STROKES,
@@ -21,31 +12,38 @@ import {
     ROUND,
 } from '@/tests/reference-round';
 
-// Spec rounds « En-tête d'un round », « Classement net d'un round », « Rating
-// affichée sur le round », « Carte de score d'un round », « Photo d'un round », « Suppression d'un round » and
-// loading-feedback « Attentes des joueurs et des rounds ». The router's delete
-// verb is stubbed (jsdom cannot run a visit); the visit callbacks it receives
-// drive the dialog's own state. Head renders nothing outside createInertiaApp;
-// the orb paints on a canvas jsdom cannot draw; jsdom has no ResizeObserver.
-// Mutations: « · » put back between tees, date and par → the header test goes
-// red; OUT summed over holes 1 to 8 (withTotals) → the card test reads 33 and
-// goes red; the photo shown without `hasPhoto` → the photo test goes red; the
-// pending label without « … » → the delete test goes red; « Annuler » wired to
-// the delete visit → the cancel test goes red; « · » put between the rating
-// and the slope → the rating test goes red; the par of the round replaced by
-// 71 in « Sans rating » → the unrated test goes red; ComputationHelp removed
-// from the page → the explanation test goes red.
+// Spec rounds « En-tête d'un round », « Rating affichée sur le round »,
+// « Carte de score d'un round », « Mise en page de la page d'un round »,
+// « Photo et explication sur la page d'un round » and app-shell « Rangée du
+// haut des pages ». The leaderboard itself: net-leaderboard.test.tsx; the
+// deletion sheet: delete-round.test.tsx. Head renders nothing outside
+// createInertiaApp; usePage is simulated for the top row; the orb paints on a
+// canvas jsdom cannot draw.
+// Mutations:
+// - the date of the meta written « 17/10/2026 » → the header test goes red;
+// - the tees of the meta left in their case (« Red ») → the header test goes
+//   red;
+// - « SANS RATING » not linked to /courses → the unrated test goes red;
+// - the rating written « 71,4 · 144 » → the rated test goes red;
+// - the leaderboard kept in the order of the card → the leaderboard test
+//   reads Gab first and goes red;
+// - the TOTAL row dropped → the card test finds no « TOTAL · PAR 71 »;
+// - ALLER summed over holes 1 to 8 → the card test reads 33 and goes red;
+// - the photo put above the legend → the photo test goes red;
+// - ComputationHelp removed → the explanation test goes red;
+// - « Modifier » left at the foot of the page → the top row test goes red.
 
 vi.mock('@inertiajs/react', async (importOriginal) => ({
     ...(await importOriginal<typeof import('@inertiajs/react')>()),
     Head: () => null,
+    usePage: () => ({ url: `/rounds/${ROUND}`, props: {} }),
 }));
 
 vi.mock('thinking-orbs', () => ({
     ThinkingOrb: () => <canvas data-testid="orb" />,
 }));
 
-const round = {
+const round: RoundDetail = {
     id: ROUND,
     courseName: 'BETHPAGE BLACK',
     tees: 'Red',
@@ -56,6 +54,7 @@ const round = {
         {
             playerId: GAB,
             name: 'Gab',
+            colorSlot: 0,
             gross: 72,
             indexBeforeT: 10,
             playingHandicap: 2,
@@ -65,6 +64,7 @@ const round = {
         {
             playerId: MANU,
             name: 'Manu',
+            colorSlot: 1,
             gross: 88,
             indexBeforeT: 174,
             playingHandicap: 23,
@@ -76,172 +76,137 @@ const round = {
     card: {
         holes: HOLES,
         lines: [
-            { playerId: GAB, name: 'Gab', strokes: GAB_STROKES },
-            { playerId: MANU, name: 'Manu', strokes: MANU_STROKES },
+            { playerId: GAB, name: 'Gab', colorSlot: 0, strokes: GAB_STROKES },
+            {
+                playerId: MANU,
+                name: 'Manu',
+                colorSlot: 1,
+                strokes: MANU_STROKES,
+            },
         ],
     },
 };
 
-type VisitOptions = { onStart?: (visit: unknown) => void };
+const unrated: RoundDetail = {
+    ...round,
+    rating: { rated: false, ratingT: 710, slope: 113 },
+};
 
-let remove: MockInstance<typeof router.delete>;
-
-beforeEach(() => {
-    // jsdom has no layout: the scroll frame of the wide card observes nothing.
-    vi.stubGlobal(
-        'ResizeObserver',
-        class {
-            observe() {}
-
-            disconnect() {}
-        },
-    );
-    remove = vi.spyOn(router, 'delete').mockImplementation(() => {});
-});
-
-afterEach(() => {
-    vi.restoreAllMocks();
-    vi.unstubAllGlobals();
-});
-
-/** The cell of the wide card at the row `row` and the column headed `column`. */
-function cardCell(row: string, column: string): HTMLElement {
+/** The texts of the row headed `header` of the card, header first. */
+function cardRow(header: string): string[] {
     const table = screen.getByRole('table', { name: 'Carte de score' });
-    const headers = within(table)
-        .getAllByRole('columnheader')
-        .map((header) => header.textContent);
-    const line = within(table)
-        .getByRole('rowheader', { name: row })
+    const row = within(table)
+        .getByRole('rowheader', { name: header })
         .closest('tr') as HTMLElement;
 
-    return line.children[headers.indexOf(column)] as HTMLElement;
+    return [...row.children].map((cell) => cell.textContent ?? '');
 }
 
+const topRow = () =>
+    document.querySelector('[data-slot="page-top-row"]') as HTMLElement;
+
 describe('Round page', () => {
-    it('shows « Tees Red », « 17 octobre 2026 » and « Par 71 » apart, without « · »', () => {
-        render(<RoundsShow round={round} />);
+    it('titles the page with the course and joins the meta by « · »', () => {
+        render(<RoundsShow round={unrated} />);
 
         expect(screen.getByRole('heading', { level: 1 }).textContent).toBe(
             'BETHPAGE BLACK',
         );
-
-        const summary = screen.getByTestId('round-summary');
-
-        expect([...summary.children].map((part) => part.textContent)).toEqual([
-            'Tees Red',
-            '17 octobre 2026',
-            'Par 71',
-        ]);
-        expect(summary.textContent).not.toContain('·');
+        expect(screen.getByTestId('round-meta').textContent).toBe(
+            'RED · 17.10.2026 · PAR 71 · SANS RATING',
+        );
     });
 
-    it('shows the net leaderboard in the order of the card, instead of the gross', () => {
+    it('links « SANS RATING » to /courses without rating', () => {
+        render(<RoundsShow round={unrated} />);
+
+        const rating = within(screen.getByTestId('round-meta')).getByRole(
+            'link',
+        );
+
+        expect(rating.textContent).toBe('SANS RATING');
+        expect(rating.getAttribute('href')).toBe('/courses');
+    });
+
+    it('ends the meta with « 71,4 / 144 », a link to /courses', () => {
         render(<RoundsShow round={round} />);
 
-        const leaderboard = screen.getByRole('table', {
+        const rating = within(screen.getByTestId('round-meta')).getByRole(
+            'link',
+        );
+
+        expect(screen.getByTestId('round-meta').textContent).toBe(
+            'RED · 17.10.2026 · PAR 71 · 71,4 / 144',
+        );
+        expect(rating.textContent).toBe('71,4 / 144');
+        expect(rating.getAttribute('href')).toBe('/courses');
+    });
+
+    it('ranks the leaderboard by net under « Classement net » and « Brut − hcp »', () => {
+        render(<RoundsShow round={round} />);
+
+        const leaderboard = screen.getByRole('list', {
             name: 'Classement net',
         });
 
         expect(
             within(leaderboard)
-                .getAllByRole('row')
-                .slice(1)
-                .map((row) =>
-                    within(row)
-                        .getAllByRole('cell')
-                        .map((cell) => cell.textContent),
+                .getAllByRole('listitem')
+                .map(
+                    (line) =>
+                        line.querySelector('[data-slot="leaderboard-name"]')
+                            ?.textContent,
                 ),
-        ).toEqual([
-            ['Gab', '72', '2', '70', '2'],
-            ['Manu', '88', '23', '65', '1'],
-        ]);
-        expect(screen.queryByRole('table', { name: 'Bruts' })).toBeNull();
+        ).toEqual(['Manu', 'Gab']);
+        expect(screen.getByText('Brut − hcp').textContent).toBe('Brut − hcp');
     });
 
-    it('shows « Rating 71,4 » and « Slope 144 » apart, without « · », in a link to /courses', () => {
+    it('shows a row per hole, then ALLER, RETOUR and TOTAL with the sums of each player', () => {
         render(<RoundsShow round={round} />);
 
-        const rating = screen.getByTestId('round-rating');
-
-        expect(rating.tagName).toBe('A');
-        expect(rating.getAttribute('href')).toBe('/courses');
-        expect([...rating.children].map((part) => part.textContent)).toEqual([
-            'Rating 71,4',
-            'Slope 144',
-        ]);
-        expect(rating.textContent).not.toContain('·');
-    });
-
-    it('shows « Sans rating (par 72, slope 113) » in a link to /courses without rating', () => {
-        render(
-            <RoundsShow
-                round={{
-                    ...round,
-                    par: 72,
-                    rating: { rated: false, ratingT: 720, slope: 113 },
-                }}
-            />,
-        );
-
-        const rating = screen.getByTestId('round-rating');
-
-        expect(rating.textContent).toBe('Sans rating (par 72, slope 113)');
-        expect(rating.getAttribute('href')).toBe('/courses');
-    });
-
-    it('offers « Comment l’index est calculé », closed', () => {
-        render(<RoundsShow round={round} />);
-
-        const title = screen.getByText('Comment l’index est calculé');
-
-        expect(title.tagName).toBe('SUMMARY');
-        expect((title.closest('details') as HTMLDetailsElement).open).toBe(
-            false,
-        );
-    });
-
-    it('shows the card with the holes, the totals and the score marks', () => {
-        render(<RoundsShow round={round} />);
-
-        expect(cardCell('Gab', '1').textContent).toBe('5, bogey');
-        expect(cardCell('Gab', 'OUT').textContent).toBe('38');
-        expect(cardCell('Gab', 'IN').textContent).toBe('34');
-        expect(cardCell('Gab', 'TOT').textContent).toBe('72');
-        expect(cardCell('Manu', 'TOT').textContent).toBe('88');
-        expect(cardCell('Par', 'TOT').textContent).toBe('71');
-        expect(
-            cardCell('Gab', '7')
-                .querySelector('[data-mark]')
-                ?.getAttribute('data-mark'),
-        ).toBe('birdie');
-        expect(
-            cardCell('Gab', '1')
-                .querySelector('[data-mark]')
-                ?.getAttribute('data-mark'),
-        ).toBe('bogey');
-    });
-
-    it('shows the card in two stacked blocks for the phone', () => {
-        render(<RoundsShow round={round} />);
-
-        const front = screen.getByRole('table', {
-            name: 'Carte de score, aller',
-        });
-        const back = screen.getByRole('table', {
-            name: 'Carte de score, retour',
-        });
+        const table = screen.getByRole('table', { name: 'Carte de score' });
 
         expect(
-            within(front)
+            within(table)
                 .getAllByRole('columnheader')
                 .map((header) => header.textContent),
-        ).toEqual(['Trou', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'OUT']);
+        ).toEqual(['Trou', 'Par · idx', 'GAB', 'MANU']);
+        expect(cardRow('1')).toEqual([
+            '1',
+            'P4 · 8',
+            '5, bogey',
+            '7, double bogey ou plus',
+        ]);
+        expect(cardRow('ALLER · PAR 36')).toEqual([
+            'ALLER · PAR 36',
+            '38',
+            '46',
+        ]);
+        expect(cardRow('RETOUR · PAR 35')).toEqual([
+            'RETOUR · PAR 35',
+            '34',
+            '42',
+        ]);
+        expect(cardRow('TOTAL · PAR 71')).toEqual([
+            'TOTAL · PAR 71',
+            '72',
+            '88',
+        ]);
         expect(
-            within(back)
-                .getAllByRole('columnheader')
+            within(table)
+                .getAllByRole('rowheader')
                 .map((header) => header.textContent),
         ).toEqual([
-            'Trou',
+            '1',
+            '2',
+            '3',
+            '4',
+            '5',
+            '6',
+            '7',
+            '8',
+            '9',
+            'ALLER · PAR 36',
             '10',
             '11',
             '12',
@@ -251,9 +216,46 @@ describe('Round page', () => {
             '16',
             '17',
             '18',
-            'IN',
-            'TOT',
+            'RETOUR · PAR 35',
+            'TOTAL · PAR 71',
         ]);
+    });
+
+    it('marks Gab’s 4 at hole 7 (par 5) birdie and his 5 at hole 1 bogey', () => {
+        render(<RoundsShow round={round} />);
+
+        const mark = (hole: string) =>
+            within(
+                screen
+                    .getByRole('table', { name: 'Carte de score' })
+                    .querySelector('tbody') as HTMLElement,
+            )
+                .getByRole('rowheader', { name: hole })
+                .closest('tr')
+                ?.querySelectorAll('td')[1]
+                .querySelector('[data-mark]')
+                ?.getAttribute('data-mark');
+
+        expect(mark('7')).toBe('birdie');
+        expect(mark('1')).toBe('bogey');
+    });
+
+    it('shows the legend under the card', () => {
+        render(<RoundsShow round={round} />);
+
+        const legend = screen.getByRole('list', { name: 'Légende' });
+
+        expect(
+            within(legend)
+                .getAllByRole('listitem')
+                .map((item) => item.textContent),
+        ).toEqual(['Eagle', 'Birdie', 'Bogey', 'Double +']);
+        expect(
+            screen
+                .getByRole('table', { name: 'Carte de score' })
+                .compareDocumentPosition(legend) &
+                Node.DOCUMENT_POSITION_FOLLOWING,
+        ).toBeTruthy();
     });
 
     it('shows no « Carte du round » image without a photo', () => {
@@ -264,7 +266,7 @@ describe('Round page', () => {
         ).toBeNull();
     });
 
-    it('shows the photo « Carte du round », linked to itself, with a photo', () => {
+    it('shows the photo « Carte du round » under the legend, linked to itself', () => {
         render(<RoundsShow round={{ ...round, hasPhoto: true }} />);
 
         const photo = screen.getByRole('img', { name: 'Carte du round' });
@@ -273,64 +275,41 @@ describe('Round page', () => {
         expect(photo.closest('a')?.getAttribute('href')).toBe(
             `/rounds/${ROUND}/photo`,
         );
+        expect(photo).toHaveClass('aspect-[16/10]', 'rounded-12');
+        expect(
+            screen
+                .getByRole('list', { name: 'Légende' })
+                .compareDocumentPosition(photo) &
+                Node.DOCUMENT_POSITION_FOLLOWING,
+        ).toBeTruthy();
     });
 
-    it('links « Modifier » to the editor of the round', () => {
+    it('offers « Comment l’index est calculé », closed, after the card', () => {
+        render(<RoundsShow round={round} />);
+
+        const title = screen.getByText('Comment l’index est calculé');
+
+        expect(title.tagName).toBe('SUMMARY');
+        expect((title.closest('details') as HTMLDetailsElement).open).toBe(
+            false,
+        );
+    });
+
+    it('puts the back link « Rounds », « Modifier » and « Supprimer » in the top row', () => {
         render(<RoundsShow round={round} />);
 
         expect(
-            screen.getByRole('link', { name: 'Modifier' }).getAttribute('href'),
+            within(topRow())
+                .getByRole('link', { name: 'Rounds' })
+                .getAttribute('href'),
+        ).toBe('/rounds');
+        expect(
+            within(topRow())
+                .getByRole('link', { name: 'Modifier' })
+                .getAttribute('href'),
         ).toBe(`/rounds/${ROUND}/edit`);
-    });
-
-    it('asks for a confirmation, then shows « Suppression du round… » while deleting', async () => {
-        remove.mockImplementation((_url, options) => {
-            (options as VisitOptions).onStart?.({});
-        });
-
-        render(<RoundsShow round={round} />);
-
-        await userEvent.click(
-            screen.getByRole('button', { name: 'Supprimer' }),
-        );
-
-        const dialog = screen.getByRole('alertdialog');
-
         expect(
-            within(dialog).getByRole('heading', {
-                name: 'Supprimer ce round ?',
-            }).textContent,
-        ).toBe('Supprimer ce round ?');
-        expect(remove).not.toHaveBeenCalled();
-
-        await act(async () => {
-            await userEvent.click(
-                within(dialog).getByRole('button', { name: 'Supprimer' }),
-            );
-        });
-
-        expect(remove).toHaveBeenCalledTimes(1);
-        expect(remove.mock.calls[0][0]).toBe(`/rounds/${ROUND}`);
-        expect(within(dialog).getByRole('status').textContent).toBe(
-            'Suppression du round…',
-        );
-        expect(
-            within(dialog).getByRole('button', { name: 'Supprimer' }),
-        ).toBeDisabled();
-    });
-
-    it('sends nothing when the deletion is cancelled', async () => {
-        render(<RoundsShow round={round} />);
-
-        await userEvent.click(
-            screen.getByRole('button', { name: 'Supprimer' }),
-        );
-        await userEvent.click(
-            within(screen.getByRole('alertdialog')).getByRole('button', {
-                name: 'Annuler',
-            }),
-        );
-
-        expect(remove).not.toHaveBeenCalled();
+            within(topRow()).getByRole('button', { name: 'Supprimer' }),
+        ).toBeInTheDocument();
     });
 });

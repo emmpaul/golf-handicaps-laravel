@@ -12,15 +12,25 @@ import {
     AlertDialogTitle,
     AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { Button } from '@/components/ui/button';
 import { Pending } from '@/components/ui/pending';
+import { formatShortPlayedOn } from '@/lib/format';
 
 /**
- * Suppression d'un round après confirmation (spec `rounds`) : sa photo part
- * avec lui, ses joueurs restent. Le serveur ouvre la liste des rounds avec
- * « Round supprimé. » ; l'attente reste affichée jusqu'à la page suivante.
+ * Suppression d'un round après confirmation (spec `rounds`, « Suppression d'un
+ * round ») : « Supprimer » de la rangée du haut ouvre la feuille, qui rappelle
+ * le parcours et la date ; sa photo part avec lui, ses joueurs restent. Le
+ * serveur ouvre la liste des rounds avec « Round supprimé. » ; l'attente reste
+ * affichée jusqu'à la page suivante.
  */
-export function DeleteRound({ roundId }: { roundId: string }) {
+export function DeleteRound({
+    roundId,
+    courseName,
+    playedOn,
+}: {
+    roundId: string;
+    courseName: string;
+    playedOn: string;
+}) {
     const [open, setOpen] = useState(false);
     const [deleting, setDeleting] = useState(false);
 
@@ -33,25 +43,18 @@ export function DeleteRound({ roundId }: { roundId: string }) {
 
     return (
         <AlertDialog open={open} onOpenChange={setOpen}>
-            <AlertDialogTrigger
-                render={<Button variant="destructive" size="lg" />}
-            >
+            {/* Lien d'action de la rangée du haut : Geist 500, 14 px, rouge, 44 px de toucher. */}
+            <AlertDialogTrigger className="flex min-h-11 items-center px-2 text-link text-signal">
                 Supprimer
             </AlertDialogTrigger>
             <AlertDialogContent>
                 <AlertDialogHeader>
                     <AlertDialogTitle>Supprimer ce round ?</AlertDialogTitle>
                     <AlertDialogDescription>
-                        Il sera retiré de l’historique, avec sa photo. Ses
-                        joueurs restent.
+                        {`${courseName} · ${formatShortPlayedOn(playedOn)}. Les index de tous les joueurs seront recalculés.`}
                     </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
-                    <Pending
-                        label={deleting ? 'Suppression du round…' : null}
-                        orb="send"
-                    />
-                    <AlertDialogCancel>Annuler</AlertDialogCancel>
                     <AlertDialogAction
                         variant="destructive"
                         disabled={deleting}
@@ -59,6 +62,11 @@ export function DeleteRound({ roundId }: { roundId: string }) {
                     >
                         Supprimer
                     </AlertDialogAction>
+                    <AlertDialogCancel>Annuler</AlertDialogCancel>
+                    <Pending
+                        label={deleting ? 'Suppression du round…' : null}
+                        orb="send"
+                    />
                 </AlertDialogFooter>
             </AlertDialogContent>
         </AlertDialog>

@@ -46,14 +46,7 @@ test('the latest round names its gross and its net winners as the list of rounds
 
     $latest = app(RoundList::class)->get(1);
 
-    expect($latest)->toBe([[
-        'id' => $reference->id,
-        'playedOn' => '2026-10-17',
-        'courseName' => 'BETHPAGE BLACK',
-        'tees' => 'Red',
-        'players' => [['name' => 'Gab', 'gross' => 72], ['name' => 'Manu', 'gross' => 88]],
-        'netWinners' => ['Gab', 'Manu'],
-    ]])->and($latest[0])->toBe(app(RoundList::class)->get()[0]);
+    expect($latest)->toBe([referenceRoundListed($reference->id)])->and($latest[0])->toBe(app(RoundList::class)->get()[0]);
 });
 
 test('the latest round makes the same number of queries whatever the number of rounds', function (int $count) {

@@ -29,7 +29,12 @@
  * - the gross per line still sent on the page of a round (`players`, spec « Bruts d'un round »
  *   removed): round.players is present;
  * - RoundDetail that lets the leaderboard read the rating again (for($round) without it): the
- *   page of a round reads course_ratings twice.
+ *   page of a round reads course_ratings twice;
+ * - the colour slot of the players left out of RoundList or PlayerList (withColorSlot() dropped,
+ *   DO21 of visual-redesign): the gross of the list and the players of the editor lose
+ *   `colorSlot`;
+ * - the players of the editor ordered by creation instead of by name: alex, created third with
+ *   the slot 2, comes after Manu.
  */
 
 use App\Domain\Rounds\Actions\CreateRound;
@@ -114,7 +119,7 @@ describe('with a session', function () {
                 'playedOn' => '2026-10-17',
                 'courseName' => 'BETHPAGE BLACK',
                 'tees' => 'Red',
-                'players' => [['name' => 'Gab', 'gross' => 72], ['name' => 'Manu', 'gross' => 88]],
+                'players' => [['name' => 'Gab', 'gross' => 72, 'colorSlot' => 0], ['name' => 'Manu', 'gross' => 88, 'colorSlot' => 1]],
                 'netWinners' => ['Gab', 'Manu'],
             ]);
     });
@@ -159,7 +164,7 @@ describe('with a session', function () {
         storeRoundCard($card);
 
         $this->get('/rounds')->assertInertia(fn (Assert $page) => $page
-            ->where('rounds.0.players', [['name' => 'Manu', 'gross' => 72], ['name' => 'Gab', 'gross' => 88]]));
+            ->where('rounds.0.players', [['name' => 'Manu', 'gross' => 72, 'colorSlot' => 1], ['name' => 'Gab', 'gross' => 88, 'colorSlot' => 0]]));
     });
 
     test('without round the list is empty', function () {
@@ -203,8 +208,8 @@ describe('with a session', function () {
                 ->component('rounds/create')
                 ->where('today', '2026-10-17')
                 ->where('players', [
-                    ['id' => $this->gab->id, 'name' => 'Gab'],
-                    ['id' => $this->manu->id, 'name' => 'Manu'],
+                    ['id' => $this->gab->id, 'name' => 'Gab', 'colorSlot' => 0],
+                    ['id' => $this->manu->id, 'name' => 'Manu', 'colorSlot' => 1],
                 ])
                 ->where('courses', [[
                     'courseName' => 'LE GÉANT',
@@ -220,9 +225,9 @@ describe('with a session', function () {
 
         $this->get('/rounds/new')->assertInertia(fn (Assert $page) => $page
             ->where('players', [
-                ['id' => $alex->id, 'name' => 'alex'],
-                ['id' => $this->gab->id, 'name' => 'Gab'],
-                ['id' => $this->manu->id, 'name' => 'Manu'],
+                ['id' => $alex->id, 'name' => 'alex', 'colorSlot' => 2],
+                ['id' => $this->gab->id, 'name' => 'Gab', 'colorSlot' => 0],
+                ['id' => $this->manu->id, 'name' => 'Manu', 'colorSlot' => 1],
             ]));
     });
 
@@ -320,8 +325,8 @@ describe('with a session', function () {
                 ->component('rounds/edit')
                 ->where('round', ['id' => $round->id, ...referenceCardData($this->gab->id, $this->manu->id)])
                 ->where('players', [
-                    ['id' => $this->gab->id, 'name' => 'Gab'],
-                    ['id' => $this->manu->id, 'name' => 'Manu'],
+                    ['id' => $this->gab->id, 'name' => 'Gab', 'colorSlot' => 0],
+                    ['id' => $this->manu->id, 'name' => 'Manu', 'colorSlot' => 1],
                 ])
                 ->has('courses', 1));
     });

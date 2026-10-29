@@ -1,11 +1,4 @@
-import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
-} from '@/components/ui/table';
+import { PlayerSwatch } from '@/components/player-swatch';
 import { NO_INDEX, NO_VALUE } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
@@ -13,6 +6,8 @@ import { cn } from '@/lib/utils';
 export type LeaderboardEntry = {
     playerId: string;
     name: string;
+    /** Rang de couleur du joueur (D6). */
+    colorSlot: number;
     gross: number;
     indexBeforeT: number | null;
     playingHandicap: number | null;
@@ -20,71 +15,92 @@ export type LeaderboardEntry = {
     rank: number | null;
 };
 
-const orDash = (value: number | null) => (value === null ? NO_VALUE : value);
-
-/** Cellule de chiffre : police condensée, alignée à droite, resserrée sous 768 px. */
-const FIGURE = 'text-right font-heading text-base font-semibold max-md:px-1.5';
-/** En-tête de colonne de chiffre, aligné à droite sur ses valeurs. */
-const FIGURE_HEAD = 'text-right text-band-ink max-md:px-1.5';
+/**
+ * Lignes par rang net croissant ; à rang égal, l'ordre de la carte (tri
+ * stable) ; un joueur sans index, sans rang, après les joueurs classés.
+ */
+function ranked(entries: LeaderboardEntry[]): LeaderboardEntry[] {
+    return [...entries].sort(
+        (a, b) =>
+            (a.rank ?? Number.POSITIVE_INFINITY) -
+            (b.rank ?? Number.POSITIVE_INFINITY),
+    );
+}
 
 /**
- * Brut, handicap de jeu, net et rang net de chaque joueur dans l'ordre de la
- * carte (spec `rounds`), en-tête sur le bandeau d'encre. Toutes les colonnes
- * tiennent à 320 px (« Classement lisible sur téléphone ») : « Hcp de jeu »
- * s'abrège en « Hcp » sous 768 px, et la mention « pas encore d'index » passe
- * à la ligne plutôt que d'élargir la table. Le nom du gagnant net (rang 1) est
- * en rouge « sous le par ».
+ * Classement net d'un round (spec `rounds`, « Classement net d'un round »,
+ * « Mise en page de la page d'un round ») : sous « CLASSEMENT NET » et
+ * « BRUT − HCP », une ligne par joueur, rang en Geist Mono 18 px gris, nom en
+ * 22 px après sa pastille de 10 px, pastille ambre « 1ER » pour chaque
+ * premier, « 72 − 1 » dessous, net en 44 px à droite. Un nom trop long est
+ * coupé par « … » ; rang, brut et net ne sont jamais coupés (« Classement
+ * lisible sur téléphone »).
  */
 export function NetLeaderboard({ entries }: { entries: LeaderboardEntry[] }) {
     return (
-        <Table aria-label="Classement net">
-            <TableHeader className="bg-band">
-                <TableRow className="hover:bg-transparent">
-                    <TableHead className="text-band-ink max-md:px-1.5">
-                        Joueur
-                    </TableHead>
-                    <TableHead className={FIGURE_HEAD}>Brut</TableHead>
-                    <TableHead className={FIGURE_HEAD}>
-                        Hcp<span className="max-md:sr-only"> de jeu</span>
-                    </TableHead>
-                    <TableHead className={FIGURE_HEAD}>Net</TableHead>
-                    <TableHead className={FIGURE_HEAD}>Rang</TableHead>
-                </TableRow>
-            </TableHeader>
-            <TableBody>
-                {entries.map((entry) => (
-                    <TableRow key={entry.playerId}>
-                        <TableCell
-                            className={cn(
-                                'font-heading text-lg font-semibold whitespace-normal max-md:px-1.5',
-                                entry.rank === 1 && 'text-signal',
-                            )}
+        <section aria-labelledby="leaderboard-title">
+            <div className="flex justify-between border-b border-rule pb-2.5 font-mono text-caption text-ink-2 uppercase">
+                <h2 id="leaderboard-title" className="font-mono">
+                    Classement net
+                </h2>
+                <span>Brut − hcp</span>
+            </div>
+            <ol aria-label="Classement net">
+                {ranked(entries).map((entry) => (
+                    <li
+                        key={entry.playerId}
+                        className="flex items-center gap-4 border-b border-rule-soft py-[18px]"
+                    >
+                        <span
+                            data-slot="leaderboard-rank"
+                            className="w-[22px] flex-none font-mono text-num-m-18 text-ink-2"
                         >
-                            {entry.name}
-                            {entry.net === null ? (
-                                <span className="text-sm block font-sans leading-tight font-normal text-muted-foreground">
-                                    {` ${NO_INDEX}`}
+                            {entry.rank ?? ''}
+                        </span>
+                        <span className="flex min-w-0 flex-col gap-2.5">
+                            <span className="flex min-w-0 items-center gap-2.5 text-name-l">
+                                <PlayerSwatch
+                                    colorSlot={entry.colorSlot}
+                                    size={10}
+                                />
+                                <span
+                                    data-slot="leaderboard-name"
+                                    className="truncate"
+                                >
+                                    {entry.name}
                                 </span>
-                            ) : null}
-                        </TableCell>
-                        <TableCell className={FIGURE}>{entry.gross}</TableCell>
-                        <TableCell className={FIGURE}>
-                            {orDash(entry.playingHandicap)}
-                        </TableCell>
-                        <TableCell
-                            className={cn(
-                                FIGURE,
-                                entry.net !== null && 'font-extrabold',
-                            )}
+                                {entry.rank === 1 ? (
+                                    <span
+                                        data-slot="leaderboard-badge"
+                                        className="flex-none rounded-pill bg-accent/15 px-[7px] py-1 font-mono text-caption tracking-[0.06em] text-accent"
+                                    >
+                                        1ER
+                                    </span>
+                                ) : null}
+                            </span>
+                            {/* « 95 · pas encore d'index » passe à la ligne à 320 px plutôt que d'élargir la page. */}
+                            <span
+                                data-slot="leaderboard-gross"
+                                className={cn(
+                                    'font-mono text-num-m-15 text-ink-2',
+                                    entry.playingHandicap !== null &&
+                                        'whitespace-nowrap',
+                                )}
+                            >
+                                {entry.playingHandicap === null
+                                    ? `${entry.gross} · ${NO_INDEX}`
+                                    : `${entry.gross} − ${entry.playingHandicap}`}
+                            </span>
+                        </span>
+                        <span
+                            data-slot="leaderboard-net"
+                            className="ml-auto flex-none font-mono text-display"
                         >
-                            {orDash(entry.net)}
-                        </TableCell>
-                        <TableCell className={FIGURE}>
-                            {orDash(entry.rank)}
-                        </TableCell>
-                    </TableRow>
+                            {entry.net ?? NO_VALUE}
+                        </span>
+                    </li>
                 ))}
-            </TableBody>
-        </Table>
+            </ol>
+        </section>
     );
 }
