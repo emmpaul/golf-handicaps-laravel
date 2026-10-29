@@ -10,7 +10,7 @@ import type { CourseActionKind } from '@/components/courses/course-action';
 import { COURSE_PILL, LookupStatus } from '@/components/courses/lookup-status';
 import { ManualRatingForm } from '@/components/courses/manual-rating-form';
 import { hasSgtOutcome, SgtOutcome } from '@/components/courses/sgt-outcome';
-import { ComputationHelp } from '@/components/handicaps/computation-help';
+import { ComputationLink } from '@/components/handicaps/computation-help';
 import { PageTopRow } from '@/components/page-top-row';
 import { Badge } from '@/components/ui/badge';
 import { formatTenths } from '@/lib/format';
@@ -229,7 +229,7 @@ export default function CoursesIndex({
                 </ul>
             )}
             <div className="mt-7">
-                <ComputationHelp />
+                <ComputationLink />
             </div>
         </>
     );

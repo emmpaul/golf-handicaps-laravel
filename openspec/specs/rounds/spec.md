@@ -75,7 +75,6 @@ La page Rounds SHALL donner les liens « Parcours » et « Saisie manuelle ». S
 - **WHEN** l'utilisateur ouvre `/rounds`
 - **THEN** la page affiche « Aucun round. Importez une carte pour commencer. » et le lien « Saisie manuelle »
 
-
 ### Requirement: En-tête d'un round
 La page d'un round SHALL afficher sous le nom du parcours une ligne de méta en capitales qui joint par « · » les tees, la date au format `JJ.MM.AAAA`, le par et la rating, et dont la rating mène à la page Parcours.
 
@@ -297,7 +296,6 @@ Les distances SHALL se saisir dans le bloc « Distances » replié sous la grill
 - **WHEN** l'utilisateur ouvre l'écran de vérification de cet import
 - **THEN** le bloc « Distances » est ouvert et la case « Distance trou 3 » est en ambre
 
-
 ### Requirement: Choix de la date au calendrier
 Dans l'éditeur, la date SHALL s'afficher en toutes lettres en français et se choisir dans un calendrier qui s'ouvre au toucher ou au clic, en français, semaine commençant le lundi, ouvert sur le mois de la date affichée avec ce jour sélectionné, mois et année choisis sans parcourir les mois un par un. La date enregistrée MUST être le jour choisi, quel que soit le fuseau de l'appareil.
 
@@ -423,7 +421,6 @@ Sur la page du round, un joueur sans index MUST venir après les joueurs classé
 - **WHEN** l'utilisateur ouvre le round
 - **THEN** Sean vient en dernier, sans rang, avec « 95 · pas encore d'index » et « — » comme net
 
-
 ### Requirement: Handicap de jeu d'un round
 Le handicap de jeu d'un joueur sur un round SHALL être son handicap de parcours : index du joueur juste avant ce round × slope / 113 + (course rating − par total du round), arrondi à l'entier le plus proche (0,5 vers le haut), avec la rating et le slope du parcours et des tees du round (spec `course-ratings`). Sans rating, c'est l'index d'avant le round arrondi à l'entier.
 
@@ -489,12 +486,16 @@ La page d'un round SHALL afficher la course rating et le slope utilisés pour se
 - **THEN** chaque rangée de trou fait 44 px de haut, le numéro en Geist Mono 500, 17 px, dans 40 px, « P4 · 8 » en Geist Mono 500, 12 px, gris, chaque score dans une colonne de 52 px ; les rangées de sous-total font 40 px, fond `oklch(0.17 0.006 260)`, rayon 8 px
 
 ### Requirement: Photo et explication sur la page d'un round
-La page d'un round SHALL garder, sous la légende, la photo de la carte quand elle existe (rayon 12 px, proportions 16/10, fond `oklch(0.2 0.006 260)`) puis le bloc replié « Comment l’index est calculé », que le design ne dessine pas.
+La page d'un round SHALL garder, sous la légende, la photo de la carte quand elle existe (rayon 12 px, proportions 16/10, fond `oklch(0.2 0.006 260)`) puis le lien « Comment l’index est calculé » vers la page « Calcul de l'index » (spec `handicap-index`), que le design ne dessine pas.
 
 #### Scenario: Round avec photo
 - **GIVEN** le round de référence de la base de démonstration, qui a une photo
 - **WHEN** l'utilisateur ouvre le round à 390 px
 - **THEN** l'image « Carte du round » s'affiche sous la légende, sur toute la largeur moins 20 px de chaque côté, aux coins de 12 px
+
+#### Scenario: Lien vers le calcul
+- **WHEN** l'utilisateur ouvre le round de référence et touche « Comment l’index est calculé »
+- **THEN** la page `/handicaps/calcul` s'ouvre
 
 ### Requirement: Mise en page de l'éditeur
 À 390 px, l'éditeur SHALL suivre le design : lien de retour (« Rounds » pour un nouveau round, « Round » pour une modification, « Importer » pour une vérification), titre « Nouveau round », « Modifier le round » ou « Vérifier la carte », champs PARCOURS et TEES côte à côte (reste et 110 px), DATE dessous, « LIGNES DE LA CARTE », les lignes, puis la grille. La barre d'onglets et le bouton Importer ne s'affichent pas.

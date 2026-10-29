@@ -33,8 +33,8 @@ import PlayersIndex from '@/pages/players/index';
 // its own (one `open` state per line instead of the page's) → the « one line
 // open » test finds Sean still open and goes red; the line closed on an error
 // (`setOpen(null)` on submit) → the error test goes red; the swatch at the
-// slot + 1 → the line test goes red; ComputationHelp removed from the page →
-// the explanation test goes red.
+// slot + 1 → the line test goes red; ComputationLink removed from the page →
+// the link test goes red.
 // Spec players « Index sur la page Joueurs »: Gab 10,0, Manu 14,5 provisional,
 // Sean without round.
 
@@ -275,15 +275,27 @@ describe('Players page', () => {
         ).toBeInTheDocument();
     });
 
-    it('offers « Comment l’index est calculé », closed', () => {
+    // Spec handicap-index « Lien vers le calcul de l'index »: a link to the
+    // computation page, none of the rule lines on the page. Mutations: the
+    // former folded block kept, or the link sent to /handicaps → red.
+    it('links « Comment l’index est calculé » to /handicaps/calcul, without the rule lines', () => {
         render(<PlayersIndex players={players} />);
 
-        const title = screen.getByText('Comment l’index est calculé');
-
-        expect(title.tagName).toBe('SUMMARY');
-        expect((title.closest('details') as HTMLDetailsElement).open).toBe(
-            false,
-        );
+        expect(
+            screen
+                .getByRole('link', { name: 'Comment l’index est calculé' })
+                .getAttribute('href'),
+        ).toBe('/handicaps/calcul');
+        expect(
+            screen.queryByText(
+                'Score ajusté : chaque trou compte au plus par + 4.',
+            ),
+        ).toBeNull();
+        expect(
+            screen.queryByText(
+                'Parcours sans rating : la course rating vaut le par du round et le slope 113.',
+            ),
+        ).toBeNull();
     });
 
     it('shows « Aucun alias » for a player without alias', () => {

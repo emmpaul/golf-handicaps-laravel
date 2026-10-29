@@ -17,9 +17,7 @@ beforeEach(function () {
 });
 
 test('the rounds of a player go from the latest to the oldest with their differential and index', function () {
-    $first = createRoundCard(referenceCardOn('2026-10-01', [[$this->gab->id, strokesOverPar(20)]]));
-    $second = createRoundCard(referenceCardOn('2026-10-10', [[$this->gab->id, strokesOverPar(17)]]));
-    $third = createRoundCard(referenceCardOn('2026-10-17', [[$this->gab->id, strokesOverPar(12)]]));
+    [$first, $second, $third] = createRoundsOfOctober($this->gab->id);
 
     expect(app(PlayerHandicapHistory::class)->get($this->gab->id))->toBe([
         [

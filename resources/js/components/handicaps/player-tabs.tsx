@@ -1,21 +1,26 @@
 import { Link } from '@inertiajs/react';
-import { index as handicapsIndex } from '@/actions/App/Http/Controllers/HandicapController';
+import type { InertiaLinkProps } from '@inertiajs/react';
 import { PlayerSwatch } from '@/components/player-swatch';
 
 /**
- * Onglets de joueur de la page Handicaps (spec « Mise en page de la page
- * Handicaps », D5) : une pilule de 44 px par joueur, lien vers
- * `/handicaps?joueur=<id>`, avec sa pastille de 8 px. L'onglet courant, plein
- * d'encre, porte `aria-current="page"` ; les autres ont un contour `rule` et
- * un texte gris. La visite garde la page (l’index change sur place, D8) et ne
- * relit que le joueur choisi, son historique et ses statistiques.
+ * Onglets de joueur (spec « Mise en page de la page Handicaps », D5) : une
+ * pilule de 44 px par joueur, avec sa pastille de 8 px. L'onglet courant,
+ * plein d'encre, porte `aria-current="page"` ; les autres ont un contour
+ * `rule` et un texte gris. La page qui les monte donne l'adresse de chaque
+ * onglet (`hrefFor`, par exemple `/handicaps?joueur=<id>`) et les props à
+ * relire (`only`), design D5 d'`index-computation-page` : la visite garde la
+ * page (l’index change sur place, D8) et ne relit que ces props.
  */
 export function PlayerTabs({
     players,
     selectedPlayerId,
+    hrefFor,
+    only,
 }: {
     players: { id: string; name: string; colorSlot: number }[];
     selectedPlayerId: string | null;
+    hrefFor: (playerId: string) => InertiaLinkProps['href'];
+    only: string[];
 }) {
     return (
         <nav
@@ -25,8 +30,8 @@ export function PlayerTabs({
             {players.map((player) => (
                 <Link
                     key={player.id}
-                    href={handicapsIndex({ query: { joueur: player.id } })}
-                    only={['selectedPlayerId', 'history', 'scoringStats']}
+                    href={hrefFor(player.id)}
+                    only={only}
                     preserveState
                     preserveScroll
                     aria-current={

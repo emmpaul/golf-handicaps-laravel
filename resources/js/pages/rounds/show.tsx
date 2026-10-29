@@ -5,7 +5,7 @@ import {
     index as roundsIndex,
 } from '@/actions/App/Http/Controllers/RoundController';
 import RoundPhotoController from '@/actions/App/Http/Controllers/RoundPhotoController';
-import { ComputationHelp } from '@/components/handicaps/computation-help';
+import { ComputationLink } from '@/components/handicaps/computation-help';
 import { PageTopRow } from '@/components/page-top-row';
 import { DeleteRound } from '@/components/rounds/delete-round';
 import { NetLeaderboard } from '@/components/rounds/net-leaderboard';
@@ -95,7 +95,7 @@ export default function RoundsShow({ round }: { round: RoundDetail }) {
                 </a>
             ) : null}
             <div className="mt-6">
-                <ComputationHelp />
+                <ComputationLink />
             </div>
         </>
     );

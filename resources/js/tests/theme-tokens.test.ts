@@ -12,6 +12,10 @@ import { describe, expect, it } from 'vite-plus/test';
 // `color-scheme: dark` removed from app.css → the colour-scheme test goes red;
 // --gutter set back to 20px → the gutter test goes red (change
 // reduce-mobile-padding: content margins of 16 px, those of the floating bar).
+// index-computation-page D7: --color-ink-soft, --text-prose, --text-num-36 and
+// --text-num-20 are literals of the « Calcul de l'index » screen. Mutations:
+// --text-prose--line-height set to 1.5 → "--text-prose" goes red;
+// --text-num-20--letter-spacing set to -0.04em → "--text-num-20" goes red.
 const tokens = readFileSync('resources/css/tokens.css', 'utf8');
 const app = readFileSync('resources/css/app.css', 'utf8');
 
@@ -47,6 +51,7 @@ const colours: [string, string][] = [
     ['--color-ink-2', 'oklch(0.68 0.01 260)'],
     ['--color-ink-3', 'oklch(0.5 0.01 260)'],
     ['--color-ink-4', 'oklch(0.4 0.01 260)'],
+    ['--color-ink-soft', 'oklch(0.88 0.005 260)'],
     ['--color-over', 'oklch(0.6 0.01 260)'],
     ['--color-accent', 'oklch(0.78 0.16 60)'],
     ['--color-signal', 'oklch(0.7 0.17 25)'],
@@ -89,7 +94,9 @@ const scale: [string, string, string, string | null, string][] = [
     ['name-l-course', '22px', '1.1', '-0.02em', '600'],
     ['name-m', '20px', '1', '-0.01em', '600'],
     ['name-m-17', '17px', '1', null, '600'],
+    ['num-36', '36px', '1', '-0.04em', '500'],
     ['num-m', '24px', '1', null, '500'],
+    ['num-20', '20px', '1', '-0.03em', '500'],
     ['num-m-18', '18px', '1', null, '500'],
     ['num-m-17', '17px', '1', null, '500'],
     ['num-m-16', '16px', '1', null, '500'],
@@ -98,6 +105,7 @@ const scale: [string, string, string, string | null, string][] = [
     ['label', '15px', '1', null, '600'],
     ['label-14', '14px', '1', null, '600'],
     ['label-13', '13px', '1', null, '600'],
+    ['prose', '15px', '1.45', null, '400'],
     ['body', '14px', '1.5', null, '400'],
     ['body-13', '13px', '1.5', null, '400'],
     ['body-12', '12px', '1.5', null, '400'],

@@ -86,6 +86,12 @@ Commande `golf:import-sqlite`, puis cutover, fait à la main par le mainteneur.
 
 Marges resserrées sur téléphone, suite de la vérification des zones sûres sur iPhone laissée par 11 : la rangée « Golf » commence au bas de la zone sûre sans les 10 px ajoutés (`max(54px, safe-top)`), et les marges latérales du contenu passent de 20 à 16 px, alignées sur la barre flottante.
 
+## 13. `index-computation-page`
+
+**Dépend de** : 6, 9 et 11. **Statut** : fait. Le changement est archivé ; reste au mainteneur le trou plafonné de démonstration de Manu, pas vu dans le navigateur parce que la base de développement avait été remplie avant le changement du seeder : lancer `make demo`, puis ouvrir `/handicaps/calcul` sur Manu.
+
+Page « Calcul de l'index » (`/handicaps/calcul`), dessinée dans le design « Golf handicap app redesign » du mainteneur : le calcul déroulé en cinq étapes (score ajusté, différentiel, différentiels retenus, ajustement, index) avec les rounds du joueur choisi, puis les cas particuliers. Le bloc replié « Comment l’index est calculé » des pages Joueurs, Handicaps, Parcours et d'un round devient un lien vers cette page.
+
 ## Définition de terminé
 
 1. spec à jour, critères vérifiables, ambiguïtés résolues avant l'implémentation ;

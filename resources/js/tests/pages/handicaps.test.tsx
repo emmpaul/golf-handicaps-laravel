@@ -10,19 +10,20 @@ import { describe, expect, it, vi } from 'vite-plus/test';
 
 import HandicapsIndex from '@/pages/handicaps/index';
 import { GAB, MANU, SEAN } from '@/tests/reference-round';
+import { expectPlayerTabs } from '@/tests/player-tabs';
 
 // Spec handicap-index « Un joueur à la fois sur la page Handicaps », « Résumé
 // de l'index d'un joueur », « Liste des rounds d'un joueur », « Marque
 // « Compte » sur la ligne du round » (MODIFIED by visual-redesign), « Mise en
 // page de la page Handicaps », « Graphique des différentiels » and
-// « Explication du calcul ». Head needs the head manager of createInertiaApp
+// « Lien vers le calcul de l'index ». Head needs the head manager of createInertiaApp
 // and renders nothing here; usePage is simulated for the top row.
 // Mutations: the « Compte » mark shown on a round that does not count → the
 // rows test goes red; the history listed oldest first (`[...history].reverse()`)
 // → the rows test goes red; « Compte » moved out of the date element → the
 // same-line test goes red; `aria-current` on every player → the tabs test
 // goes red; the Next.js subtitle « différentiel = score ajusté − par » put
-// back → the explanation test goes red; the bars scaled to 150 px instead of
+// back → the link test goes red; the bars scaled to 150 px instead of
 // 110 px for the largest differential → the bars test reads 27, 75 and 150 px
 // and goes red; the trend computed on the two latest differentials instead
 // of the indexes (`deltaT`) → the trend test reads « ▼ 5,0 » and goes red;
@@ -151,24 +152,10 @@ describe('Handicaps page', () => {
             />,
         );
 
-        const tabs = within(
-            screen.getByRole('navigation', { name: 'Choisir un joueur' }),
-        ).getAllByRole('link');
-
-        expect(tabs.map((tab) => tab.textContent)).toEqual([
-            'Gab',
-            'Manu',
-            'Sean',
-        ]);
-        expect(tabs.map((tab) => tab.getAttribute('href'))).toEqual([
+        const tabs = expectPlayerTabs([
             `/handicaps?joueur=${GAB}`,
             `/handicaps?joueur=${MANU}`,
             `/handicaps?joueur=${SEAN}`,
-        ]);
-        expect(tabs.map((tab) => tab.getAttribute('aria-current'))).toEqual([
-            null,
-            'page',
-            null,
         ]);
         expect(tabs[1].className).toContain('aria-[current=page]:bg-ink');
         expect(tabs[1].className).toContain('aria-[current=page]:text-bg');
@@ -498,21 +485,34 @@ describe('Handicaps page', () => {
         expect(within(section()).queryByText('Index actuel')).toBeNull();
     });
 
-    it('offers « Comment l’index est calculé », closed, without the Next.js subtitle', () => {
+    // Spec handicap-index « Lien vers le calcul de l'index », scenario « Page
+    // Handicaps »: the link keeps the chosen player, no rule line on the page.
+    // Mutations: `playerId` not passed (the link reads /handicaps/calcul), the
+    // former folded block kept, or the Next.js subtitle put back → red.
+    it('links « Comment l’index est calculé » to the chosen player, without the rule lines nor the Next.js subtitle', () => {
         render(
             <HandicapsIndex
                 players={players}
-                selectedPlayerId={GAB}
+                selectedPlayerId={MANU}
                 history={gabHistory}
             />,
         );
 
-        const title = screen.getByText('Comment l’index est calculé');
-
-        expect(title.tagName).toBe('SUMMARY');
-        expect((title.closest('details') as HTMLDetailsElement).open).toBe(
-            false,
-        );
+        expect(
+            screen
+                .getByRole('link', { name: 'Comment l’index est calculé' })
+                .getAttribute('href'),
+        ).toBe(`/handicaps/calcul?joueur=${MANU}`);
+        expect(
+            screen.queryByText(
+                'Score ajusté : chaque trou compte au plus par + 4.',
+            ),
+        ).toBeNull();
+        expect(
+            screen.queryByText(
+                'Parcours sans rating : la course rating vaut le par du round et le slope 113.',
+            ),
+        ).toBeNull();
         expect(
             screen.queryByText(/différentiel = score ajusté − par/),
         ).toBeNull();

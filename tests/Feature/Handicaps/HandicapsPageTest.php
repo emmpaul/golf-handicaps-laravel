@@ -44,8 +44,7 @@ describe('with a session', function () {
 
     describe('with Gab, Manu and Sean and the reference card', function () {
         beforeEach(function () {
-            createPlayersOnTest('Gab', 'Manu', 'Sean');
-            $this->reference = createRoundCard(referenceCardData($this->gab->id, $this->manu->id));
+            $this->reference = createReferenceRoundOfThree();
         });
 
         test('the page opens on the first player by name with his history', function () {
