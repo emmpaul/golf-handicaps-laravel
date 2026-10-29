@@ -4,6 +4,8 @@ All notable changes to this application, version by version. The format follows 
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-10-29
+
 ### Added
 
 - `/handicaps/calcul`: the « Comment l’index est calculé » page walks through the five steps of the index (adjusted score, differential, retained differentials, adjustment, index) with the rounds of the chosen player, the player's latest capped hole, their 20 latest rounds with the ones that count, then the provisional index and the courses without rating.
