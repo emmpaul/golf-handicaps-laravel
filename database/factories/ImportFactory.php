@@ -39,7 +39,7 @@ class ImportFactory extends Factory
     public static function referenceDraft(): array
     {
         /** @var array<string, mixed> */
-        return json_decode((string) file_get_contents(database_path('data/img3064.draft.json')), true, flags: JSON_THROW_ON_ERROR);
+        return json_decode((string) file_get_contents(base_path('tests/fixtures/scorecards/gspro-img3064.draft.json')), true, flags: JSON_THROW_ON_ERROR);
     }
 
     public function queued(): static
