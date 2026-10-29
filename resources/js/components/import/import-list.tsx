@@ -97,7 +97,7 @@ function ImportLine({ item }: { item: ImportListItem }) {
     }
 
     return (
-        <li className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b py-2 text-sm">
+        <li className="text-sm flex flex-wrap items-center gap-x-3 gap-y-1 border-b py-2">
             <h3 className="font-heading text-base font-semibold">
                 <time dateTime={item.createdAt.replace(' ', 'T')}>
                     {heading}

@@ -70,7 +70,7 @@ export default function PlayersIndex({
                 <div
                     aria-hidden
                     className={cn(
-                        'hidden bg-band px-2 py-1.5 text-sm font-medium text-band-ink',
+                        'bg-band text-sm text-band-ink hidden px-2 py-1.5 font-medium',
                         PLAYER_COLUMNS,
                     )}
                 >
@@ -106,7 +106,7 @@ export default function PlayersIndex({
                                     )}
                                 </span>
                             </div>
-                            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm lg:min-h-8">
+                            <div className="text-sm flex flex-wrap items-center gap-x-2 gap-y-1 lg:min-h-8">
                                 {/* Sous l'en-tête « Alias » à partir de 1 024 px : le libellé reste pour les lecteurs d'écran. */}
                                 <span className="text-muted-foreground lg:sr-only">
                                     Alias :

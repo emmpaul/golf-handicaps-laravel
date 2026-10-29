@@ -128,7 +128,7 @@ function LinePlayer({
             className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2"
         >
             <div className="col-span-2 flex flex-wrap items-baseline gap-x-2">
-                <span id={titleId} className="w-16 text-sm font-medium">
+                <span id={titleId} className="text-sm w-16 font-medium">
                     Ligne {number}
                 </span>
                 {/* Nom lu sur la carte d'un import ; rien pour une ligne ajoutée à la main. */}

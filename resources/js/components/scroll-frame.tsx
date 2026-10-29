@@ -61,7 +61,7 @@ export function ScrollFrame({
             data-overflow-end={edges.end || undefined}
             style={{ '--scroll-label-width': labelWidth } as CSSProperties}
             className={cn(
-                'scroll-frame relative max-w-full min-w-0 overflow-hidden rounded-lg border',
+                'scroll-frame rounded-lg relative max-w-full min-w-0 overflow-hidden border',
                 className,
             )}
         >

@@ -82,7 +82,7 @@ export default function Home({
                             aria-hidden
                             className={cn(
                                 PLAYER_COLUMNS,
-                                'bg-band py-1.5 text-sm font-medium text-band-ink',
+                                'bg-band text-sm text-band-ink py-1.5 font-medium',
                             )}
                         >
                             <span>Joueur</span>
@@ -105,7 +105,7 @@ export default function Home({
                                             `overflow: clip`, which keeps its baseline; « provisoire »
                                             on its own line below. */}
                                         <span className="flex min-w-0 flex-col">
-                                            <span className="overflow-x-clip font-heading text-2xl font-semibold text-ellipsis whitespace-nowrap">
+                                            <span className="font-heading text-2xl overflow-x-clip font-semibold text-ellipsis whitespace-nowrap">
                                                 {player.name}
                                             </span>
                                             {player.provisional ? (
@@ -115,11 +115,11 @@ export default function Home({
                                             ) : null}
                                         </span>
                                         {player.indexT === null ? (
-                                            <span className="text-right text-sm text-muted-foreground">
+                                            <span className="text-sm text-right text-muted-foreground">
                                                 {NO_INDEX}
                                             </span>
                                         ) : (
-                                            <span className="text-right font-heading text-[3.5rem] leading-none font-extrabold tracking-(--tracking-display) tabular-nums">
+                                            <span className="font-heading text-right text-[3.5rem] leading-none font-extrabold tracking-(--tracking-display) tabular-nums">
                                                 {formatTenths(player.indexT)}
                                             </span>
                                         )}
@@ -187,7 +187,7 @@ function LatestRound({ round }: { round: RoundListItem }) {
                 <span className="font-heading text-2xl leading-tight font-extrabold [overflow-wrap:anywhere]">
                     {round.courseName}
                 </span>
-                <span className="flex flex-wrap gap-x-4 text-sm text-muted-foreground">
+                <span className="text-sm flex flex-wrap gap-x-4 text-muted-foreground">
                     <span>Tees {round.tees}</span>
                     <time dateTime={round.playedOn}>
                         {formatPlayedOn(round.playedOn)}

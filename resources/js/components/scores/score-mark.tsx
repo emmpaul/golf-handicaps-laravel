@@ -8,8 +8,8 @@ export function ScoreMark({ strokes, par }: { strokes: number; par: number }) {
             data-mark={mark}
             className={cn(
                 'inline-flex size-8 items-center justify-center tabular-nums',
-                mark === 'birdie' && 'rounded-full border border-birdie',
-                mark === 'bogey' && 'border border-bogey',
+                mark === 'birdie' && 'border-birdie rounded-full border',
+                mark === 'bogey' && 'border-bogey border',
             )}
         >
             {strokes}

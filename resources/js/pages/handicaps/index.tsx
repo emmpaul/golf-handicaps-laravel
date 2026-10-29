@@ -70,7 +70,7 @@ function PlayerSection({
                     >
                         {player.name}
                     </h2>
-                    <span className="flex flex-wrap gap-x-3 text-sm text-muted-foreground">
+                    <span className="text-sm flex flex-wrap gap-x-3 text-muted-foreground">
                         {player.deltaT !== null ? (
                             <span data-testid="index-delta">
                                 Écart{' '}
@@ -84,10 +84,10 @@ function PlayerSection({
                 </div>
                 <span
                     data-testid="player-index"
-                    className="text-right font-heading text-[4.5rem] leading-[0.85] font-extrabold tracking-(--tracking-display) tabular-nums"
+                    className="font-heading text-right text-[4.5rem] leading-[0.85] font-extrabold tracking-(--tracking-display) tabular-nums"
                 >
                     {player.indexT === null ? (
-                        <span className="font-sans text-sm font-normal tracking-normal text-muted-foreground">
+                        <span className="text-sm font-sans font-normal tracking-normal text-muted-foreground">
                             {NO_INDEX}
                         </span>
                     ) : (

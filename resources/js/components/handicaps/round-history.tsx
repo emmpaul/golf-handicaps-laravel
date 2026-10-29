@@ -38,7 +38,7 @@ export function RoundHistory({
                 aria-hidden
                 className={cn(
                     HISTORY_COLUMNS,
-                    'bg-band py-1.5 text-sm font-medium text-band-ink',
+                    'bg-band text-sm text-band-ink py-1.5 font-medium',
                 )}
             >
                 <span>Round</span>
@@ -67,7 +67,7 @@ export function RoundHistory({
                                         <Badge>Compte</Badge>
                                     ) : null}
                                 </span>
-                                <span className="flex flex-wrap gap-x-2 text-sm [overflow-wrap:anywhere] text-muted-foreground">
+                                <span className="text-sm flex flex-wrap gap-x-2 [overflow-wrap:anywhere] text-muted-foreground">
                                     <span>{round.courseName}</span>
                                     <span>{round.tees}</span>
                                 </span>

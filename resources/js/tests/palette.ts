@@ -1,9 +1,9 @@
 /// <reference types="node" />
 import { readFileSync } from 'node:fs';
 
-// Ported from tests/app/palette.ts of the Next.js app (design D10). Tokens are
-// light in `@theme static` and dark in the media block of `tokens.css`; the
-// shadcn variables of `app.css` point at them.
+// Reads the single dark theme of the visual redesign (design D1, D9): tokens in
+// `@theme static` of `tokens.css`, shadcn variables in `:root` of `app.css`
+// pointing at them. The OKLCH → sRGB conversion is the CSS Color 4 one.
 const tokens = readFileSync('resources/css/tokens.css', 'utf8');
 const app = readFileSync('resources/css/app.css', 'utf8');
 
@@ -15,28 +15,18 @@ function declarations(block: string) {
     );
 }
 
-const lightTokens = declarations(
-    tokens.match(/@theme static\s*\{([^}]+)\}/)?.[1] ?? '',
-);
-const darkTokens = declarations(
-    tokens.match(
-        /@media\s*\(prefers-color-scheme: dark\)\s*\{\s*:root\s*\{([^}]+)\}/,
-    )?.[1] ?? '',
+const themeTokens = declarations(
+    tokens.match(/@theme static\s*\{([\s\S]+?)\n\}/)?.[1] ?? '',
 );
 const shadcn = declarations(app.match(/:root\s*\{([^}]+)\}/)?.[1] ?? '');
 
-export type Mode = 'light' | 'dark';
-
-/** Follows `var(--x)` from a shadcn variable or a token down to its OKLCH value in the given mode. */
-function resolve(mode: Mode, name: string, depth = 0): string {
+/** Follows `var(--x)` from a shadcn variable or a token down to its colour value. */
+function resolve(name: string, depth = 0): string {
     if (depth > 8) {
         throw new Error(`var() loop at --${name}`);
     }
 
-    const value =
-        (mode === 'dark' ? darkTokens.get(name) : undefined) ??
-        lightTokens.get(name) ??
-        shadcn.get(name);
+    const value = themeTokens.get(name) ?? shadcn.get(name);
 
     if (!value) {
         throw new Error(`Undeclared variable: --${name}`);
@@ -44,18 +34,29 @@ function resolve(mode: Mode, name: string, depth = 0): string {
 
     const ref = value.match(/^var\(--([\w-]+)\)$/);
 
-    return ref ? resolve(mode, ref[1], depth + 1) : value;
+    return ref ? resolve(ref[1], depth + 1) : value;
 }
 
-/** OKLCH → linear sRGB. Contrast is measured before gamma encoding. */
-function linear(mode: Mode, name: string): [number, number, number] {
-    const value = resolve(mode, name).match(/^oklch\(([^)]+)\)$/)?.[1];
+/** Colour of a variable in linear sRGB. Contrast is measured before gamma encoding. */
+function linear(name: string): [number, number, number] {
+    const value = resolve(name);
+    const hexValue = value.match(/^#([\da-f]{6})$/i)?.[1];
 
-    if (!value) {
-        throw new Error(`Not an OKLCH value: --${name}`);
+    if (hexValue) {
+        return [0, 2, 4].map((i) => {
+            const v = parseInt(hexValue.slice(i, i + 2), 16) / 255;
+
+            return v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
+        }) as [number, number, number];
     }
 
-    const [l, c, hue] = value.split(/\s+/).map(Number);
+    const oklch = value.match(/^oklch\(([^)]+)\)$/)?.[1];
+
+    if (!oklch) {
+        throw new Error(`Not an OKLCH or hex value: --${name}`);
+    }
+
+    const [l, c, hue] = oklch.split(/\s+/).map(Number);
     const a = c * Math.cos((hue * Math.PI) / 180);
     const b = c * Math.sin((hue * Math.PI) / 180);
     const x = (l + 0.3963377774 * a + 0.2158037573 * b) ** 3;
@@ -69,10 +70,10 @@ function linear(mode: Mode, name: string): [number, number, number] {
     ];
 }
 
-/** WCAG 2 contrast ratio between two variables in the given mode. */
-export function contrast(mode: Mode, fg: string, bg: string): number {
+/** WCAG 2 contrast ratio between two variables. */
+export function contrast(fg: string, bg: string): number {
     const luminance = (name: string) => {
-        const [r, g, b] = linear(mode, name);
+        const [r, g, b] = linear(name).map((v) => Math.min(1, Math.max(0, v)));
 
         return 0.2126 * r + 0.7152 * g + 0.0722 * b;
     };
@@ -81,9 +82,9 @@ export function contrast(mode: Mode, fg: string, bg: string): number {
     return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
 }
 
-/** sRGB hex (`#RRGGBB`, upper case) of a variable in the given mode. */
-export function hex(mode: Mode, name: string): string {
-    return `#${linear(mode, name)
+/** sRGB hex (`#RRGGBB`, upper case) of a variable. */
+export function hex(name: string): string {
+    return `#${linear(name)
         .map((v) => Math.min(1, Math.max(0, v)))
         .map((v) =>
             Math.round(

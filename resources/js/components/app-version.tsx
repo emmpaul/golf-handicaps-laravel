@@ -20,7 +20,7 @@ export function AppVersion({
     const href = releaseUrl(version);
 
     return (
-        <footer className="mt-auto text-center text-xs text-muted-foreground">
+        <footer className="text-xs mt-auto text-center text-muted-foreground">
             {href === null ? (
                 <span className="inline-flex items-center px-2 max-md:min-h-11">
                     {label}

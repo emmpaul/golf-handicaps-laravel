@@ -178,7 +178,7 @@ Arbitrages pris pendant la tâche 1.2 et l'unité 1, mainteneur absent ; chacun 
 | DO11 | Nombre de rounds par parcours | Nouvelle lecture (D14), sans schéma ni route. |
 | DO12 | Page de connexion (`app-access`) | Spec inchangée : la tâche 8.4 recompose `/login` avec les éléments du design en gardant marque, titre « Handicaps golf », champ et bouton ; aucun libellé ne change. |
 | DO13 | Noms des tokens (D2, D1) | Échelle `--text-*` : un token par variante de D2, la variante principale sous le nom de D2, les autres suffixées de leur taille (`--text-label-14`, `--text-num-m-17`…), plus `--text-name-l-course` (22 / 1,1 / −0,02 em) et `--text-meta-round` (12 / 1,4). Graisses dans `--text-*--font-weight` ; famille par `font-sans` / `font-mono`. Rayons nommés par leur valeur (`--radius-22` … `--radius-2`) et `--radius-pill` (999 px). Courbes `--ease-design`, `--ease-pop` sous `@theme`, durées `--dur-*` dans `:root`. |
-| DO14 | Intermédiaire de l'unité 1 | Le remplacement des tokens retire `paper`, `band`, `error`, `ai`, `focus`… : les composants pas encore restylés perdent ces couleurs jusqu'à leurs tâches (3 à 10). `base.css` est repointé sur les nouveaux tokens pour que le fond, le texte et le focus restent définis. |
+| DO14 | Intermédiaire de l'unité 1 | Le remplacement des tokens retire `paper`, `band`, `error`, `ai`, `focus`… : les composants pas encore restylés perdent ces couleurs jusqu'à leurs tâches (3 à 10). `base.css` est repointé sur les nouveaux tokens pour que le fond, le texte et le focus restent définis. `app.css` ne garde que les variables shadcn de D1 : `text-ai`, `border-birdie`, `border-bogey`, `bg-popover`, `bg-secondary` ne produisent plus de style, et `bg-accent` (survol des boutons et des lignes de tableau) prend l'ambre du design, jusqu'aux tâches 4.1, 4.2 et 6.3. Le formateur retrie les classes inconnues de 29 composants (ordre seul). |
 
 ## Risks / Trade-offs
 
@@ -197,4 +197,4 @@ Aucune donnée ni migration. Déploiement par l'image habituelle ; les icônes P
 
 ## Open Questions
 
-Aucune question ne change la spec : les décisions du mainteneur sont consignées dans la proposition. Reste à vérifier à l'installation le nom exact des paquets `@fontsource` de Geist et Geist Mono.
+Aucune question ne change la spec : les décisions du mainteneur sont consignées dans la proposition. Les paquets sont `@fontsource/geist` et `@fontsource/geist-mono` (5.3.0, OFL-1.1), vérifiés dans le registre à la tâche 2.2.

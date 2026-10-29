@@ -73,7 +73,7 @@ function ScorecardTable({
                 <tr>
                     <th
                         scope="col"
-                        className={cn(labelClass, 'bg-band py-1.5 text-sm')}
+                        className={cn(labelClass, 'bg-band text-sm py-1.5')}
                     >
                         Trou
                     </th>
@@ -83,7 +83,7 @@ function ScorecardTable({
                             scope="col"
                             className={cn(
                                 cellClass,
-                                'py-1.5 font-heading text-base font-bold',
+                                'font-heading text-base py-1.5 font-bold',
                                 // Sous 360 px, « 13 14 15 » resserrés : un cran plus petit.
                                 !wide && 'max-[22.5rem]:text-sm',
                                 typeof column !== 'number' &&
@@ -109,7 +109,7 @@ function ScorecardTable({
                             scope="row"
                             className={cn(
                                 labelClass,
-                                'border-b bg-background py-1 text-sm',
+                                'text-sm border-b bg-background py-1',
                                 row.scores &&
                                     'font-heading text-base font-semibold text-foreground',
                             )}
@@ -128,7 +128,7 @@ function ScorecardTable({
                                     key={column}
                                     className={cn(
                                         cellClass,
-                                        'border-b py-1 font-heading text-base',
+                                        'font-heading text-base border-b py-1',
                                         row.scores
                                             ? 'font-semibold'
                                             : 'text-sm',

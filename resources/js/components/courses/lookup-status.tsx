@@ -36,7 +36,7 @@ export function LookupStatus({
             {course.note !== null ? (
                 <p
                     data-testid="course-note"
-                    className="basis-full text-sm text-muted-foreground"
+                    className="text-sm basis-full text-muted-foreground"
                 >
                     {course.note}
                 </p>
