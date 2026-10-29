@@ -26,6 +26,12 @@ final readonly class LegacyDatabase
             throw new LegacyImportFailed("Base SQLite introuvable : {$path}");
         }
 
+        // A base in WAL mode, opened even read only, gets -wal and -shm files and may be read in
+        // a stale state without its WAL: only a VACUUM INTO copy is read (design D2).
+        if (self::isInWalMode($path)) {
+            throw new LegacyImportFailed('Base en WAL : copier par VACUUM INTO (docs/deployment.md, Bascule depuis Next).');
+        }
+
         config(['database.connections.'.self::CONNECTION => [
             'driver' => 'sqlite',
             'database' => $path,
@@ -36,6 +42,23 @@ final readonly class LegacyDatabase
         DB::purge(self::CONNECTION);
 
         return new self(DB::connection(self::CONNECTION));
+    }
+
+    /**
+     * Bytes 18 and 19 of the header of a SQLite file, its write and read versions, are 2 in WAL
+     * mode and 1 in the rollback journal mode. Read with fopen, without SQLite: nothing created.
+     */
+    private static function isInWalMode(string $path): bool
+    {
+        $file = fopen($path, 'rb');
+        if ($file === false) {
+            return false;
+        }
+
+        $header = (string) fread($file, 20);
+        fclose($file);
+
+        return strlen($header) === 20 && (ord($header[18]) === 2 || ord($header[19]) === 2);
     }
 
     public function connection(): Connection

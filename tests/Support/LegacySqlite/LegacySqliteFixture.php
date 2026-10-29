@@ -69,6 +69,24 @@ final class LegacySqliteFixture
     }
 
     /**
+     * Turns the base to the WAL journal of the live base of Next (bytes 18-19 of the header at
+     * 2), through a connection of its own closed at once: SQLite then checkpoints and deletes
+     * the -wal and -shm files, so that any such file seen later was created by the reader.
+     */
+    public function inWalMode(): self
+    {
+        $pdo = new PDO('sqlite:'.$this->path, options: [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
+        $pdo->exec('pragma journal_mode=wal');
+        unset($pdo);
+
+        if (file_exists($this->path.'-wal') || file_exists($this->path.'-shm')) {
+            throw new RuntimeException('The -wal and -shm files of the fixture remain after the switch to WAL.');
+        }
+
+        return $this;
+    }
+
+    /**
      * @return list<string> the tables of sqlite_master, internal tables of SQLite left out
      */
     public function tables(): array

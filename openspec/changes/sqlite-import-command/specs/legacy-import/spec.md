@@ -18,12 +18,17 @@ Le système SHALL fournir la commande `php artisan golf:import-sqlite <base> [--
 - **THEN** aucune route ne lance l'import
 
 ### Requirement: Base source en lecture seule
-La commande SHALL ouvrir la base SQLite en lecture seule et MUST NOT la modifier, qu'elle réussisse, échoue ou fasse un essai à blanc. Le dossier `--uploads` est lu sans être modifié.
+La commande SHALL ouvrir la base SQLite en lecture seule et MUST NOT la modifier ni créer de fichier à côté d'elle, qu'elle réussisse, échoue ou fasse un essai à blanc. Le dossier `--uploads` est lu sans être modifié.
 
 #### Scenario: Fichier inchangé
 - **GIVEN** une base SQLite valide et son empreinte SHA-256
 - **WHEN** l'import réussit, puis un second import échoue sur une base cible non vide
 - **THEN** l'empreinte du fichier est la même qu'avant le premier import
+
+#### Scenario: Base en WAL
+- **GIVEN** une base SQLite au niveau `0004` dont le journal est en mode WAL (octets 18 et 19 de l'en-tête à 2), sans fichier `-wal` ni `-shm`
+- **WHEN** l'opérateur lance l'import
+- **THEN** la commande affiche « Base en WAL : copier par VACUUM INTO (docs/deployment.md, Bascule depuis Next). », sort en 1, n'écrit rien, et aucun fichier `-wal` ni `-shm` n'apparaît à côté de la base
 
 ### Requirement: Niveau de schéma vérifié
 La commande SHALL refuser une base dont le schéma n'est pas celui de la migration Drizzle `0004_course_ratings` de Next : chaque table reprise doit exister avec chacune de ses colonnes. Le refus nomme les tables ou colonnes manquantes et arrive avant toute écriture. Les tables que l'import ignore (`jobs`, tables internes de SQLite et de Drizzle) ne sont pas contrôlées.
