@@ -2,7 +2,9 @@
 
 /*
  * Port of the playingHandicap and courseHandicap cases of tests/domain/strokes.test.ts of the
- * Next.js application.
+ * Next.js application. tests/fixtures/course-handicap.json is shared with
+ * resources/js/lib/strokes.test.ts: a gap between the PHP and TypeScript formulas turns one of
+ * the two red (design D5 of home-and-match-strokes).
  *
  * Mutations that turn these tests red:
  * - truncation instead of rounding (intdiv): 125 gives 12 and −16 gives −1;
@@ -13,28 +15,30 @@
 use App\Domain\Handicaps\RatedCourse;
 use App\Domain\Handicaps\Whs;
 
-test('the playing handicap is the index rounded, 0,5 up', function (int $indexT, int $handicap) {
-    expect(Whs::playingHandicap($indexT))->toBe($handicap);
-})->with([
-    [174, 17],
-    [10, 1],
-    [125, 13],
-    [0, 0],
-    [-15, -1],
-    [-16, -2],
-]);
+/**
+ * The cases of one function in the shared table, as Pest data sets.
+ *
+ * @return list<array<string, mixed>>
+ */
+function courseHandicapCases(string $function): array
+{
+    /** @var array<string, list<array<string, mixed>>> $fixture */
+    $fixture = json_decode((string) file_get_contents(__DIR__.'/../../fixtures/course-handicap.json'), true, flags: JSON_THROW_ON_ERROR);
 
-test('the course handicap on Bethpage Black / Red, 71,4 / 144, par 71', function (int $indexT, int $handicap) {
-    expect(Whs::courseHandicap($indexT, new RatedCourse(714, 144, 71)))->toBe($handicap);
-})->with([
-    [10, 2],
-    [174, 23],
-    [-20, -2],
-]);
+    return $fixture[$function];
+}
 
-test('the course handicap without rating is the playing handicap', function (int $indexT, int $handicap) {
-    expect(Whs::courseHandicap($indexT, null))->toBe($handicap);
-})->with([
-    [10, 1],
-    [174, 17],
-]);
+test('the shared table has cases for both functions', function () {
+    expect(courseHandicapCases('playingHandicap'))->toHaveCount(6)
+        ->and(courseHandicapCases('courseHandicap'))->toHaveCount(5);
+});
+
+test('the playing handicap is the index rounded, 0,5 up', function (int $indexT, int $expected) {
+    expect(Whs::playingHandicap($indexT))->toBe($expected);
+})->with(courseHandicapCases('playingHandicap'));
+
+test('the course handicap with the rating, or the playing handicap without', function (int $indexT, ?array $course, int $expected) {
+    $rated = $course === null ? null : new RatedCourse($course['ratingT'], $course['slope'], $course['par']);
+
+    expect(Whs::courseHandicap($indexT, $rated))->toBe($expected);
+})->with(courseHandicapCases('courseHandicap'));

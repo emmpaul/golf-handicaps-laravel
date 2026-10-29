@@ -1,0 +1,29 @@
+{
+    "playingHandicap": [
+        { "indexT": 174, "expected": 17 },
+        { "indexT": 10, "expected": 1 },
+        { "indexT": 125, "expected": 13 },
+        { "indexT": 0, "expected": 0 },
+        { "indexT": -15, "expected": -1 },
+        { "indexT": -16, "expected": -2 }
+    ],
+    "courseHandicap": [
+        {
+            "indexT": 10,
+            "course": { "ratingT": 714, "slope": 144, "par": 71 },
+            "expected": 2
+        },
+        {
+            "indexT": 174,
+            "course": { "ratingT": 714, "slope": 144, "par": 71 },
+            "expected": 23
+        },
+        {
+            "indexT": -20,
+            "course": { "ratingT": 714, "slope": 144, "par": 71 },
+            "expected": -2
+        },
+        { "indexT": 10, "course": null, "expected": 1 },
+        { "indexT": 174, "course": null, "expected": 17 }
+    ]
+}
