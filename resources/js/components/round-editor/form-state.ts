@@ -43,11 +43,27 @@ export type EditorAction =
 
 const emptyValues = (): CellValue[] => Array<CellValue>(HOLES).fill(null);
 
+/**
+ * Ligne de l'éditeur. Une ligne lue sur la carte garde son nom lu et ses
+ * totaux imprimés ; une ligne saisie à la main n'en a pas.
+ */
 export function newLine(row: Partial<RoundCardLine> = {}): EditorLine {
     return {
         key: crypto.randomUUID(),
         playerId: row.playerId ?? null,
         strokes: row.strokes ? [...row.strokes] : emptyValues(),
+        ...readParts(row),
+    };
+}
+
+/** Nom et totaux lus d'une ligne, seulement quand la lecture les a donnés. */
+function readParts({
+    readName,
+    totals,
+}: Partial<RoundCardLine>): Pick<RoundCardLine, 'readName' | 'totals'> {
+    return {
+        ...(readName ? { readName } : {}),
+        ...(totals ? { totals: { ...totals } } : {}),
     };
 }
 
@@ -75,17 +91,23 @@ export function cardEditorState(card: RoundCard): EditorState {
     };
 }
 
-/** La carte envoyée et contrôlée : tout sauf la `key` des lignes. */
+/**
+ * La carte envoyée et contrôlée : tout sauf la `key` des lignes. Les noms et
+ * totaux lus d'un import n'y figurent que s'ils existent : une saisie manuelle
+ * envoie la même carte qu'avant l'import.
+ */
 export function toRoundCard(state: EditorState): RoundCard {
     return {
         courseName: state.courseName,
         tees: state.tees,
         playedOn: state.playedOn,
         holes: state.holes,
-        lines: state.lines.map(({ playerId, strokes }) => ({
-            playerId,
-            strokes,
+        lines: state.lines.map((line) => ({
+            playerId: line.playerId,
+            strokes: line.strokes,
+            ...readParts(line),
         })),
+        ...(state.parTotals ? { parTotals: state.parTotals } : {}),
     };
 }
 
