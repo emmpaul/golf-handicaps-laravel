@@ -53,10 +53,11 @@
     /* Zones sûres (encoche, barre d'accueil) : 0 hors plein écran. */
     --safe-top: env(safe-area-inset-top, 0px);
     --safe-bottom: env(safe-area-inset-bottom, 0px);
-    /* Cadre actuel, retiré avec AppLayout et AppNav (tâches 3.1 et 3.3). */
-    --top-chrome: calc(var(--safe-top) + 3.75rem + 1px);
-    --tabbar-h: 3.5rem;
-    --bottom-chrome: calc(var(--tabbar-h) + var(--safe-bottom));
+    /* Haut et bas du cadre pour les barres collées de l'éditeur, retirés avec
+     * lui (tâches 6.1 et 6.2) : plus d'en-tête collé, barre flottante de
+     * 60 px à 28 px du bas de la zone sûre (D3). */
+    --top-chrome: var(--safe-top);
+    --bottom-chrome: calc(88px + var(--safe-bottom));
     color-scheme: dark;
 }
 
@@ -74,33 +75,4 @@
     html {
         @apply bg-background font-sans;
     }
-}
-
-/* Fondus des cadres défilants (ScrollFrame) : un fondu au bord de chaque côté
- * où il reste du contenu, posé par data-overflow-start et data-overflow-end. */
-.scroll-frame::before,
-.scroll-frame::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    bottom: 0;
-    width: 24px;
-    z-index: 20;
-    pointer-events: none;
-    opacity: 0;
-}
-
-.scroll-frame::before {
-    left: var(--scroll-label-width);
-    background: linear-gradient(to right, var(--background), transparent);
-}
-
-.scroll-frame::after {
-    right: 0;
-    background: linear-gradient(to left, var(--background), transparent);
-}
-
-.scroll-frame[data-overflow-start]::before,
-.scroll-frame[data-overflow-end]::after {
-    opacity: 1;
 }

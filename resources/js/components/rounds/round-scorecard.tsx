@@ -1,5 +1,4 @@
 import { ScoreMark } from '@/components/scores/score-mark';
-import { ScrollFrame } from '@/components/scroll-frame';
 import { withTotals } from '@/lib/round-checks';
 import type { HoleRow } from '@/lib/round-checks';
 import { cn } from '@/lib/utils';
@@ -216,9 +215,12 @@ export function RoundScorecard({ card }: { card: SavedCard }) {
                 />
             </div>
             <div className="max-md:hidden">
-                <ScrollFrame
-                    label="Défilement de la carte de score"
-                    labelWidth="6rem"
+                {/* Focusable so that keyboard users can scroll the table,
+                    until the rows of the redesign replace it (task 5.2). */}
+                <section
+                    aria-label="Défilement de la carte de score"
+                    tabIndex={0}
+                    className="max-w-full min-w-0 overflow-x-auto"
                 >
                     <ScorecardTable
                         label="Carte de score"
@@ -227,7 +229,7 @@ export function RoundScorecard({ card }: { card: SavedCard }) {
                         par={par}
                         wide
                     />
-                </ScrollFrame>
+                </section>
             </div>
         </section>
     );
