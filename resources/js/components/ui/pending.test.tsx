@@ -5,10 +5,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import { Pending } from '@/components/ui/pending';
 
 // Spec loading-feedback « Indicateur d'attente », « Indicateur dans les deux
-// thèmes », « Mouvement réduit ». The orb is simulated to read its props: it
-// paints on a canvas jsdom cannot draw.
-// Mutations: `theme="light"` in PendingOrb → the theme test goes red;
-// `paused` not passed to ThinkingOrb → the reduced-motion test goes red.
+// thèmes » (dark variant only, text as the metas of the design: Geist Mono 500,
+// 12 px, ink-2; DO24 of visual-redesign), « Mouvement réduit ». The orb is
+// simulated to read its props: it paints on a canvas jsdom cannot draw.
+// Mutations: `theme="auto"` kept in PendingOrb → the theme test goes red; the
+// text left in `text-sm text-muted-foreground` (no style of the scale) → the
+// meta test goes red; `paused` not passed to ThinkingOrb → the reduced-motion
+// test goes red.
 
 const orbProps = vi.hoisted(() => ({ last: null as ThinkingOrbProps | null }));
 
@@ -77,10 +80,20 @@ describe('Pending', () => {
         expect(region.contains(screen.getByTestId('orb'))).toBe(true);
     });
 
-    it('lets the orb follow the device theme', () => {
+    it('writes the text as a meta of the design: Geist Mono 12 px, ink-2', () => {
         render(<Pending label="Enregistrement du joueur…" orb="save" />);
 
-        expect(orbProps.last?.theme).toBe('auto');
+        expect(screen.getByRole('status')).toHaveClass(
+            'font-mono',
+            'text-meta-12',
+            'text-ink-2',
+        );
+    });
+
+    it('draws the orb in its dark variant whatever the device theme', () => {
+        render(<Pending label="Enregistrement du joueur…" orb="save" />);
+
+        expect(orbProps.last?.theme).toBe('dark');
         expect(orbProps.last?.state).toBe('working');
         expect(orbProps.last?.size).toBe(20);
     });
