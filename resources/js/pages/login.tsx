@@ -1,7 +1,6 @@
 import { Form, Head } from '@inertiajs/react';
 import type { ReactNode } from 'react';
 import { store } from '@/actions/App/Http/Controllers/LoginController';
-import { BrandMark } from '@/components/brand-mark';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -9,24 +8,21 @@ import { Pending } from '@/components/ui/pending';
 import BareLayout from '@/layouts/bare-layout';
 
 /**
- * Saisie du code d'accès partagé, hors du cadre commun. Un code faux revient
- * en erreur `passcode` (« Code incorrect » ou le message du limiteur), lue
- * sous le champ ; le champ est vidé à chaque erreur.
+ * Saisie du code d'accès partagé, hors du cadre commun (spec app-access,
+ * recomposée avec les éléments du design, décision Q9, DO12) : la rangée
+ * « Golf », le titre, le champ de 48 px et le bouton plein. Un code faux
+ * revient en erreur `passcode` (« Code incorrect » ou le message du
+ * limiteur), lue sous le champ ; le champ est vidé à chaque erreur.
  */
 export default function Login() {
     return (
         <>
             <Head title="Connexion" />
-            {/* Formulaire centré dans la hauteur restante, version en bas de page. */}
-            <div className="flex flex-1 flex-col justify-center gap-6">
-                <div className="flex flex-col gap-3 border-t-2 border-foreground pt-4">
-                    <p className="font-heading text-xl flex items-center gap-2 leading-none font-extrabold">
-                        <BrandMark /> Golf
-                    </p>
-                    <h1 className="font-heading text-3xl leading-tight font-extrabold tracking-(--tracking-display)">
-                        Handicaps golf
-                    </h1>
-                </div>
+            <p className="flex min-h-11 items-center pt-[max(54px,calc(var(--safe-top)+10px))]">
+                <span className="text-label">Golf</span>
+            </p>
+            <h1 className="mt-[22px] text-title">Handicaps golf</h1>
+            <div className="mt-6">
                 <Form
                     action={store()}
                     resetOnError
@@ -54,14 +50,13 @@ export default function Login() {
                                 <p
                                     id="passcode-error"
                                     role="alert"
-                                    className="text-sm text-destructive"
+                                    className="text-body-12 text-signal"
                                 >
                                     {errors.passcode}
                                 </p>
                             ) : null}
                             <Button
                                 type="submit"
-                                size="lg"
                                 disabled={processing}
                                 className="mt-2 w-full"
                             >
