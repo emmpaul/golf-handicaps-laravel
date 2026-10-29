@@ -172,6 +172,16 @@ function differentialsByName(): array
 }
 
 /**
+ * Every row of player_round_stats, by value.
+ *
+ * @return list<array<string, mixed>>
+ */
+function allStats(): array
+{
+    return PlayerRoundStat::query()->orderBy('id')->get()->toArray();
+}
+
+/**
  * The card the AI reads on the reference photo IMG_3064: the reference draft with the date as
  * printed instead of playedOn.
  *

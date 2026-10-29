@@ -19,6 +19,15 @@
  *   take the rating of the row before them (TypeError on the row without course);
  * - the stroke indexes taken from the oldest round of the pair (a second query of the holes of
  *   the first round played on it): BETHPAGE BLACK / Red reads 16, 8, … instead of 8, 16, ….
+ *
+ * Course-rating-sgt, design D8:
+ * - the The Course View link taken from the name of the round (« THE SANCTUARY ») instead of the
+ *   SGT name (« Sanctuary »): the-sanctuary instead of sanctuary;
+ * - lookupPending always true: the page without pending row reads true;
+ * - the note exposed on a confirmed row (decision Q18): « Ancienne note » instead of null;
+ * - the proposal read from proposed_tee alone, without the tees read: the proposal of the tee
+ *   Red reads no rating;
+ * - the candidates without their scorecard link: no scorecardUrl on « Sanctuary ».
  */
 
 use App\Domain\Courses\Queries\CourseOverview;
@@ -30,6 +39,33 @@ use Illuminate\Support\Facades\DB;
 use Inertia\Testing\AssertableInertia as Assert;
 
 const BETHPAGE_RED_STROKE_INDEXES = [8, 16, 18, 2, 4, 10, 6, 14, 12, 9, 11, 7, 3, 17, 1, 5, 13, 15];
+
+/**
+ * The lookup part of a course of the page without row of course_ratings (design D8).
+ *
+ * @return array<string, mixed>
+ */
+function withoutLookup(): array
+{
+    return [
+        'id' => null, 'status' => null, 'label' => null, 'note' => null, 'source' => null,
+        'sgtCourseName' => null, 'sgtCourseLocation' => null, 'proposal' => null,
+        'teesRead' => [], 'candidates' => [], 'scorecardUrl' => null, 'courseViewUrl' => null,
+    ];
+}
+
+/**
+ * The five tees read on scorecard_30.jpg, as the page receives them.
+ *
+ * @return list<array{name: string, ratingT: int, slope: int}>
+ */
+function bethpageTeesRead(): array
+{
+    return array_map(
+        fn (array $tee): array => ['name' => $tee[0], 'ratingT' => $tee[1], 'slope' => $tee[2]],
+        [['Blue', 775, 155], ['White', 742, 148], ['Red', 714, 144], ['Junior', 710, 120], ['PAR3', 540, 120]],
+    );
+}
 
 /**
  * The reference card on another course and tees, its first hole a par $par1.
@@ -78,7 +114,7 @@ describe('with a session', function () {
             createRoundCard(referenceCardData($this->gab->id, $this->manu->id));
             // The rows of the lookups of both rounds (SGT_LOOKUP off) give way to the rating alone.
             CourseRating::query()->delete();
-            CourseRating::factory()->bethpageRed()->create();
+            $this->rating = CourseRating::factory()->bethpageRed()->create();
         });
 
         test('the page lists each course with the par of its latest round and its rating', function () {
@@ -87,9 +123,14 @@ describe('with a session', function () {
                 ->assertInertia(fn (Assert $page) => $page
                     ->component('courses/index')
                     ->where('courses', [
-                        ['courseName' => 'BETHPAGE BLACK', 'tees' => 'Red', 'par' => 71, 'ratingT' => 714, 'slope' => 144, 'strokeIndexes' => BETHPAGE_RED_STROKE_INDEXES],
-                        ['courseName' => 'PAYNES VALLEY', 'tees' => 'Blue', 'par' => 72, 'ratingT' => null, 'slope' => null, 'strokeIndexes' => BETHPAGE_RED_STROKE_INDEXES],
-                    ]));
+                        [
+                            'courseName' => 'BETHPAGE BLACK', 'tees' => 'Red', 'par' => 71, 'ratingT' => 714, 'slope' => 144, 'strokeIndexes' => BETHPAGE_RED_STROKE_INDEXES,
+                            ...withoutLookup(),
+                            'id' => $this->rating->id, 'status' => 'confirmed', 'label' => 'Confirmé', 'source' => 'manual',
+                        ],
+                        ['courseName' => 'PAYNES VALLEY', 'tees' => 'Blue', 'par' => 72, 'ratingT' => null, 'slope' => null, 'strokeIndexes' => BETHPAGE_RED_STROKE_INDEXES, ...withoutLookup()],
+                    ])
+                    ->where('lookupPending', false));
         });
 
         test('a round saved on a new course while the courses are read moves no rating', function () {
@@ -103,9 +144,11 @@ describe('with a session', function () {
                 }
             });
 
-            expect(app(CourseOverview::class)->get())->toBe([
-                ['courseName' => 'BETHPAGE BLACK', 'tees' => 'Red', 'par' => 71, 'ratingT' => 714, 'slope' => 144, 'strokeIndexes' => BETHPAGE_RED_STROKE_INDEXES],
-                ['courseName' => 'PAYNES VALLEY', 'tees' => 'Blue', 'par' => 72, 'ratingT' => null, 'slope' => null, 'strokeIndexes' => BETHPAGE_RED_STROKE_INDEXES],
+            $courses = app(CourseOverview::class)->get();
+
+            expect(array_map(fn (array $course): array => [$course['courseName'], $course['tees'], $course['ratingT'], $course['slope'], $course['id']], $courses))->toBe([
+                ['BETHPAGE BLACK', 'Red', 714, 144, $this->rating->id],
+                ['PAYNES VALLEY', 'Blue', null, null, null],
             ]);
         });
     });
@@ -194,6 +237,95 @@ describe('with a session', function () {
                 ->assertInertiaFlash('toast', ['type' => 'error', 'message' => 'Parcours introuvable']);
 
             expect(CourseRating::query()->pluck('rating_t')->all())->toBe([null]);
+        });
+    });
+
+    describe('with the reference card and a row of its lookup', function () {
+        beforeEach(function () {
+            createRoundCard(referenceCardData($this->gab->id, $this->manu->id));
+            // The row of the lookup of the card (SGT_LOOKUP off) gives way to the state under test.
+            CourseRating::query()->delete();
+        });
+
+        test('a proposal gives its SGT course, its proposed tee and its links', function () {
+            $rating = CourseRating::factory()->proposed()->create();
+
+            $this->get('/courses')->assertInertia(fn (Assert $page) => $page
+                ->where('courses', [[
+                    'courseName' => 'BETHPAGE BLACK', 'tees' => 'Red', 'par' => 71, 'ratingT' => null, 'slope' => null,
+                    'strokeIndexes' => BETHPAGE_RED_STROKE_INDEXES,
+                    'id' => $rating->id, 'status' => 'proposed', 'label' => 'Proposition à confirmer', 'note' => null, 'source' => null,
+                    'sgtCourseName' => 'Bethpage Black', 'sgtCourseLocation' => 'Farmingdale, NY',
+                    'proposal' => ['name' => 'Red', 'ratingT' => 714, 'slope' => 144],
+                    'teesRead' => bethpageTeesRead(), 'candidates' => [],
+                    'scorecardUrl' => 'https://simulatorgolftour.com/public/assets/courseImages/scorecards/scorecard_30.jpg',
+                    'courseViewUrl' => 'https://thecourseview.com/courses/bethpage-black',
+                ]])
+                ->where('lookupPending', false));
+        });
+
+        test('the candidates come each with its scorecard link', function () {
+            CourseRating::factory()->chooseCourse()->create(['course_name' => 'BETHPAGE BLACK', 'tees' => 'Red']);
+
+            $course = $this->get('/courses')->inertiaProps('courses.0');
+
+            expect([$course['status'], $course['label'], $course['candidates'], $course['scorecardUrl'], $course['courseViewUrl']])->toBe([
+                'choose_course', 'Parcours SGT à choisir',
+                [
+                    ['id' => 477, 'name' => 'Sanctuary', 'location' => 'Sedalia, CO', 'par' => 72, 'scorecardUrl' => 'https://simulatorgolftour.com/public/assets/courseImages/scorecards/scorecard_477.jpg'],
+                    ['id' => 1951, 'name' => 'The Pines Sanctuary Cove', 'location' => 'Hope Island, Queensland, Australia', 'par' => 72, 'scorecardUrl' => 'https://simulatorgolftour.com/public/assets/courseImages/scorecards/scorecard_1951.jpg'],
+                ],
+                null, null,
+            ]);
+        });
+
+        test('the The Course View link is the slug of the SGT name, not of the name of the round', function () {
+            $card = referenceCardOnCourse($this->gab->id, 'THE SANCTUARY', 'White', '2026-10-18');
+            createRoundCard($card);
+            CourseRating::query()->delete();
+            CourseRating::factory()->proposed()->create([
+                'course_name' => 'THE SANCTUARY', 'tees' => 'White', 'proposed_tee' => 'White',
+                'sgt_course_id' => 477, 'sgt_course_name' => 'Sanctuary', 'sgt_course_location' => 'Sedalia, CO',
+            ]);
+
+            $course = $this->get('/courses')->inertiaProps('courses.1');
+
+            expect([$course['courseName'], $course['courseViewUrl'], $course['proposal']])->toBe([
+                'THE SANCTUARY', 'https://thecourseview.com/courses/sanctuary', ['name' => 'White', 'ratingT' => 742, 'slope' => 148],
+            ]);
+        });
+
+        test('a confirmed row exposes no note', function () {
+            CourseRating::factory()->confirmedFromSgt()->create(['note' => 'Ancienne note']);
+
+            $course = $this->get('/courses')->inertiaProps('courses.0');
+
+            expect([$course['status'], $course['label'], $course['note'], $course['source'], $course['ratingT'], $course['slope']])
+                ->toBe(['confirmed', 'Confirmé', null, 'sgt', 714, 144]);
+        });
+
+        test('a row in failure exposes its note', function () {
+            CourseRating::factory()->failed()->create(['course_name' => 'BETHPAGE BLACK', 'tees' => 'Red']);
+
+            $course = $this->get('/courses')->inertiaProps('courses.0');
+
+            expect([$course['status'], $course['label'], $course['note']])->toBe(['failed', 'Recherche échouée', 'SGT injoignable']);
+        });
+
+        test('a pending row makes the lookup pending', function () {
+            CourseRating::factory()->pending()->create(['course_name' => 'BETHPAGE BLACK', 'tees' => 'Red']);
+
+            $this->get('/courses')->assertInertia(fn (Assert $page) => $page
+                ->where('courses.0.status', 'pending')
+                ->where('courses.0.label', 'Recherche en cours')
+                ->where('lookupPending', true));
+        });
+
+        test('a pair without row has no id nor status and no lookup pending', function () {
+            $this->get('/courses')->assertInertia(fn (Assert $page) => $page
+                ->where('courses.0.id', null)
+                ->where('courses.0.status', null)
+                ->where('lookupPending', false));
         });
     });
 });

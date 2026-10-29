@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\CourseController;
 use App\Http\Controllers\CourseRatingController;
+use App\Http\Controllers\CourseRatingLookupController;
 use App\Http\Controllers\HandicapController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\ImportController;
@@ -89,6 +90,15 @@ Route::get('/courses', [CourseController::class, 'index'])->name('courses.index'
 Route::controller(CourseRatingController::class)->group(function () {
     Route::put('/courses/rating', 'update')->name('courses.rating.update');
     Route::delete('/courses/rating', 'destroy')->name('courses.rating.destroy');
+});
+// The lookup of a rating (course-rating-sgt, design D7) is addressed by the id of its row.
+// No whereUuid(): the fallback answers GET only, so a POST on « 12 » would get 405; the uuid
+// check of HasUuids turns it into a 404 before any query.
+Route::controller(CourseRatingLookupController::class)->prefix('/courses/ratings/{courseRating}')->group(function () {
+    Route::post('/confirmation', 'confirm')->name('courses.ratings.confirmation.store');
+    Route::post('/tee', 'chooseTee')->name('courses.ratings.tee.store');
+    Route::post('/candidate', 'chooseCandidate')->name('courses.ratings.candidate.store');
+    Route::post('/lookup', 'relaunch')->name('courses.ratings.lookup.store');
 });
 
 // Unknown addresses go through the web group: without a session they redirect to /login.

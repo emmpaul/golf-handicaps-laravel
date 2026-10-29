@@ -21,7 +21,15 @@ class StrokesController extends Controller
                 fn (array $player): array => ['id' => $player['id'], 'name' => $player['name'], 'indexT' => $player['indexT']],
                 $standings->get(),
             ),
-            'courses' => $courses->get(),
+            // The page needs no lookup of the ratings (course-rating-sgt, design D8).
+            'courses' => array_map(fn (array $course): array => [
+                'courseName' => $course['courseName'],
+                'tees' => $course['tees'],
+                'par' => $course['par'],
+                'ratingT' => $course['ratingT'],
+                'slope' => $course['slope'],
+                'strokeIndexes' => $course['strokeIndexes'],
+            ], $courses->get()),
         ]);
     }
 }
