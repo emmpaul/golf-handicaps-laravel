@@ -46,7 +46,7 @@ Avant de commencer : relire `proposal.md` (tableau des requirements Next, sujets
 
 ## 8. Vérification finale
 
-- [ ] 8.1 Lancer `make update-shards` si de nouveaux fichiers de test ne sont pas répartis, puis `make check` et le voir vert ; en cas d'échec, lire `reports/check/<étape>.log` et corriger dans le code, sans affaiblir une règle
+- [x] 8.1 Lancer `make update-shards` si de nouveaux fichiers de test ne sont pas répartis, puis `make check` et le voir vert ; en cas d'échec, lire `reports/check/<étape>.log` et corriger dans le code, sans affaiblir une règle
 - [ ] 8.2 Passe navigateur : `make up`, `make demo`, `make dev` en arrière-plan, `make browser`, puis le skill `browser-use` sur `http://localhost`, à 320, 390 et 1440 px, en clair puis en sombre : accueil (index, écarts, dernier round et son lien, « 1 import à vérifier » vers l'écran de correction, « Importer une carte ») ; `/handicaps` (sélecteur, choix de Manu gardé après rechargement et retour arrière, marque « Compte » sur la ligne de la date à 320 px, lien vers un round, explication repliée) ; `/strokes` (Gab et Manu sur BETHPAGE BLACK / Red, Écart puis Complet, grille sur deux rangées à 320 px sans défilement horizontal, ligne de rating vers `/courses`, Sean non cochable si le jeu en a un sans index, sinon vérifié par 5.4) ; `/handicaps/xyz` et `/strokes/xyz` en 404 ; lire la console du navigateur (aucune erreur) ; rapporter ce qui a été vu ; finir par `make dev-stop`
 - [ ] 8.3 Relire chaque scénario des quatre deltas de specs et noter, pour chacun, le test ou l'étape de 8.2 qui le vérifie ; un scénario sans preuve se signale au mainteneur avant la PR de code ; finir par `make openspec ARGS="validate --all --strict"` vert
 
