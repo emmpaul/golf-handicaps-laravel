@@ -2,35 +2,35 @@ import { Button as ButtonPrimitive } from "@base-ui/react/button"
 import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/lib/utils"
 
+// Boutons du design (D5) : pleine encre par défaut, contour `rule`, rouge
+// plein à texte blanc `on-signal` (exception de contraste, D9). Hauteurs 48 px
+// (défaut), 44 (`sm`, boutons de liste), 52 (`lg`, feuille) et 56 px (`xl`,
+// bouton principal collé en bas), à toute largeur. Bloqué : fond `surface-3`,
+// texte `ink-3` (contrôle désactivé, exempté par WCAG 1.4.3, DO15).
 const buttonVariants = cva(
-  "group/button inline-flex shrink-0 items-center justify-center rounded-lg border border-transparent bg-clip-padding text-sm font-medium whitespace-nowrap transition-[color,background-color,border-color] duration-(--dur-micro) ease-out outline-none select-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-solid focus-visible:outline-ring active:not-aria-[haspopup]:translate-y-px disabled:cursor-not-allowed disabled:opacity-55 aria-invalid:border-destructive [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+  "group/button inline-flex shrink-0 items-center justify-center gap-1.5 border border-transparent bg-clip-padding whitespace-nowrap transition-[color,background-color,border-color,scale] duration-(--dur-press) ease-out outline-none select-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-solid focus-visible:outline-ring disabled:cursor-not-allowed disabled:border-transparent disabled:bg-surface-3 disabled:text-ink-3 aria-invalid:border-destructive [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
   {
     variants: {
       variant: {
-        default:
-          "bg-primary text-primary-foreground hover:not-disabled:bg-primary/85 active:not-disabled:bg-primary/75",
+        default: "bg-ink text-bg hover:not-disabled:bg-ink/90",
         outline:
-          "border-foreground bg-transparent text-foreground hover:not-disabled:bg-muted active:not-disabled:bg-accent aria-expanded:bg-muted",
-        secondary:
-          "bg-secondary text-secondary-foreground hover:not-disabled:bg-accent active:not-disabled:bg-accent aria-expanded:bg-accent",
+          "border-rule bg-transparent text-ink hover:not-disabled:bg-surface-2 aria-expanded:bg-surface-2",
+        secondary: "bg-surface-3 text-ink hover:not-disabled:bg-surface-2",
         ghost:
-          "hover:not-disabled:bg-muted hover:not-disabled:text-foreground active:not-disabled:bg-accent aria-expanded:bg-muted aria-expanded:text-foreground",
-        destructive:
-          "border-destructive bg-transparent text-destructive hover:not-disabled:bg-destructive/10 active:not-disabled:bg-destructive/20",
-        link: "text-primary underline underline-offset-4 decoration-1 hover:not-disabled:decoration-2",
+          "text-ink-2 hover:not-disabled:bg-surface-2 hover:not-disabled:text-ink aria-expanded:bg-surface-2 aria-expanded:text-ink",
+        destructive: "bg-signal text-on-signal hover:not-disabled:bg-signal/90",
+        link: "text-ink underline decoration-1 underline-offset-4 hover:not-disabled:decoration-2",
       },
       size: {
-        default:
-          "h-11 gap-1.5 px-2.5 has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2 md:h-8",
-        xs: "h-6 gap-1 px-2 text-xs has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 [&_svg:not([class*='size-'])]:size-3",
-        sm: "h-7 gap-1 px-2.5 text-[0.8rem] has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 [&_svg:not([class*='size-'])]:size-3.5",
-        lg: "h-11 gap-1.5 px-2.5 has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2 md:h-9",
-        icon: "size-11 md:size-8",
-        "icon-xs":
-          "size-6 [&_svg:not([class*='size-'])]:size-3",
-        "icon-sm":
-          "size-7",
-        "icon-lg": "size-9",
+        default: "h-12 rounded-10 px-[18px] text-label",
+        xs: "h-11 rounded-10 px-3 text-link-13",
+        sm: "h-11 rounded-10 px-3.5 text-label-14",
+        lg: "h-13 rounded-12 px-5 text-label",
+        xl: "h-14 rounded-14 px-5 text-body-l font-semibold",
+        icon: "size-11 rounded-10",
+        "icon-xs": "size-11 rounded-10",
+        "icon-sm": "size-11 rounded-10",
+        "icon-lg": "size-12 rounded-10",
       },
     },
     defaultVariants: {
