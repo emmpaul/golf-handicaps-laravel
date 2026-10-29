@@ -18,7 +18,7 @@ Pour le handicap, le système SHALL compter chaque trou au plus par + 4 (quadrup
 - **THEN** le score ajusté de Gab vaut 72 et celui de Manu 88
 
 ### Requirement: Différentiel d'un round
-Le système SHALL calculer le différentiel d'un joueur sur un round : (113 / slope) × (score ajusté − course rating), arrondi au dixième le plus proche, 0,05 arrondi vers le haut. La course rating et le slope sont ceux saisis pour le parcours et les tees du round (spec `course-ratings`). Sans rating saisie, la course rating vaut le par total du round et le slope 113.
+Le système SHALL calculer le différentiel d'un joueur sur un round : (113 / slope) × (score ajusté − course rating), arrondi au dixième le plus proche, 0,05 arrondi vers le haut. La course rating et le slope sont ceux confirmés pour le parcours et les tees du round (spec `course-ratings`). Sans rating confirmée, la course rating vaut le par total du round et le slope 113.
 
 #### Scenario: Différentiels sans rating
 - **GIVEN** « BETHPAGE BLACK / Red » sans rating
@@ -34,6 +34,11 @@ Le système SHALL calculer le différentiel d'un joueur sur un round : (113 / sl
 - **GIVEN** « BETHPAGE BLACK / Red » sans rating
 - **WHEN** Gab joue la carte `IMG_3064` avec 3 au trou 1 au lieu de 5
 - **THEN** son différentiel vaut −1,0
+
+#### Scenario: Proposition en attente
+- **GIVEN** « BETHPAGE BLACK / Red » avec la proposition 71,4 / 144, non confirmée
+- **WHEN** la carte `IMG_3064` est enregistrée
+- **THEN** le différentiel de Gab vaut 1,0 et celui de Manu 17,0
 
 ### Requirement: Calcul de l'index
 L'index d'un joueur SHALL se calculer sur ses 20 derniers rounds au plus, triés par date de jeu puis par date d'enregistrement. On applique la table WHS au nombre n de rounds : 3 → meilleur − 2,0 ; 4 → meilleur − 1,0 ; 5 → meilleur ; 6 → moyenne des 2 meilleurs − 1,0 ; 7-8 → 2 meilleurs ; 9-11 → 3 ; 12-14 → 4 ; 15-16 → 5 ; 17-18 → 6 ; 19 → 7 ; 20 → 8.
@@ -105,7 +110,7 @@ Pour chaque joueur de chaque round, le système SHALL conserver le brut, le scor
 - **THEN** les deux rounds sont marqués comme comptant
 
 ### Requirement: Recalcul complet
-Après tout ajout, correction ou suppression de round, et après toute saisie, correction ou retrait de la rating d'un parcours, le système SHALL recalculer les différentiels et tout l'historique d'index des joueurs concernés, y compris pour les rounds postérieurs à la date modifiée, avant de répondre. Un joueur retiré d'un round corrigé MUST être recalculé lui aussi. Une écriture refusée MUST NOT changer aucun historique.
+Après tout ajout, correction ou suppression de round, et après toute saisie, confirmation, choix d'un tee, correction ou retrait de la rating d'un parcours, le système SHALL recalculer les différentiels et tout l'historique d'index des joueurs concernés, y compris pour les rounds postérieurs à la date modifiée, avant de répondre. Un joueur retiré d'un round corrigé MUST être recalculé lui aussi. Une écriture refusée MUST NOT changer aucun historique.
 
 #### Scenario: Round ajouté dans le passé
 - **GIVEN** Gab avec un round le 2026-10-10 (différentiel 17,0) et un le 2026-10-17 (12,0)
@@ -131,6 +136,11 @@ Après tout ajout, correction ou suppression de round, et après toute saisie, c
 - **GIVEN** Manu avec la carte `IMG_3064` sur « BETHPAGE BLACK / Red » sans rating, différentiel 17,0
 - **WHEN** l'utilisateur saisit 71,4 et 144 pour « BETHPAGE BLACK / Red »
 - **THEN** le différentiel de Manu sur ce round vaut 13,0, et ses index après ce round et après les suivants sont recalculés
+
+#### Scenario: Proposition confirmée
+- **GIVEN** Manu avec 88 brut le 2026-10-10 sur un autre parcours de par 71 sans rating (différentiel 17,0) et la carte `IMG_3064` le 2026-10-17 sur « BETHPAGE BLACK / Red », avec la proposition 71,4 / 144
+- **WHEN** l'utilisateur confirme la proposition
+- **THEN** le différentiel de Manu sur la carte `IMG_3064` vaut 13,0 et son index après ce round 15,0
 
 #### Scenario: Rating retirée
 - **GIVEN** « BETHPAGE BLACK / Red » à 71,4 / 144 et la carte `IMG_3064` enregistrée, différentiels de Gab 0,5 et de Manu 13,0

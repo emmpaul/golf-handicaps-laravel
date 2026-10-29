@@ -60,7 +60,7 @@ Tableau de bord, dont le bloc « Imports à vérifier » qui lit les imports de 
 
 ## 9. `course-rating-sgt`
 
-**Dépend de** : 6, 8. **Statut** : proposé.
+**Dépend de** : 6, 8. **Statut** : fait. Le changement est archivé ; reste au mainteneur, après le déploiement sur le staging, la lecture de « N recherches de rating mises en file. » dans le log de `migrate` et la confirmation des propositions sur `/courses`.
 
 Recherche des ratings sur Simulator Golf Tour par le worker, confirmation, recalcul.
 
