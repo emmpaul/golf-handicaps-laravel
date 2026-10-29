@@ -2,16 +2,19 @@
 
 /*
  * Mutations that turn these tests red:
- * - ScoreFactory deleted: Score has no factory;
+ * - ScoreFactory or AiUsageFactory deleted: Score or AiUsage has no factory;
  * - a model added to app/Models without its factory, or left out of the literal list;
  * - withPlayers() that gives a score of 16 or skips a hole: RoundCardChecks finds a problem;
  * - PlayerRoundStatFactory without the line of its player on its round: the composite foreign
- *   key of player_round_stats refuses the row.
+ *   key of player_round_stats refuses the row;
+ * - ImportFactory::ready() without the reference draft: the CHECK of imports refuses a ready
+ *   import without draft, or the par total differs.
  */
 
 use App\Domain\Rounds\RoundCard;
 use App\Domain\Rounds\RoundCardChecks;
 use App\Models\CourseRating;
+use App\Models\Import;
 use App\Models\Player;
 use App\Models\PlayerRoundStat;
 use App\Models\Round;
@@ -23,7 +26,7 @@ test('every model of app/Models has its factory', function () {
         ->map(fn (string $path): string => basename($path, '.php'))
         ->sort()->values()->all();
 
-    expect($models)->toBe(['CourseRating', 'Player', 'PlayerAlias', 'PlayerRoundStat', 'Round', 'RoundHole', 'RoundPlayer', 'Score']);
+    expect($models)->toBe(['AiUsage', 'CourseRating', 'Import', 'Player', 'PlayerAlias', 'PlayerRoundStat', 'Round', 'RoundHole', 'RoundPlayer', 'Score']);
 
     foreach ($models as $model) {
         /** @var class-string<Model> $class */
@@ -54,4 +57,10 @@ test('the history and rating factories need no other preparation', function () {
         ->and($stat->round->lines()->pluck('player_id')->all())->toBe([$stat->player_id])
         ->and(CourseRating::query()->get(['course_name', 'tees', 'rating_t', 'slope'])->toArray())
         ->toBe([['course_name' => 'BETHPAGE BLACK', 'tees' => 'Red', 'rating_t' => 714, 'slope' => 144]]);
+});
+
+test('a ready import is made with the draft of the reference card', function () {
+    $import = Import::factory()->ready()->create();
+
+    expect($import->fresh()?->draft['par']['total'])->toBe(71);
 });

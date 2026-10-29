@@ -11,8 +11,8 @@ Avant de commencer : vérifier que `players-and-rounds` (entrée 5 de `ROADMAP.m
 
 ## 2. Modèles et tables
 
-- [ ] 2.1 Écrire `tests/Feature/Imports/ImportSchemaTest.php` : un statut `done` est refusé par PostgreSQL ; un import `ready` sans `draft` est refusé ; deux imports avec le même `round_id` sont refusés ; supprimer un round supprime son import ; un `cost_micro_usd` négatif dans `ai_usage` est refusé ; le voir rouge ; mutations nommées : FK `round_id` en `nullOnDelete`, `CHECK` du statut retiré ; écrire les migrations `imports` et `ai_usage` (D1), l'enum `ImportStatus` (libellés « En attente », « Lecture en cours », « Prêt à vérifier », « Échec »), les modèles `Import`, `AiUsage` (`HasUuids`) et leurs fabriques (D10) ; vérifier vert
-- [ ] 2.2 Mettre à jour `tests/Feature/FactoryDiscoveryTest.php` : la liste littérale passe à huit modèles avec `Import` et `AiUsage` ; un import fabriqué `ready()` a pour `draft['par']['total']` 71 ; mutation nommée : `AiUsageFactory` supprimée ; vérifier vert
+- [x] 2.1 Écrire `tests/Feature/Imports/ImportSchemaTest.php` : un statut `done` est refusé par PostgreSQL ; un import `ready` sans `draft` est refusé ; deux imports avec le même `round_id` sont refusés ; supprimer un round supprime son import ; un `cost_micro_usd` négatif dans `ai_usage` est refusé ; le voir rouge ; mutations nommées : FK `round_id` en `nullOnDelete`, `CHECK` du statut retiré ; écrire les migrations `imports` et `ai_usage` (D1), l'enum `ImportStatus` (libellés « En attente », « Lecture en cours », « Prêt à vérifier », « Échec »), les modèles `Import`, `AiUsage` (`HasUuids`) et leurs fabriques (D10) ; vérifier vert
+- [x] 2.2 Mettre à jour `tests/Feature/FactoryDiscoveryTest.php` : la liste littérale passe à huit modèles avec `Import` et `AiUsage` ; un import fabriqué `ready()` a pour `draft['par']['total']` 71 ; mutation nommée : `AiUsageFactory` supprimée ; vérifier vert
 
 ## 3. Domaine : brouillon, date, totaux lus
 
