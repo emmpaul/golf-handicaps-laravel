@@ -51,6 +51,21 @@ function referenceHoles(): array
     return referenceCardData(null, null)['holes'];
 }
 
+/**
+ * Line 0 of the reference card as read: « GAB », 72 with its totals.
+ *
+ * @return array{playerId: string, strokes: list<int>, readName: string, totals: array{out: int, in: int, total: int}}
+ */
+function gabReadLine(string $playerId): array
+{
+    return [
+        'playerId' => $playerId,
+        'strokes' => [5, 5, 3, 5, 4, 4, 4, 3, 5, 4, 4, 4, 4, 3, 4, 5, 3, 3],
+        'readName' => 'GAB',
+        'totals' => ['out' => 38, 'in' => 34, 'total' => 72],
+    ];
+}
+
 test('without a session the import pages redirect to /login', function (string $uri) {
     $this->get($uri)->assertRedirect('/login');
 })->with([
@@ -139,12 +154,7 @@ describe('with a session', function () {
                 'playedOn' => '2026-10-17',
                 'holes' => referenceHoles(),
                 'lines' => [
-                    [
-                        'playerId' => $gab->id,
-                        'strokes' => [5, 5, 3, 5, 4, 4, 4, 3, 5, 4, 4, 4, 4, 3, 4, 5, 3, 3],
-                        'readName' => 'GAB',
-                        'totals' => ['out' => 38, 'in' => 34, 'total' => 72],
-                    ],
+                    gabReadLine($gab->id),
                     [
                         'playerId' => null,
                         'strokes' => [7, 5, 3, 7, 6, 5, 5, 3, 5, 3, 6, 5, 7, 4, 5, 4, 3, 5],
@@ -207,12 +217,7 @@ describe('with a session', function () {
                 'playedOn' => '2026-10-13',
                 'holes' => referenceHoles(),
                 'lines' => [
-                    [
-                        'playerId' => $this->gab->id,
-                        'strokes' => [5, 5, 3, 5, 4, 4, 4, 3, 5, 4, 4, 4, 4, 3, 4, 5, 3, 3],
-                        'readName' => 'GAB',
-                        'totals' => ['out' => 38, 'in' => 34, 'total' => 72],
-                    ],
+                    gabReadLine($this->gab->id),
                     [
                         'playerId' => $this->manu->id,
                         'strokes' => [7, 5, 3, 7, 6, 5, 5, 3, 5, 3, 6, 5, 7, 4, 5, 4, 3, 5],
