@@ -62,7 +62,7 @@ class LookUpCourseRating implements ShouldQueue
             return;
         }
 
-        $finish->handle($this->courseRatingId, $this->lookUp($target, $sgt, $budget));
+        $finish->handle($target, $this->lookUp($target, $sgt, $budget));
     }
 
     /**
@@ -70,7 +70,12 @@ class LookUpCourseRating implements ShouldQueue
      */
     public function failed(?Throwable $exception): void
     {
-        app(FinishCourseRatingLookup::class)->handle($this->courseRatingId, CourseRatingLookupOutcome::failed(self::SGT_UNREACHABLE));
+        // The target is read again: failed() runs on a fresh copy of the job, without the target
+        // of its last attempt. A row no longer pending keeps what the user did.
+        $target = app(StartCourseRatingLookup::class)->handle($this->courseRatingId);
+        if ($target !== null) {
+            app(FinishCourseRatingLookup::class)->handle($target, CourseRatingLookupOutcome::failed(self::SGT_UNREACHABLE));
+        }
     }
 
     /**
