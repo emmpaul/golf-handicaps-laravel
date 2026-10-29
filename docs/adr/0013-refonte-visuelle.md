@@ -6,7 +6,7 @@ Acceptée, 2026-10-29 (changement OpenSpec `visual-redesign`). Remplace en parti
 
 ## Contexte
 
-Le port avait repris l'interface de l'application Next.js (décision 7 de `docs/PORT_TO_LARAVEL.md`, ADR 0006) : thème scoreboard clair et sombre selon le système, Sofia Sans Condensed et IBM Plex Sans, en-tête collé avec la marque dessinée, navigation en haut sur ordinateur et barre d'onglets en bas sur téléphone, courbe recharts sur la page Handicaps. Le mainteneur a fait dessiner une nouvelle interface, « Golf handicap app redesign » : une maquette de téléphone de 390 × 844 px, sombre, typographique, en Geist et Geist Mono, avec une barre d'onglets flottante, un bouton d'import toujours visible, des couleurs de joueur et un bloc de statistiques. Elle ne définit aucun thème clair ni écran large. Le groupe découvrira l'application Laravel au cutover ; la refonte passe avant la reprise des données de Next (entrée 10 de la feuille de route), pour qu'il ne change pas deux fois d'interface.
+Le port avait repris l'interface de l'application Next.js (décision 7 de `docs/PORT_TO_LARAVEL.md`, ADR 0006) : thème scoreboard clair et sombre selon le système, Sofia Sans Condensed et IBM Plex Sans, en-tête collé avec la marque dessinée, navigation en haut sur ordinateur et barre d'onglets en bas sur téléphone. Le mainteneur a fait dessiner une nouvelle interface, « Golf handicap app redesign » : une maquette de téléphone de 390 × 844 px, sombre, typographique, en Geist et Geist Mono, avec une barre d'onglets flottante, un bouton d'import toujours visible, des couleurs de joueur et un bloc de statistiques. Elle ne définit aucun thème clair ni écran large. Le groupe découvrira l'application Laravel au cutover ; la refonte passe avant la reprise des données de Next (entrée 10 de la feuille de route), pour qu'il ne change pas deux fois d'interface.
 
 L'archive du design contient aussi la famille Sentient, sous ITF Free Font License 2.0. Le HTML final ne la nomme nulle part. Le dépôt est public sur GitHub et l'image GHCR embarque `public/build`.
 
@@ -26,14 +26,14 @@ L'archive du design contient aussi la famille Sentient, sous ITF Free Font Licen
 - **Cadre du design.** Une colonne de 390 px centrée à toute largeur, une barre d'onglets flottante à quatre sections et le bouton rond Importer, une rangée de page qui défile au lieu de l'en-tête collé, « Golf » en texte au lieu de la marque dessinée. La navigation du haut et `ScrollFrame` disparaissent. Les écrans de l'éditeur masquent la barre.
 - **Couleur de joueur** calculée à la lecture : rang de création modulo 6 (`Player::withColorSlot()`), sans colonne.
 - **Bloc STATS** calculé à la lecture par la Query `PlayerScoringStats`, une requête d'agrégats, arrondis en entiers côté PHP.
-- **Barres CSS** pour les différentiels ; recharts est retiré.
+- **Barres CSS** pour les différentiels, sans bibliothèque de graphiques.
 - **Animations du design** toutes reprises, la règle « jamais largeur, hauteur ou position » levée pour les seules propriétés que le design anime ; état final dès la première image sous mouvement réduit.
 - **Compromis d'accessibilité, décision du mainteneur (Q4).** Trois paires gardent la valeur du design sous les seuils : contour de champ `oklch(0.27 0.008 260)` à 1,34:1 contre le fond, case décochée `oklch(0.4 0.01 260)` à 2,18:1, texte blanc sur le bouton rouge à 2,88:1. Le prix est une moins bonne visibilité des champs, des cases et du bouton de suppression pour les personnes malvoyantes. Aucune autre exception n'est permise : `theme-contrast.test.ts` déclare ces trois paires en liste littérale avec leurs ratios et échoue sur toute quatrième paire sous le seuil.
 - **Ce que garde l'ADR 0006** : les primitives base-ui possédées par le projet, le garde-fou `theme-sources`, les icônes statiques générées par `app:icons`, le toast par le flash d'Inertia.
 
 ## Conséquences
 
-- L'ADR 0006 passe à « Remplacée en partie par 0013 » pour la palette, le mode sombre selon le système, les polices et la marque d'en-tête. La décision 7 de `docs/PORT_TO_LARAVEL.md` est remplacée pour le thème, les tokens et recharts.
+- L'ADR 0006 passe à « Remplacée en partie par 0013 » pour la palette, le mode sombre selon le système, les polices et la marque d'en-tête. La décision 7 de `docs/PORT_TO_LARAVEL.md` est remplacée pour le thème et les tokens.
 - `DESIGN.md` décrit le nouveau design ; c'est la référence de toute nouvelle page.
 - Un appareil réglé en mode clair affiche le thème sombre. Ajouter un thème clair demandera un design, son propre changement OpenSpec et une ADR.
 - Les trois exceptions de contraste sont permanentes tant que le design ne change pas. Les relever demande une décision du mainteneur et la mise à jour de la liste du test.

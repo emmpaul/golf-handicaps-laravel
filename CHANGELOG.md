@@ -132,7 +132,7 @@ All notable changes to this application, version by version. The format follows 
 - `docker-compose.yml` passes `SGT_LOOKUP` to `migrate`, `web` and `worker`, and its `migrate` service runs `golf:queue-rating-lookups` last; `.env.example` and `docs/deployment.md` document them.
 - Visual redesign after the maintainer's "Golf handicap app redesign": dark theme only with the palette of the design (closed, new tokens), Geist and Geist Mono fonts, floating tab bar with four sections and a round Importer button, a single 390 px column at every width, a page top row instead of the sticky header, bottom sheet for confirmations, pill toast, the motion of the design, and every page recomposed (home, import, correction, rounds, round, Handicaps, strokes, players, courses).
 - Score marks gain the double circle of an eagle or better and the double square of a double bogey or worse.
-- Differentials of the Handicaps page drawn as CSS bars instead of a chart.
+- Differentials of the Handicaps page drawn as CSS bars.
 - Home screen icons, favicon, manifest and `theme-color` on the dark background `#060709`; black status bar for the installed app.
 - `DESIGN.md`, ADR 0006 (superseded in part by 0013), decision 7 of `docs/PORT_TO_LARAVEL.md`, the Interface agent guideline and the OpenSpec context follow the redesign; `AGENTS.md` regenerated.
 
@@ -145,7 +145,6 @@ All notable changes to this application, version by version. The format follows 
 - The starter kit welcome page (`welcome.tsx`) and the kit's `favicon.ico`.
 - The "Section à venir" placeholder page (`section-placeholder.tsx`) and its fallback routes; `/handicaps` and `/strokes` serve their own pages and an unknown sub-address answers 404.
 - Sofia Sans Condensed and IBM Plex Sans fonts, and the light theme.
-- recharts dependency.
 - Top navigation, sticky header with the drawn brand mark, and the `ScrollFrame` and `PageTitle` components.
 
 ### Fixed

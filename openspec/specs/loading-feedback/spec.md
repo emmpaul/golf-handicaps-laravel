@@ -21,11 +21,11 @@ Pendant toute attente déclenchée par l'utilisateur ou suivie à l'écran, le s
 - **THEN** le lecteur d'écran annonce le texte, parce que la région annoncée existait déjà avant l'attente
 
 ### Requirement: Indicateur dans les deux thèmes
-Le motif de l'indicateur SHALL suivre le thème de l'appareil : clair sur fond clair, sombre sur fond sombre.
+Le motif de l'indicateur SHALL s'afficher dans sa variante sombre, lisible sur le fond `oklch(0.13 0.005 260)` et sur les surfaces, quel que soit le réglage de l'appareil (thème sombre seul, spec `visual-theme`). Son texte MUST prendre le style des métas du design : Geist Mono 500, 12 px, gris `oklch(0.68 0.01 260)`.
 
 #### Scenario: Mode sombre
-- **WHEN** l'indicateur s'affiche sur un téléphone en mode sombre
-- **THEN** le motif s'affiche dans sa variante sombre, lisible sur le fond `#0A111F`
+- **WHEN** l'indicateur s'affiche sur un téléphone réglé en mode clair puis en mode sombre
+- **THEN** le motif s'affiche les deux fois dans sa variante sombre, et le texte « Enregistrement du joueur… » en Geist Mono 500, 12 px, gris
 
 ### Requirement: Mouvement réduit
 Quand le système d'exploitation ou le navigateur demande de réduire les animations, le motif de l'indicateur MUST rester immobile. Le texte de l'indicateur MUST rester affiché et annoncé.
