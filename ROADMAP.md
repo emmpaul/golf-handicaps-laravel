@@ -30,7 +30,7 @@ Code d'accès partagé, `/login`, déconnexion, session chiffrée de 90 jours, l
 
 ## 4. `production-deployment`
 
-**Dépend de** : 3. **Statut** : en cours. Le changement est archivé ; restent le staging (groupe 8 des tâches) et la première `/release` `v0.1.0`. Il n'est fait qu'une fois les deux passés.
+**Dépend de** : 3. **Statut** : en cours. Le changement est archivé. `v0.1.0` est publiée et tourne sur `golf2.emmanuelpaul.com`, qui tient lieu de staging : installation, `/api/version`, HSTS, témoin `Secure` et limiteur vérifiés le 2026-10-29. Restent l'essai de restauration (tâche 8.3) et l'essai du retour à l'image précédente à `v0.1.1`.
 
 Image unique sur GHCR, stack docker-compose Dokploy (`web`, `worker`, `migrate`, `pgsql`), sauvegardes, staging. Remplit la couche 12 du squelette.
 
@@ -74,8 +74,8 @@ Refonte visuelle selon le design « Golf handicap app redesign » du mainteneur 
 
 **Dépend de** : 9, 11. **Statut** : fait. Le changement est archivé. Pas de bascule franche (changement `parallel-run-cutover`) ; restent au mainteneur, dans l'ordre (`docs/deployment.md`, « Bascule depuis Next ») :
 
-- déployer la stack Laravel sur `golf2.emmanuelpaul.com`, avec `SGT_LOOKUP=off`, et y importer une copie de la base Next, Next restant en production ;
-- comparer, pour chaque joueur, l'index et les rounds (liste, scores, différentiels) entre Next et `golf2`, en réimportant une copie fraîche au besoin ;
+- déployer la stack Laravel sur `golf2.emmanuelpaul.com`, avec `SGT_LOOKUP=off`, et y importer une copie de la base Next, Next restant en production : fait le 2026-10-29 ;
+- comparer, pour chaque joueur, l'index et les rounds (liste, scores, différentiels) entre Next et `golf2`, en réimportant une copie fraîche au besoin : comparaison bonne le 2026-10-29 ;
 - déménager : arrêter les saisies sur Next, dernier import, domaine principal passé à la stack Laravel, `golf2` retiré, Next gardé arrêté 30 jours.
 
 Commande `golf:import-sqlite`, puis cutover, fait à la main par le mainteneur.
