@@ -91,6 +91,29 @@ describe('with a session', function () {
         ]);
     });
 
+    test('a player with 21 rounds lists them all and his oldest round does not count', function () {
+        // Spec handicap-index, « Liste des rounds d'un joueur »: « Plus de 20 rounds ». The
+        // oldest round, +0, is Manu's best differential; the 20 others are at +17.
+        // Mutation that turns this test red: the index computed on every round (the
+        // array_slice to the 20 latest removed from Whs::computeIndex): the round of
+        // 2026-09-01 counts.
+        createPlayersOnTest('Manu');
+        createRoundCard(referenceCardOn('2026-09-01', [[$this->manu->id, strokesOverPar(0)]]));
+        foreach (range(2, 21) as $day) {
+            createRoundCard(referenceCardOn(sprintf('2026-09-%02d', $day), [[$this->manu->id, strokesOverPar(17)]]));
+        }
+
+        $this->get('/handicaps?joueur='.$this->manu->id)
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->has('history', 21)
+                ->where('history.20.playedOn', '2026-09-01')
+                ->where('history.20.differentialT', 0)
+                ->where('history.20.countsInCurrent', false)
+                ->where('history.0.playedOn', '2026-09-21')
+                ->where('history.0.indexAfterT', 170));
+    });
+
     test('the page makes the same number of queries whatever the number of rounds', function (int $count) {
         createPlayersOnTest('Gab', 'Manu', 'Sean');
         createDailyRoundsOfThree($count);

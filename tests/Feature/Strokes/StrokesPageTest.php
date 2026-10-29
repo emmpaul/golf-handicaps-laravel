@@ -84,6 +84,33 @@ describe('with a session', function () {
         expect($writes)->toBe([]);
     });
 
+    test('a rating typed on /courses between two visits reaches the next visit of /strokes', function () {
+        // Spec match-strokes, « Rating du parcours choisi »: « Rating saisie entre deux visites ».
+        // Mutation that turns this test red: the courses of the Strokes page kept from one
+        // visit to the next (Cache::rememberForever around $courses->get() in
+        // StrokesController): the second visit still reads BETHPAGE BLACK / Red without rating.
+        createRoundCard(referenceCardData($this->gab->id, $this->manu->id));
+
+        $this->get('/strokes')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('courses.0.courseName', 'BETHPAGE BLACK')
+                ->where('courses.0.ratingT', null)
+                ->where('courses.0.slope', null));
+
+        $this->put('/courses/rating', ['courseName' => 'BETHPAGE BLACK', 'tees' => 'Red', 'rating' => '71,4', 'slope' => '144'])
+            ->assertRedirect();
+
+        $this->get('/strokes')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->has('courses', 1)
+                ->where('courses.0.courseName', 'BETHPAGE BLACK')
+                ->where('courses.0.tees', 'Red')
+                ->where('courses.0.ratingT', 714)
+                ->where('courses.0.slope', 144));
+    });
+
     test('without round the page receives no course', function () {
         $this->get('/strokes')
             ->assertOk()
