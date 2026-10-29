@@ -129,11 +129,16 @@ function PlayerSection({
     scoringStats: ScoringStatsData | null;
 }) {
     const playerTrend = trend(player.deltaT);
+    const value =
+        player.indexT === null ? NO_VALUE : formatTenths(player.indexT);
     // The index of the former player fades out, the new one comes 140 ms later (D8).
-    const index = useSwap(
-        player.id,
-        player.indexT === null ? NO_VALUE : formatTenths(player.indexT),
-    );
+    const index = useSwap(player.id, value);
+    // The former value stays only in the same layout: never « 10,0 » beside
+    // « Pas encore d'index », never « — » under « INDEX ACTUEL » (DO38).
+    const shown =
+        (index.shown === NO_VALUE) === (value === NO_VALUE)
+            ? index.shown
+            : value;
 
     if (player.indexT === null) {
         return (
@@ -143,7 +148,7 @@ function PlayerSection({
                     style={index.style}
                     className="font-mono text-display-xl text-ink-2"
                 >
-                    {index.shown}
+                    {shown}
                 </p>
                 <p className="mt-3.5 text-body text-ink-2">
                     Pas encore d'index. Un premier round donne un index
@@ -172,7 +177,7 @@ function PlayerSection({
                     style={index.style}
                     className="inline-block font-mono text-display-xl"
                 >
-                    {index.shown}
+                    {shown}
                 </span>
                 {playerTrend !== null ? (
                     <span

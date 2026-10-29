@@ -203,6 +203,8 @@ describe('Home page', () => {
         ]);
     });
 
+    // M10: classes compared as exact tokens. Mutation: the index at
+    // `text-display-xl` (88 px) → red, where a substring match passed.
     it('draws a board line with its swatch, the name at 17 px and the index at 44 px', () => {
         render(<Home players={players} latestRound={latestRound} />);
 
@@ -211,13 +213,13 @@ describe('Home page', () => {
         ).getAllByRole('listitem')[0];
         const parts = [...gab.querySelectorAll('[data-part]')];
 
-        expect(gab.querySelector('[aria-hidden="true"]')?.className).toContain(
+        expect(gab.querySelector('[aria-hidden="true"]')).toHaveClass(
             'bg-player-1',
         );
-        expect(parts[1].className).toContain('text-name-m-17');
-        expect(parts[2].className).toContain('text-section');
-        expect(parts[3].className).toContain('text-display');
-        expect(within(gab).getByRole('link').className).toContain('min-h-19');
+        expect(parts[1]).toHaveClass('text-name-m-17');
+        expect(parts[2]).toHaveClass('text-section');
+        expect(parts[3]).toHaveClass('text-display');
+        expect(within(gab).getByRole('link')).toHaveClass('min-h-19');
     });
 
     it('leads each player to /handicaps?joueur=<id>', () => {
@@ -242,16 +244,14 @@ describe('Home page', () => {
         const link = within(block).getByRole('link');
 
         expect(link.getAttribute('href')).toBe(`/rounds/${ROUND}`);
-        expect(within(block).getByText('Dernier round').className).toContain(
+        expect(within(block).getByText('Dernier round')).toHaveClass(
             'uppercase',
         );
         expect(within(block).getByText('17 OCT.').tagName).toBe('TIME');
-        expect(within(block).getByText('BETHPAGE BLACK').className).toContain(
+        expect(within(block).getByText('BETHPAGE BLACK')).toHaveClass(
             'text-name-l-course',
         );
-        expect(within(block).getByText('· Red').className).toContain(
-            'text-ink-2',
-        );
+        expect(within(block).getByText('· Red')).toHaveClass('text-ink-2');
         expect(latestLines()).toEqual([
             ['1', 'Manu', '88 − 23', '65'],
             ['2', 'Gab', '72 − 2', '70'],
@@ -327,8 +327,8 @@ describe('Home page', () => {
 
         expect(row.getAttribute('href')).toBe('/import');
         expect(row.textContent).toBe('2imports à vérifier→');
-        expect(row.className).toContain('text-accent');
-        expect(row.className).toContain('min-h-11');
+        expect(row).toHaveClass('text-accent');
+        expect(row).toHaveClass('min-h-11');
     });
 
     it('writes « 1 » « import à vérifier » in the singular', () => {

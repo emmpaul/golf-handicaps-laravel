@@ -14,7 +14,7 @@ import { ScoringStats } from '@/components/handicaps/scoring-stats';
 import { Checkbox } from '@/components/ui/checkbox';
 import AppLayout from '@/layouts/app-layout';
 import HandicapsIndex from '@/pages/handicaps/index';
-import { GAB, MANU } from '@/tests/reference-round';
+import { GAB, MANU, SEAN } from '@/tests/reference-round';
 
 // Spec visual-theme « Animations du design » (« Changement d'onglet »,
 // « Changement de joueur sur la page Handicaps », « Barres à l'ouverture »,
@@ -48,6 +48,7 @@ vi.mock('@inertiajs/react', async (importOriginal) => {
 });
 
 let frames: FrameRequestCallback[] = [];
+let frameIds = 0;
 
 /** Plays the frames queued so far, as the browser paints one image. */
 function nextFrame() {
@@ -70,12 +71,14 @@ function reduceMotion() {
 beforeEach(() => {
     page.url = '/rounds';
     frames = [];
+    frameIds = 0;
     vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => {
         frames.push(callback);
+        frameIds += 1;
 
-        return frames.length;
+        return frameIds;
     });
-    vi.stubGlobal('cancelAnimationFrame', () => {});
+    vi.stubGlobal('cancelAnimationFrame', vi.fn());
 });
 
 afterEach(() => {
@@ -123,6 +126,37 @@ const stats = {
     classPercents: [0, 17, 61, 22, 0],
     pars: [],
 };
+
+/** Gab with an index, Manu with another, Sean without any. */
+const swapPlayers = [
+    {
+        id: GAB,
+        name: 'Gab',
+        indexT: 100,
+        provisional: false,
+        deltaT: null,
+        rounds: 3,
+        colorSlot: 0,
+    },
+    {
+        id: MANU,
+        name: 'Manu',
+        indexT: 158,
+        provisional: false,
+        deltaT: null,
+        rounds: 3,
+        colorSlot: 1,
+    },
+    {
+        id: SEAN,
+        name: 'Sean',
+        indexT: null,
+        provisional: false,
+        deltaT: null,
+        rounds: 0,
+        colorSlot: 2,
+    },
+];
 
 function barHeights(): string[] {
     return Array.from(
@@ -191,19 +225,13 @@ describe('tab bar', () => {
         );
         const classes = labels.map((label) => label.className);
 
-        expect(classes.map((name) => name.includes('max-w-[90px]'))).toEqual([
-            false,
-            true,
-            false,
-            false,
-        ]);
-        expect(classes.map((name) => name.includes('max-w-0'))).toEqual([
-            true,
-            false,
-            true,
-            true,
-        ]);
-        expect(labels[1].className).toContain(
+        expect(
+            labels.map((label) => label.classList.contains('max-w-[90px]')),
+        ).toEqual([false, true, false, false]);
+        expect(
+            labels.map((label) => label.classList.contains('max-w-0')),
+        ).toEqual([true, false, true, true]);
+        expect(labels[1]).toHaveClass(
             '[transition:max-width_var(--dur-nav)_var(--ease-design),opacity_var(--dur-fade)_ease,margin-left_var(--dur-nav)_var(--ease-design)]',
         );
         expect(
@@ -262,8 +290,10 @@ describe('Handicaps page', () => {
         document
             .querySelectorAll<HTMLElement>('[data-part="segment"]')
             .forEach((segment) => {
-                expect(segment.className).toContain('transition-[width]');
-                expect(segment.className).toContain('duration-700');
+                expect(segment).toHaveClass(
+                    'transition-[width]',
+                    'duration-700',
+                );
             });
     });
 
@@ -340,6 +370,89 @@ describe('Handicaps page', () => {
     });
 });
 
+describe('swap towards a player without index', () => {
+    // L13, DO38: switching to a player without index never writes the former
+    // index beside « Pas encore d'index » (even transparent, it stays in the
+    // text of the page). Mutation: the branch without index rendering the
+    // swapped value (`index.shown`) → « 10,0 » is found, this test goes red.
+    it('writes « — » at once, in its entrance, and never the former index', () => {
+        vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+        page.url = '/handicaps';
+        const { rerender } = render(
+            <HandicapsIndex
+                players={swapPlayers}
+                selectedPlayerId={GAB}
+                history={[]}
+            />,
+        );
+
+        rerender(
+            <HandicapsIndex
+                players={swapPlayers}
+                selectedPlayerId={SEAN}
+                history={[]}
+            />,
+        );
+
+        const index = screen.getByTestId('player-index');
+        expect(index.textContent).toBe('—');
+        expect(index.style.opacity).toBe('0');
+        expect(screen.queryByText('10,0')).toBeNull();
+
+        act(() => {
+            vi.advanceTimersByTime(140);
+        });
+
+        expect(index.textContent).toBe('—');
+        expect(index.style.opacity).toBe('1');
+    });
+});
+
+describe('cancellation on unmount', () => {
+    // M8: an animation left behind by a component gone would set the state
+    // of an unmounted tree. Mutation: the cleanup of useEntered without
+    // `cancelAnimationFrame(second)` → the frame test goes red; the cleanup
+    // of useSwap without `clearTimeout` → the swap test goes red.
+    it('cancels the second frame of the entrance when unmounted between the two frames', () => {
+        const { unmount } = render(
+            <DifferentialBars history={history} colorSlot={0} />,
+        );
+
+        nextFrame();
+        unmount();
+
+        expect(cancelAnimationFrame).toHaveBeenCalledWith(2);
+    });
+
+    it('clears the swap of the index when unmounted before 140 ms', () => {
+        vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+        page.url = '/handicaps';
+        const { rerender, unmount } = render(
+            <HandicapsIndex
+                players={swapPlayers}
+                selectedPlayerId={GAB}
+                history={[]}
+            />,
+        );
+        const setTimer = vi.spyOn(globalThis, 'setTimeout');
+        const clearTimer = vi.spyOn(globalThis, 'clearTimeout');
+
+        rerender(
+            <HandicapsIndex
+                players={swapPlayers}
+                selectedPlayerId={MANU}
+                history={[]}
+            />,
+        );
+        const swap = setTimer.mock.results.at(-1)?.value;
+        unmount();
+
+        expect(setTimer.mock.calls.at(-1)?.[1]).toBe(140);
+        expect(clearTimer).toHaveBeenCalledWith(swap);
+        expect(vi.getTimerCount()).toBe(0);
+    });
+});
+
 describe('check box', () => {
     it('scales the check from 0.4 unchecked to 1 checked on the pop curve', () => {
         render(<Checkbox aria-label="Sean" />);
@@ -347,11 +460,10 @@ describe('check box', () => {
         const check = document.querySelector(
             '[data-slot="checkbox-wrapper"] svg',
         ) as SVGElement;
-        const classes = check.getAttribute('class') ?? '';
 
-        expect(classes).toContain('scale-40');
-        expect(classes).toContain('peer-checked:scale-100');
-        expect(classes).toContain(
+        expect(check).toHaveClass(
+            'scale-40',
+            'peer-checked:scale-100',
             '[transition:opacity_200ms_ease,scale_var(--dur-swap)_var(--ease-pop)]',
         );
 
