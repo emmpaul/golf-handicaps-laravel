@@ -101,6 +101,10 @@ All notable changes to this application, version by version. The format follows 
 - `SGT_LOOKUP` variable (`on` by default): `off` ends every lookup in "Saisie manuelle" without any request to SGT, any other value stops the application at boot.
 - Demonstration data: BETHPAGE BLACK / Red confirmed from SGT at 71,4 / 144, PAYNES VALLEY / Blue with a proposal to confirm and CALA NOVA / White not found on SGT, written before the rounds so that no lookup is queued.
 - ADR 0012 (course rating lookup on Simulator Golf Tour), the lookup in the Index et ratings section of `ARCHITECTURE.md` and its rollback in `docs/deployment.md`.
+- STATS block of the Handicaps page: average and best gross, share of holes at par or better, distribution from eagle or better to double bogey or worse, average per hole on par 3, 4 and 5, computed on read by `PlayerScoringStats`.
+- A colour per player, from the six of the design by order of creation (`colorSlot`), without a column.
+- Count of imports to check on the Importer button of every page (shared `pendingImports` prop).
+- ADR 0013 (visual redesign).
 
 ### Changed
 
@@ -126,6 +130,11 @@ All notable changes to this application, version by version. The format follows 
 - `course_ratings` gains the lookup columns of the Next.js app (`source`, `status`, `sgt_course_id`, `sgt_course_name`, `sgt_course_location`, `candidates`, `tees_read`, `proposed_tee`, `note`) and its `rating_t` and `slope` become nullable; existing rows become "Confirmé" with the `manual` source.
 - "Retirer la rating" keeps the lookup: the proposal, the tees read or the candidates come back instead of the row being deleted.
 - `docker-compose.yml` passes `SGT_LOOKUP` to `migrate`, `web` and `worker`, and its `migrate` service runs `golf:queue-rating-lookups` last; `.env.example` and `docs/deployment.md` document them.
+- Visual redesign after the maintainer's "Golf handicap app redesign": dark theme only with the palette of the design (closed, new tokens), Geist and Geist Mono fonts, floating tab bar with four sections and a round Importer button, a single 390 px column at every width, a page top row instead of the sticky header, bottom sheet for confirmations, pill toast, the motion of the design, and every page recomposed (home, import, correction, rounds, round, Handicaps, strokes, players, courses).
+- Score marks gain the double circle of an eagle or better and the double square of a double bogey or worse.
+- Differentials of the Handicaps page drawn as CSS bars instead of a chart.
+- Home screen icons, favicon, manifest and `theme-color` on the dark background `#060709`; black status bar for the installed app.
+- `DESIGN.md`, ADR 0006 (superseded in part by 0013), decision 7 of `docs/PORT_TO_LARAVEL.md`, the Interface agent guideline and the OpenSpec context follow the redesign; `AGENTS.md` regenerated.
 
 ### Removed
 
@@ -135,6 +144,9 @@ All notable changes to this application, version by version. The format follows 
 - `rounds/round-gross` component, replaced by the net leaderboard.
 - The starter kit welcome page (`welcome.tsx`) and the kit's `favicon.ico`.
 - The "Section à venir" placeholder page (`section-placeholder.tsx`) and its fallback routes; `/handicaps` and `/strokes` serve their own pages and an unknown sub-address answers 404.
+- Sofia Sans Condensed and IBM Plex Sans fonts, and the light theme.
+- recharts dependency.
+- Top navigation, sticky header with the drawn brand mark, and the `ScrollFrame` and `PageTitle` components.
 
 ### Fixed
 
