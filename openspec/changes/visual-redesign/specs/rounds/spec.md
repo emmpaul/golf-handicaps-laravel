@@ -136,6 +136,48 @@ La grille de l'éditeur SHALL présenter une ligne par trou : numéro, par, inde
 - **WHEN** l'éditeur est ouvert à 1440 px
 - **THEN** la grille garde une rangée par trou, dans la colonne centrée de 390 px
 
+### Requirement: Classement net d'un round
+Pour chaque joueur d'un round, la page du round SHALL afficher le rang net, le nom, « {brut} − {handicap de jeu} » et le net, les joueurs rangés par rang net croissant, des ex æquo dans l'ordre de la carte. Le net vaut brut moins handicap de jeu. Le rang est un rang de compétition : des nets égaux partagent le même rang, et le rang suivant saute les places partagées. Chaque premier porte la pastille ambre « 1ER ». Un joueur sans index MUST venir après les joueurs classés, sans rang ni pastille, avec « {brut} · pas encore d'index » et « — » comme net : il n'est pas classé en net.
+
+#### Scenario: Rang après des ex æquo
+- **GIVEN** quatre joueurs dont les nets valent, dans l'ordre de la carte, 80, 70, 59 et 70
+- **WHEN** l'utilisateur ouvre le round
+- **THEN** les lignes sont, dans l'ordre, le troisième au rang « 1 » avec « 1ER », le deuxième et le quatrième au rang « 2 », puis le premier au rang « 4 »
+
+#### Scenario: Classement avec rating
+- **GIVEN** Gab avec un index de 1,0 et Manu de 17,4 juste avant un round sur « BETHPAGE BLACK / Red » à 71,4 / 144, par 71, où Gab joue 72 et Manu 88
+- **WHEN** l'utilisateur ouvre le round
+- **THEN** la première ligne est « 1 », Manu, « 1ER », « 88 − 23 », « 65 », et la seconde « 2 », Gab, « 72 − 2 », « 70 »
+
+#### Scenario: Ex æquo
+- **GIVEN** Gab et Manu à 71 net sur la carte `IMG_3064`, sans rating
+- **WHEN** l'utilisateur ouvre le round
+- **THEN** Gab puis Manu sont tous deux au rang « 1 » avec la pastille « 1ER »
+
+#### Scenario: Joueur sans index
+- **GIVEN** un round où Sean joue son tout premier round, 95, avec Gab et Manu
+- **WHEN** l'utilisateur ouvre le round
+- **THEN** Sean vient en dernier, sans rang, avec « 95 · pas encore d'index » et « — » comme net
+
+### Requirement: Classement lisible sur téléphone
+Le classement net d'un round SHALL montrer pour chaque joueur son rang, son nom, « {brut} − {handicap de jeu} » et son net sans en couper aucun sur un écran de 320 px, un nom trop long coupé par « … », et la page MUST NOT défiler horizontalement. Les premiers nets sont marqués par la pastille ambre « 1ER », pas par la couleur de leur nom.
+
+#### Scenario: Classement à 320 px
+- **WHEN** l'utilisateur ouvre à 320 px un round de Manu et Sean où les deux ont un index
+- **THEN** le rang, « {brut} − {handicap de jeu} » et le net de chaque ligne sont entièrement visibles sans défilement horizontal
+
+### Requirement: Rating affichée sur le round
+La page d'un round SHALL afficher la course rating et le slope utilisés pour ses différentiels et son classement net à la fin de sa ligne de méta (spec ci-dessus, « En-tête d'un round ») : « 71,4 / 144 », ou « SANS RATING » quand le parcours n'a pas de rating, le par total du round étant déjà dans la méta. Cette valeur MUST être un lien vers la page Parcours.
+
+#### Scenario: Round avec rating
+- **GIVEN** « BETHPAGE BLACK / Red » à 71,4 / 144
+- **WHEN** l'utilisateur ouvre la carte `IMG_3064`
+- **THEN** la méta finit par « 71,4 / 144 », lien vers la page Parcours
+
+#### Scenario: Round sans rating
+- **WHEN** l'utilisateur ouvre un round de par 72 sur un parcours sans rating
+- **THEN** la méta contient « PAR 72 » et finit par « SANS RATING », lien vers la page Parcours
+
 ## ADDED Requirements
 
 ### Requirement: Mise en page de la page Rounds
@@ -159,24 +201,6 @@ La grille de l'éditeur SHALL présenter une ligne par trou : numéro, par, inde
 #### Scenario: Rangées de la carte
 - **WHEN** la carte de score s'affiche à 390 px
 - **THEN** chaque rangée de trou fait 44 px de haut, le numéro en Geist Mono 500, 17 px, dans 40 px, « P4 · 8 » en Geist Mono 500, 12 px, gris, chaque score dans une colonne de 52 px ; les rangées de sous-total font 40 px, fond `oklch(0.17 0.006 260)`, rayon 8 px
-
-### Requirement: Présentation du classement net
-La page d'un round SHALL ranger les joueurs par rang net croissant, des ex æquo dans l'ordre de la carte, et marquer chaque premier d'une pastille « 1ER » ambre. Un joueur sans index MUST venir après les joueurs classés, avec « — » comme net, sans rang ni pastille. Cette présentation remplace, à la réconciliation de la tâche 1.2, l'ordre de la carte et le gagnant en rouge des exigences « Classement net d'un round » et « Classement lisible sur téléphone » de `handicap-index`.
-
-#### Scenario: Classement avec rating
-- **GIVEN** Gab avec un index de 1,0 et Manu de 17,4 juste avant un round sur « BETHPAGE BLACK / Red » à 71,4 / 144, par 71, où Gab joue 72 et Manu 88
-- **WHEN** l'utilisateur ouvre le round
-- **THEN** la première ligne est « 1 », Manu, « 1ER », « 88 − 23 », « 65 », et la seconde « 2 », Gab, « 72 − 2 », « 70 »
-
-#### Scenario: Ex æquo
-- **GIVEN** Gab et Manu à 71 net sur la carte `IMG_3064`, sans rating
-- **WHEN** l'utilisateur ouvre le round
-- **THEN** Gab puis Manu sont tous deux au rang « 1 » avec la pastille « 1ER »
-
-#### Scenario: Joueur sans index
-- **GIVEN** un round où Sean joue son premier round avec Gab et Manu
-- **WHEN** l'utilisateur ouvre le round
-- **THEN** Sean vient en dernier, sans rang, avec « 95 · pas encore d'index » et « — » comme net
 
 ### Requirement: Photo et explication sur la page d'un round
 La page d'un round SHALL garder, sous la légende, la photo de la carte quand elle existe (rayon 12 px, proportions 16/10, fond `oklch(0.2 0.006 260)`) puis le bloc replié « Comment l’index est calculé », que le design ne dessine pas.

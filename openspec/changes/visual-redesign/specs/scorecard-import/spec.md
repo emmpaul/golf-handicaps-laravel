@@ -4,18 +4,58 @@
 
 Transformer la photo d'une carte de score en round enregistré : envoi, lecture en tâche de fond, liste des imports et écran de vérification.
 
-## ADDED Requirements
+## MODIFIED Requirements
 
-### Requirement: Mise en page de l'écran Importer
-À 390 px, l'écran Importer SHALL suivre le design : titre « Importer » et lien « Saisie manuelle » à sa droite, texte « Photo de l'écran de fin de round, prise au téléphone. », « NOUVELLE CARTE », deux tuiles côte à côte, puis « IMPORTS » avec leur nombre et la liste. Cette exigence remplace la disposition de « Une action principale à l'import » (tâche 1.2).
+### Requirement: Une action principale à l'import
+Sur un appareil à écran tactile, l'écran d'import SHALL présenter « Prendre une photo » et « Choisir une photo » en deux tuiles côte à côte de même largeur, sans libellé de champ entre elles ; sans écran tactile, seule la tuile « Choisir une photo » s'affiche, sur toute la largeur du groupe. Le champ de fichier MUST garder le nom accessible « Photo de la carte ».
 
-#### Scenario: Tuiles sur iPhone
+#### Scenario: Écran d'import sur iPhone
 - **WHEN** l'utilisateur ouvre `/import` sur un iPhone
-- **THEN** « Prendre une photo » (icône d'appareil photo ambre, « CAMÉRA ») et « Choisir une photo » (icône d'image claire, « PHOTOTHÈQUE ») sont deux tuiles de même largeur, fond `oklch(0.17 0.006 260)`, séparées par un filet de 1 px, dans un groupe aux coins de 14 px, et le champ de fichier garde le nom « Photo de la carte »
+- **THEN** « Prendre une photo » (icône d'appareil photo ambre, « CAMÉRA ») et « Choisir une photo » (icône d'image claire, « PHOTOTHÈQUE ») sont deux tuiles de même largeur, fond `oklch(0.17 0.006 260)`, séparées par un filet de 1 px, dans un groupe aux coins de 14 px, et aucun libellé « Photo de la carte » n'est affiché entre elles
 
 #### Scenario: Ordinateur sans écran tactile
 - **WHEN** l'utilisateur ouvre `/import` sur un ordinateur sans écran tactile
 - **THEN** seule la tuile « Choisir une photo » s'affiche, sur toute la largeur du groupe
+
+#### Scenario: Champ toujours trouvable
+- **WHEN** un test cherche le champ de fichier par son nom « Photo de la carte »
+- **THEN** il le trouve
+
+### Requirement: Repère de lecture par l'IA
+En tête de l'écran de correction d'un import dont la lecture a donné un brouillon, le système SHALL afficher « Carte lue par l’IA, vérifie chaque case » dans la couleur du token `--color-info` (`oklch(0.8 0.12 200)`), que l'écran parte de la lecture ou d'une correction enregistrée. L'écran vide d'un import en « Échec » et la saisie manuelle MUST NOT l'afficher.
+
+#### Scenario: Import lu par l'IA
+- **WHEN** l'utilisateur ouvre l'écran de correction de l'import de la carte de référence, « Prêt à vérifier »
+- **THEN** l'écran affiche en tête « Carte lue par l’IA, vérifie chaque case », dans la couleur `--color-info`
+
+#### Scenario: Correction reprise
+- **GIVEN** une correction enregistrée sur l'import de la carte de référence
+- **WHEN** l'utilisateur rouvre son écran de correction
+- **THEN** l'écran affiche toujours « Carte lue par l’IA, vérifie chaque case »
+
+#### Scenario: Import en échec
+- **WHEN** l'utilisateur ouvre l'écran de correction vide d'un import en « Échec »
+- **THEN** « Carte lue par l’IA, vérifie chaque case » n'est pas affiché
+
+#### Scenario: Saisie manuelle
+- **WHEN** l'utilisateur ouvre « Saisie manuelle »
+- **THEN** « Carte lue par l’IA, vérifie chaque case » n'est pas affiché
+
+### Requirement: Nom lu sur chaque ligne
+Sur l'écran de correction d'un import, chaque ligne de joueur lue SHALL afficher le nom lu sur la carte, « lu » au-dessus de « « GAB » », sur la même rangée que « L{n} », la liste du joueur et le bouton de retrait (spec `rounds`, « Lignes de joueur groupées sur téléphone »). Une ligne ajoutée à la main n'affiche pas de nom lu.
+
+#### Scenario: Ligne à 390 px
+- **WHEN** l'écran de correction du round de référence est ouvert sur un écran de 390 px
+- **THEN** « L1 », la liste « Joueur de la ligne 1 », « lu « GAB » » et le bouton « Retirer la ligne 1 » sont sur la même rangée
+
+#### Scenario: Ligne ajoutée
+- **WHEN** l'utilisateur ajoute une ligne sur l'écran de correction
+- **THEN** la nouvelle ligne n'affiche aucun « lu « … » »
+
+## ADDED Requirements
+
+### Requirement: Mise en page de l'écran Importer
+À 390 px, l'écran Importer SHALL suivre le design : titre « Importer » et lien « Saisie manuelle » à sa droite, texte « Photo de l'écran de fin de round, prise au téléphone. », « NOUVELLE CARTE », le groupe de tuiles (spec ci-dessus, « Une action principale à l'import »), puis « IMPORTS » avec leur nombre et la liste.
 
 #### Scenario: Aucun import
 - **WHEN** la liste des imports est vide
