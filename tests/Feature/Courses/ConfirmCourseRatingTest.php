@@ -11,7 +11,9 @@
  *   with « Tee absent de la carte SGT »;
  * - the NoProposalToConfirm refusal removed: the row of CALA NOVA, without proposed tee, raises
  *   no refusal;
- * - the note cleared by the confirmation (decision Q18): the note « Ancienne note » is lost.
+ * - the note cleared by the confirmation (decision Q18): the note « Ancienne note » is lost;
+ * - a pending row not refused by the confirmation: the row relaunched after its confirmation is
+ *   confirmed again from the proposal of the earlier lookup, and the relaunch is lost.
  */
 
 use App\Domain\Courses\Actions\ChooseCourseRatingTee;
@@ -92,3 +94,31 @@ test('a tee absent from the tees read is refused and nothing changes', function 
     expect(confirmedValues($rating))->toBe([null, null, null, CourseRatingStatus::ChooseTee, null, null])
         ->and(allStats())->toBe($stats);
 })->with(['absent' => ['Gold'], 'another case' => ['white']]);
+
+describe('on a row relaunched after its confirmation', function () {
+    beforeEach(function () {
+        // Pending again, SGT course forgotten; the proposal and the tees of the earlier lookup
+        // are still on the row while the new lookup runs.
+        $this->rating = CourseRating::factory()->confirmedFromSgt()->create([
+            'status' => CourseRatingStatus::Pending,
+            'sgt_course_id' => null, 'sgt_course_name' => null, 'sgt_course_location' => null,
+        ]);
+        $this->stats = allStats();
+    });
+
+    test('confirming the earlier proposal is refused and nothing changes', function () {
+        expect(fn () => app(ConfirmCourseRatingProposal::class)->handle($this->rating))
+            ->toThrow(NoProposalToConfirm::class, 'Aucune proposition à confirmer');
+
+        expect(confirmedValues($this->rating))->toBe([714, 144, 'sgt', CourseRatingStatus::Pending, 'Red', null])
+            ->and(allStats())->toBe($this->stats);
+    });
+
+    test('retaining an earlier tee read is refused and nothing changes', function () {
+        expect(fn () => app(ChooseCourseRatingTee::class)->handle($this->rating, 'White'))
+            ->toThrow(TeeNotRead::class, 'Tee absent de la carte SGT');
+
+        expect(confirmedValues($this->rating))->toBe([714, 144, 'sgt', CourseRatingStatus::Pending, 'Red', null])
+            ->and(allStats())->toBe($this->stats);
+    });
+});

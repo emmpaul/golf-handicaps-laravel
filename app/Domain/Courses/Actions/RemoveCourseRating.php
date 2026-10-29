@@ -56,14 +56,15 @@ final class RemoveCourseRating
     }
 
     /**
-     * The state of the last lookup: its proposal, else its tees read, else its candidates, else
-     * a rating to type by hand.
+     * The state of the last lookup: still pending while a relaunched lookup runs, else its
+     * proposal, else its tees read, else its candidates, else a rating to type by hand.
      */
     private function recoveredStatus(CourseRating $rating): CourseRatingStatus
     {
         $teesRead = array_column($rating->tees_read ?? [], 'name');
 
         return match (true) {
+            $rating->status === CourseRatingStatus::Pending => CourseRatingStatus::Pending,
             $rating->proposed_tee !== null && in_array($rating->proposed_tee, $teesRead, true) => CourseRatingStatus::Proposed,
             $teesRead !== [] => CourseRatingStatus::ChooseTee,
             ($rating->candidates ?? []) !== [] => CourseRatingStatus::ChooseCourse,

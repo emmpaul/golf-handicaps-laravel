@@ -24,12 +24,16 @@ final class ConfirmReadTee
     /**
      * @param  string|null  $teeName  the tee to retain, or null for the tee proposed on the row
      *
-     * @throws DomainException $refusal when no tee read has that name
+     * @throws DomainException $refusal when no tee read has that name, or when a relaunched
+     *                          lookup runs: the tees on the row are those of the earlier lookup
      */
     public function handle(CourseRating $courseRating, ?string $teeName, DomainException $refusal): void
     {
         DB::transaction(function () use ($courseRating, $teeName, $refusal): void {
             $rating = CourseRating::query()->lockForUpdate()->findOrFail($courseRating->id);
+            if ($rating->status === CourseRatingStatus::Pending) {
+                throw $refusal;
+            }
             $name = $teeName ?? $rating->proposed_tee;
             $tee = collect($rating->tees_read ?? [])->first(fn (array $read): bool => $name !== null && $read['name'] === $name);
             if ($tee === null) {

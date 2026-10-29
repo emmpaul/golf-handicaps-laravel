@@ -15,7 +15,9 @@
  *   confirmed proposal of the tee Red comes back as « Tee à choisir »;
  * - the candidates never checked: the confirmed choice among candidates comes back as
  *   « Saisie manuelle »;
- * - a row without confirmed rating not refused: removing a proposal raises no refusal.
+ * - a row without confirmed rating not refused: removing a proposal raises no refusal;
+ * - the pending status not kept by the removal: the row relaunched after its confirmation comes
+ *   back as « Proposition à confirmer », and its job then stops without looking up.
  */
 
 use App\Domain\Courses\Actions\RemoveCourseRating;
@@ -98,6 +100,20 @@ describe('on a row of the lookup', function () {
 
         expect(removedRow())->toBe([null, null, null, CourseRatingStatus::ChooseCourse, null, null])
             ->and(array_column(CourseRating::query()->sole()->candidates ?? [], 'id'))->toBe([477, 1951]);
+    });
+
+    test('removing the rating of a row relaunched after its confirmation keeps the lookup running', function () {
+        // Relaunched after the confirmation of the tee Red: pending, SGT course forgotten, the
+        // proposal of the earlier lookup still on the row, its job queued.
+        CourseRating::factory()->confirmedFromSgt()->create([
+            'status' => CourseRatingStatus::Pending,
+            'sgt_course_id' => null, 'sgt_course_name' => null, 'sgt_course_location' => null,
+        ]);
+
+        app(RemoveCourseRating::class)->handle('BETHPAGE BLACK', 'Red');
+
+        expect(removedRow())->toBe([null, null, null, CourseRatingStatus::Pending, null, 'Red'])
+            ->and(differentialsByName())->toBe(['Gab' => 10, 'Manu' => 170, 'Sean' => 170]);
     });
 
     test('removing a proposal not confirmed is refused and nothing changes', function () {
