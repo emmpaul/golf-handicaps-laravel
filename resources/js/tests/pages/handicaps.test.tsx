@@ -502,6 +502,55 @@ describe('Handicaps page', () => {
         ).toBeNull();
     });
 
+    // Spec « Mise en page de la page Handicaps »: the STATS block sits between
+    // the chart of the differentials and the history; the deferred prop not
+    // loaded yet shows no block. Mutations: the block rendered after the
+    // history, or not rendered → this test goes red.
+    it('places the STATS block under the chart and above the history', () => {
+        const { rerender } = render(
+            <HandicapsIndex
+                players={players}
+                selectedPlayerId={GAB}
+                history={gabHistory}
+            />,
+        );
+
+        expect(screen.queryByRole('heading', { name: 'Stats' })).toBeNull();
+
+        rerender(
+            <HandicapsIndex
+                players={players}
+                selectedPlayerId={GAB}
+                history={gabHistory}
+                scoringStats={{
+                    rounds: 3,
+                    holes: 54,
+                    averageGrossT: 800,
+                    bestGross: 72,
+                    parOrBetterPercent: 56,
+                    classes: [0, 6, 24, 16, 8],
+                    classPercents: [0, 11, 44, 30, 15],
+                    pars: [],
+                }}
+            />,
+        );
+
+        const headings = screen
+            .getAllByRole('heading', { level: 2 })
+            .map((heading) => heading.textContent);
+        const stats = screen.getByRole('heading', { name: 'Stats' });
+        const list = screen.getByRole('list', { name: 'Rounds de Gab' });
+
+        expect(headings.indexOf('Stats')).toBe(
+            headings.indexOf('Différentiels') + 1,
+        );
+        expect(
+            stats.compareDocumentPosition(list) &
+                Node.DOCUMENT_POSITION_FOLLOWING,
+        ).toBeTruthy();
+        expect(screen.getByText('54 trous')).toBeTruthy();
+    });
+
     it('shows « Aucun joueur. » without tabs when there is no player', () => {
         render(
             <HandicapsIndex
