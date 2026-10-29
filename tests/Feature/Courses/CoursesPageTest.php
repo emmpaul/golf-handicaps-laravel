@@ -56,7 +56,8 @@ test('without a session /courses redirects to /login and a typed rating writes n
         ->put('/courses/rating', ['courseName' => 'BETHPAGE BLACK', 'tees' => 'Red', 'rating' => '71,4', 'slope' => '144'])
         ->assertRedirect('/login');
 
-    expect(CourseRating::query()->count())->toBe(0);
+    // Only the row of the lookup of the round (SGT_LOOKUP off), without rating.
+    expect(CourseRating::query()->pluck('rating_t')->all())->toBe([null]);
 });
 
 describe('with a session', function () {
@@ -75,6 +76,8 @@ describe('with a session', function () {
         beforeEach(function () {
             createRoundCard(referenceCardOnCourse($this->gab->id, 'PAYNES VALLEY', 'Blue', '2026-10-24', par1: 5));
             createRoundCard(referenceCardData($this->gab->id, $this->manu->id));
+            // The rows of the lookups of both rounds (SGT_LOOKUP off) give way to the rating alone.
+            CourseRating::query()->delete();
             CourseRating::factory()->bethpageRed()->create();
         });
 
@@ -171,7 +174,7 @@ describe('with a session', function () {
                 ->assertSessionHasErrors(['slope' => 'Slope entre 55 et 155'])
                 ->assertSessionDoesntHaveErrors('rating');
 
-            expect(CourseRating::query()->count())->toBe(0);
+            expect(CourseRating::query()->pluck('rating_t')->all())->toBe([null]);
         })->with(['above 155' => ['160'], 'not whole' => ['144,5']]);
 
         test('a badly formed or empty rating gives the rating error and writes nothing', function (string $rating) {
@@ -181,7 +184,7 @@ describe('with a session', function () {
                 ->assertSessionHasErrors(['rating' => 'Rating entre 40,0 et 90,0'])
                 ->assertSessionDoesntHaveErrors('slope');
 
-            expect(CourseRating::query()->count())->toBe(0);
+            expect(CourseRating::query()->pluck('rating_t')->all())->toBe([null]);
         })->with(['two decimals' => ['71,45'], 'empty' => ['']]);
 
         test('a course without round goes back with the error toast and writes nothing', function () {
@@ -190,7 +193,7 @@ describe('with a session', function () {
                 ->assertRedirect('/courses')
                 ->assertInertiaFlash('toast', ['type' => 'error', 'message' => 'Parcours introuvable']);
 
-            expect(CourseRating::query()->count())->toBe(0);
+            expect(CourseRating::query()->pluck('rating_t')->all())->toBe([null]);
         });
     });
 });

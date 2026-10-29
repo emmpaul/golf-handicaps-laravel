@@ -2,6 +2,7 @@
 
 namespace App\Domain\Rounds\Actions;
 
+use App\Domain\Courses\Actions\QueueCourseRatingLookup;
 use App\Domain\Handicaps\Actions\RecomputePlayerStats;
 use App\Domain\Rounds\Exceptions\IncoherentRoundCard;
 use App\Domain\Rounds\RoundCard;
@@ -14,13 +15,16 @@ use Illuminate\Support\Facades\DB;
 
 /**
  * Corrects a saved round with the same checks as a new one: its holes, lines and scores are
- * replaced; its photo stays. The handicap history of its former and new players is recomputed.
+ * replaced; its photo stays. The handicap history of its former and new players is recomputed,
+ * and a course and tees new to the group get their rating lookup queued (design D6 of
+ * course-rating-sgt).
  */
 final class UpdateRound
 {
     public function __construct(
         private readonly RoundCardWriter $writer,
         private readonly RecomputePlayerStats $recomputePlayerStats,
+        private readonly QueueCourseRatingLookup $queueCourseRatingLookup,
     ) {}
 
     /**
@@ -39,6 +43,7 @@ final class UpdateRound
             RoundHole::query()->where('round_id', $round->id)->delete();
             $this->writer->write($round, $card);
             $this->recomputePlayerStats->handle([...$formerPlayerIds, ...$card->playerIds()]);
+            $this->queueCourseRatingLookup->handle($round->course_name, $round->tees);
 
             return $round;
         });
