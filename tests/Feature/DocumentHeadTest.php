@@ -1,9 +1,12 @@
 <?php
 
 /*
- * Mutation that turns these tests red: swap the two theme-color values in
- * resources/views/app.blade.php (#0A111F for light, #F4F7FB for dark), or
- * remove the mobile-web-app-capable meta tag.
+ * Spec visual-theme (visual-redesign), « Thème sombre seul »: « Couleur de la barre d'état »;
+ * design D10, decision Q1.
+ *
+ * Mutations that turn these tests red: a second theme-color kept in
+ * resources/views/app.blade.php (the light one, #F4F7FB, with its media); color-scheme left at
+ * « light dark »; the mobile-web-app-capable meta tag removed.
  */
 
 beforeEach(function () {
@@ -43,13 +46,11 @@ test('the viewport covers the whole screen, notch included', function () {
         ->and($viewport[0])->toContain('viewport-fit=cover');
 });
 
-test('the theme color follows the light and dark modes', function () {
+test('one theme color, the background of the design, whatever the mode', function () {
     $xpath = homeDocument();
 
-    expect(attributeValues($xpath, '//meta[@name="theme-color"][@media="(prefers-color-scheme: light)"]/@content'))
-        ->toBe(['#F4F7FB'])
-        ->and(attributeValues($xpath, '//meta[@name="theme-color"][@media="(prefers-color-scheme: dark)"]/@content'))
-        ->toBe(['#0A111F']);
+    expect(attributeValues($xpath, '//meta[@name="theme-color"]/@content'))->toBe(['#060709'])
+        ->and(attributeValues($xpath, '//meta[@name="theme-color"]/@media'))->toBe([]);
 });
 
 test('the page links the web manifest and the apple touch icon', function () {
@@ -66,11 +67,10 @@ test('the page can be installed on the home screen', function () {
         ->and(attributeValues($xpath, '//meta[@name="apple-mobile-web-app-capable"]/@content'))->toBe(['yes']);
 });
 
-test('the dark mode is left to the system', function () {
+test('the page declares the dark scheme alone', function () {
     $xpath = homeDocument();
 
-    expect(attributeValues($xpath, '/html/@class'))->not->toContain('dark')
-        ->and(attributeValues($xpath, '//meta[@name="color-scheme"]/@content'))->toBe(['light dark']);
+    expect(attributeValues($xpath, '//meta[@name="color-scheme"]/@content'))->toBe(['dark']);
 });
 
 test('the page sets no appearance cookie', function () {

@@ -64,7 +64,7 @@ Avant de commencer : relire `proposal.md` (source du design, écarts E1 à E34, 
 
 ## 10. Tête de page, manifest, icônes
 
-- [ ] 10.1 Mettre à jour `tests/Feature/DocumentHeadTest.php` (une seule `theme-color` `#060709`, sans `media`), `WebManifestTest.php` (`theme_color` et `background_color` `#060709`) et `AppIconsTest.php` (pixels du fond `#060709` et du fanion `#F66D67`, décision Q10) ; le voir rouge ; mutations nommées : seconde `theme-color` gardée, fond d'icône `#0F1D3E` ; mettre à jour `app.blade.php`, `manifest.webmanifest`, `favicon.svg`, les constantes de `GenerateAppIcons`, puis `vendor/bin/sail artisan app:icons` ; vérifier vert
+- [x] 10.1 Mettre à jour `tests/Feature/DocumentHeadTest.php` (une seule `theme-color` `#060709`, sans `media`), `WebManifestTest.php` (`theme_color` et `background_color` `#060709`) et `AppIconsTest.php` (pixels du fond `#060709` et du fanion `#F66D67`, décision Q10) ; le voir rouge ; mutations nommées : seconde `theme-color` gardée, fond d'icône `#0F1D3E` ; mettre à jour `app.blade.php`, `manifest.webmanifest`, `favicon.svg`, les constantes de `GenerateAppIcons`, puis `vendor/bin/sail artisan app:icons` ; vérifier vert
 
 ## 11. Documentation et consignes
 

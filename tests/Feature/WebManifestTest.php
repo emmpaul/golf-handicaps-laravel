@@ -1,7 +1,9 @@
 <?php
 
 /*
- * Mutation that turns this test red: set "theme_color" to "#ffffff" in
+ * Spec visual-theme (visual-redesign), « Couleurs du manifest »: « Manifest servi »; design D10.
+ *
+ * Mutation that turns this test red: "background_color" left at the former paper "#F4F7FB" in
  * public/manifest.webmanifest.
  */
 
@@ -17,8 +19,8 @@ test('the web manifest declares the installable application', function () {
         'short_name' => 'Golf',
         'start_url' => '/',
         'display' => 'standalone',
-        'background_color' => '#F4F7FB',
-        'theme_color' => '#F4F7FB',
+        'background_color' => '#060709',
+        'theme_color' => '#060709',
         'lang' => 'fr',
         'icons' => [
             ['src' => '/icons/icon-192.png', 'sizes' => '192x192', 'type' => 'image/png'],
