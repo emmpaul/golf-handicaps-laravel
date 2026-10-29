@@ -38,8 +38,10 @@ Critère : `X.Y.Z` retenu, tag absent en local et sur `origin`.
 5. Extraire les notes dans un fichier au chemin fixe, relu par les étapes 3 et 8 :
 
     ```sh
-    awk -v h="## [X.Y.Z] - " 'index($0, h) == 1 {f=1; next} /^## \[/ {f=0} f' CHANGELOG.md > "${TMPDIR:-/tmp}/release-notes-vX.Y.Z.md"
+    awk '/^## \[X\.Y\.Z\] - / {f=1; next} /^## \[/ {f=0} f' CHANGELOG.md > "${TMPDIR:-/tmp}/release-notes-vX.Y.Z.md"
     ```
+
+    Pas de `$0` dans ce skill : le chargeur des skills le remplace par l'argument. Le fichier n'est pas vide.
 
 6. `git push -u origin chore/release-vX.Y.Z`, puis `gh pr create --base main --title "chore(release): vX.Y.Z" --body-file "${TMPDIR:-/tmp}/release-notes-vX.Y.Z.md"`.
 
@@ -93,9 +95,21 @@ Critère : trois digests identiques, et la réponse vaut `{"version":"X.Y.Z","co
 
 ## 8. GitHub Release
 
-`gh release create vX.Y.Z --verify-tag --title vX.Y.Z --notes-file "${TMPDIR:-/tmp}/release-notes-vX.Y.Z.md"`.
+Le corps de la release est un en-tête de déploiement, puis `## Changes` et les notes de l'étape 3. Il s'écrit en anglais, comme `CHANGELOG.md`, dans `${TMPDIR:-/tmp}/release-body-vX.Y.Z.md`. `<prev>` est la version publiée précédente : `git describe --tags --abbrev=0 "vX.Y.Z^"`. Sans tag précédent, c'est la première version, et chaque ligne prend sa variante « première version ».
 
-Critère : `gh release view vX.Y.Z` montre les notes de la section `## [X.Y.Z]`.
+En-tête, une ligne par point :
+
+- **Image** : `ghcr.io/emmpaul/golf-handicaps-laravel:vX.Y.Z`, aussi `latest` et `<sha>`, `linux/amd64`, et le digest de l'étape 7.
+- **Commit** : `<sha>` court, lié à `https://github.com/emmpaul/golf-handicaps-laravel/commit/<sha>`.
+- **Deploy** : `IMAGE_TAG=vX.Y.Z` dans Dokploy, puis « Déployer une version » de `docs/deployment.md`. Première version : « Première installation ».
+- **Migrations** : les fichiers de `git diff --name-only --diff-filter=A <prev> vX.Y.Z -- database/migrations`, ou « none ». S'il y en a, rappeler de forcer un dump avant le déploiement et de lire leur `up()` avant un retour arrière. Première version : leur nombre, toutes appliquées par `migrate`.
+- **Environment** : les variables de `docker-compose.yml` ajoutées ou retirées depuis `<prev>`, ou « no change ». Les comparer par `git show <tag>:docker-compose.yml | grep -oE '\$\{[A-Z_]+' | sort -u` aux deux tags. Première version : les obligatoires (`${NOM:?…}` dans le fichier), `APP_PASSCODE`, et le renvoi à « Renseigner les variables » de `docs/deployment.md`.
+- **Rollback** : `IMAGE_TAG=<prev>`, puis « Retour arrière » de `docs/deployment.md`. Première version : aucune version à laquelle revenir.
+- **Full changelog** : `https://github.com/emmpaul/golf-handicaps-laravel/compare/<prev>...vX.Y.Z`. Première version : `https://github.com/emmpaul/golf-handicaps-laravel/blob/vX.Y.Z/CHANGELOG.md`.
+
+Puis `gh release create vX.Y.Z --verify-tag --title vX.Y.Z --notes-file "${TMPDIR:-/tmp}/release-body-vX.Y.Z.md"`.
+
+Critère : `gh release view vX.Y.Z` montre l'en-tête, avec le digest de l'étape 7, puis les notes de la section `## [X.Y.Z]`.
 
 ## 9. Déploiement
 
