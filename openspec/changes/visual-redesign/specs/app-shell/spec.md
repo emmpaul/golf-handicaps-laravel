@@ -46,7 +46,7 @@ Le système SHALL présenter la mise en page du téléphone à toute largeur : j
 - **THEN** la colonne fait 320 px et les marges latérales restent de 20 px
 
 ### Requirement: Feuille de confirmation
-Une action à confirmer SHALL ouvrir une feuille montant du bas de l'écran sur un voile `rgba(0, 0, 0, 0.6)` : fond `oklch(0.17 0.006 260)`, filet du haut `oklch(0.27 0.008 260)`, coins du haut de 22 px, marges 24 px 20 px 34 px, titre en Geist 600, 20 px, texte en Geist 400, 14 px, puis le bouton d'action et « Annuler », de 52 px chacun. Toucher le voile MUST fermer la feuille sans rien faire.
+Une action à confirmer SHALL ouvrir une feuille montant du bas de l'écran sur un voile `rgba(0, 0, 0, 0.6)` : fond `oklch(0.17 0.006 260)`, filet du haut `oklch(0.27 0.008 260)`, coins du haut de 22 px, marges 24 px 20 px 34 px, titre en Geist 600, 20 px, texte en Geist 400, 14 px, puis le bouton d'action et « Annuler », de 52 px chacun. Toucher le voile MUST fermer la feuille sans rien faire. À l'ouverture, le focus MUST aller sur « Annuler », jamais sur l'action destructive.
 
 #### Scenario: Voile touché
 - **WHEN** l'utilisateur ouvre la feuille de suppression d'un round puis touche le voile
@@ -55,6 +55,10 @@ Une action à confirmer SHALL ouvrir une feuille montant du bas de l'écran sur 
 #### Scenario: Échap
 - **WHEN** l'utilisateur ouvre la feuille au clavier puis appuie sur Échap
 - **THEN** la feuille se ferme et le focus revient sur « Supprimer » de la rangée du haut
+
+#### Scenario: Focus initial sur « Annuler »
+- **WHEN** l'utilisateur ouvre au clavier la feuille de suppression d'un round puis appuie sur Entrée
+- **THEN** la feuille se ferme et le round reste
 
 ### Requirement: Libellé de section
 Une liste ou un groupe de champs SHALL être introduit par un libellé de section : Geist Mono 500, 11 px, approche 0,08 em, capitales, gris `oklch(0.68 0.01 260)`, 10 px au-dessus d'un filet de 1 px `oklch(0.27 0.008 260)` ; une valeur à droite (compte, unité) prend le même style.

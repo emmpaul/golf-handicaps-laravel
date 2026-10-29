@@ -1,7 +1,14 @@
 import { router } from '@inertiajs/react';
 import type { VisitOptions } from '@inertiajs/core';
 import type { MockInstance } from 'vite-plus/test';
-import { act, fireEvent, render, screen, within } from '@testing-library/react';
+import {
+    act,
+    fireEvent,
+    render,
+    screen,
+    waitFor,
+    within,
+} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import {
     afterEach,
@@ -694,6 +701,28 @@ describe('List of imports', () => {
         expect(
             within(dialog).getByRole('button', { name: 'Annuler' }),
         ).toBeDisabled();
+    });
+
+    // B3, DO33: the sheet of an import opens on « Annuler » too (here
+    // « Annuler » also comes first). Mutation: the initial focus of
+    // AlertDialogContent aimed at the action
+    // (`[data-slot="alert-dialog-action"]`) → this test goes red.
+    it('opens the deletion sheet with the focus on « Annuler »', async () => {
+        render(<ImportIndex imports={[ready]} readingEnabled />);
+
+        await userEvent.click(
+            within(line('17 oct. 2026 · 21:05')).getByRole('button', {
+                name: 'Supprimer',
+            }),
+        );
+
+        const dialog = screen.getByRole('alertdialog');
+
+        await waitFor(() => {
+            expect(document.activeElement).toBe(
+                within(dialog).getByRole('button', { name: 'Annuler' }),
+            );
+        });
     });
 
     it('sends nothing when the deletion is cancelled', async () => {
