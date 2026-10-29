@@ -110,3 +110,24 @@ test('a rating typed before the migration is confirmed by hand after it', functi
     expect(DB::table('course_ratings')->get(['status', 'source', 'rating_t', 'slope'])->map(fn (object $row): array => (array) $row)->all())
         ->toBe([['status' => 'confirmed', 'source' => 'manual', 'rating_t' => 714, 'slope' => 144]]);
 });
+
+// Mutation that turns this test red: the delete() of the rows without confirmed rating removed
+// from down(): the pending row is kept, and rating_t cannot go back to NOT NULL. The rollback
+// keeps the confirmed ratings and makes rating_t required again.
+test('rolling the migration back erases the lookups without rating and keeps the confirmed ones', function () {
+    CourseRating::factory()->pending()->create(['course_name' => 'CALA NOVA', 'tees' => 'White']);
+    CourseRating::factory()->create(['course_name' => 'BETHPAGE BLACK', 'tees' => 'Red', 'rating_t' => 714, 'slope' => 144]);
+    $migration = require database_path('migrations/2026_10_29_000011_add_lookup_to_course_ratings_table.php');
+
+    $migration->down();
+
+    expect(DB::table('course_ratings')->get(['course_name', 'tees', 'rating_t', 'slope'])->map(fn (object $row): array => (array) $row)->all())
+        ->toBe([['course_name' => 'BETHPAGE BLACK', 'tees' => 'Red', 'rating_t' => 714, 'slope' => 144]])
+        ->and(fn () => DB::table('course_ratings')->insert([
+            'id' => '0199c2d0-0000-7000-8000-000000000003',
+            'course_name' => 'PAYNES VALLEY',
+            'tees' => 'Blue',
+            'rating_t' => null,
+            'slope' => 131,
+        ]))->toThrow(QueryException::class, 'rating_t');
+});
