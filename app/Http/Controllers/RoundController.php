@@ -12,7 +12,7 @@ use App\Domain\Rounds\Queries\KnownCourses;
 use App\Domain\Rounds\Queries\RoundDetail;
 use App\Domain\Rounds\Queries\RoundList;
 use App\Domain\Rounds\RoundCard;
-use App\Http\Requests\RoundCardRequest;
+use App\Http\Controllers\Concerns\SavesRoundCards;
 use App\Http\Requests\StoreRoundRequest;
 use App\Http\Requests\UpdateRoundRequest;
 use App\Models\Round;
@@ -22,6 +22,8 @@ use Inertia\Response;
 
 class RoundController extends Controller
 {
+    use SavesRoundCards;
+
     /**
      * The rounds from the latest to the oldest, with the gross of their players.
      */
@@ -99,27 +101,5 @@ class RoundController extends Controller
         $deleteRound->handle($round);
 
         return $this->saved(to_route('rounds.index'), 'Round supprimé.');
-    }
-
-    /**
-     * Back to the editor with the `duplicate` flash when the card repeats a saved round and the
-     * person did not choose to save it anyway; nothing is written.
-     */
-    private function duplicateOf(RoundCardRequest $request, FindDuplicateRound $duplicates, ?Round $except = null): ?RedirectResponse
-    {
-        if ($request->forced()) {
-            return null;
-        }
-
-        $duplicate = $duplicates->for($request->card(), $except);
-
-        return $duplicate === null ? null : Inertia::flash('duplicate', ['roundId' => $duplicate->id])->back();
-    }
-
-    private function saved(RedirectResponse $redirect, string $message): RedirectResponse
-    {
-        Inertia::flash('toast', ['type' => 'success', 'message' => $message]);
-
-        return $redirect;
     }
 }
