@@ -10,19 +10,47 @@
  * - in bootstrap/app.php, place RequirePasscode after PreventRequestForgery in the priority
  *   list: the stale CSRF token then answers 419 instead of 401;
  * - in RequirePasscode, answer an Inertia write with redirect('/login', 307): the PUT visit gets
- *   307, which the Inertia client replays as a PUT on /login (405), instead of 303.
+ *   307, which the Inertia client replays as a PUT on /login (405), instead of 303;
+ * - the placeholder route put back for /strokes (Route::inertia('/strokes/{path?}', …) with
+ *   ->where('path', '.*')): /strokes/xyz answers 200 instead of 404.
  */
 
 use App\Support\Passcode;
 use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Support\Facades\Route;
+use Inertia\Testing\AssertableInertia as Assert;
 
 test('a page without a session redirects to the login page', function (string $uri) {
     $this->get($uri)->assertRedirect('/login');
 })->with([
     'home' => ['/'],
     'section' => ['/rounds/0190a6b2-7c3e-7000-8000-000000000001'],
+    'handicaps' => ['/handicaps'],
+    'strokes' => ['/strokes'],
     'unknown address' => ['/icon-admin'],
+]);
+
+// Spec app-shell, « Adresses des sections »: every section serves its own page, no address
+// serves the « Section à venir » page any more.
+test('each section answers 200 with its own page', function (string $uri, string $component) {
+    $this->withPasscodeSession()
+        ->get($uri)
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page->component($component))
+        ->assertDontSee('Section à venir');
+})->with([
+    'import' => ['/import', 'import/index'],
+    'rounds' => ['/rounds', 'rounds/index'],
+    'handicaps' => ['/handicaps', 'handicaps/index'],
+    'strokes' => ['/strokes', 'strokes/index'],
+    'players' => ['/players', 'players/index'],
+]);
+
+test('a sub-address of a section without its own page answers 404', function (string $uri) {
+    $this->withPasscodeSession()->get($uri)->assertNotFound();
+})->with([
+    'handicaps' => ['/handicaps/0190a6b2-7c3e-7000-8000-000000000001'],
+    'strokes' => ['/strokes/xyz'],
 ]);
 
 test('an unknown address with a session answers 404', function () {

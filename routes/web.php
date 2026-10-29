@@ -2,6 +2,8 @@
 
 use App\Http\Controllers\CourseController;
 use App\Http\Controllers\CourseRatingController;
+use App\Http\Controllers\HandicapController;
+use App\Http\Controllers\HomeController;
 use App\Http\Controllers\ImportController;
 use App\Http\Controllers\ImportCorrectionController;
 use App\Http\Controllers\ImportPhotoController;
@@ -12,6 +14,7 @@ use App\Http\Controllers\PlayerAliasController;
 use App\Http\Controllers\PlayerController;
 use App\Http\Controllers\RoundController;
 use App\Http\Controllers\RoundPhotoController;
+use App\Http\Controllers\StrokesController;
 use App\Http\Middleware\RequirePasscode;
 use Illuminate\Support\Facades\Route;
 
@@ -23,16 +26,12 @@ Route::withoutMiddleware(RequirePasscode::class)->controller(LoginController::cl
 
 Route::post('/logout', [LoginController::class, 'destroy'])->name('logout');
 
-Route::inertia('/', 'home')->name('home');
+Route::get('/', HomeController::class)->name('home');
 
-// Sections without a page yet: each address and its sub-addresses serve the placeholder,
-// until the section's own change replaces the route under the same name.
-Route::inertia('/handicaps/{path?}', 'section-placeholder', ['section' => 'Handicaps'])
-    ->where('path', '.*')
-    ->name('handicaps.index');
-Route::inertia('/strokes/{path?}', 'section-placeholder', ['section' => 'Coups'])
-    ->where('path', '.*')
-    ->name('strokes.index');
+// Handicaps and Strokes (home-and-match-strokes, design D6): the player of the Handicaps page is
+// in ?joueur=; a sub-address, such as /strokes/xyz, falls to the 404 below.
+Route::get('/handicaps', [HandicapController::class, 'index'])->name('handicaps.index');
+Route::get('/strokes', [StrokesController::class, 'index'])->name('strokes.index');
 
 // Imports (scorecard-ai-import, design D6): an address under /import without a route, such as
 // /import/xyz, falls to the 404 below.

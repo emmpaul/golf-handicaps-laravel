@@ -6,8 +6,10 @@ use App\Integrations\Ai\ScorecardPhotoReader;
 use App\Models\Player;
 use App\Models\PlayerRoundStat;
 use App\Models\Round;
+use Carbon\CarbonImmutable;
 use Database\Factories\ImportFactory;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Laravel\Ai\Responses\Data\Meta;
 use Laravel\Ai\Responses\Data\TextUsage;
@@ -189,4 +191,34 @@ function referenceReading(): array
 function billedAnswer(array $card): StructuredTextResponse
 {
     return new StructuredTextResponse($card, (string) json_encode($card), new TextUsage(3000, 1200), new Meta);
+}
+
+/**
+ * Saves the reference card on $count days from 2026-09-02, played by Gab (+1), Manu (+17) and
+ * Sean (+12) of the running test: the base of the query count tests (design D8 of
+ * home-and-match-strokes).
+ */
+function createDailyRoundsOfThree(int $count): void
+{
+    foreach (range(1, $count) as $day) {
+        createRoundCard(referenceCardOn(CarbonImmutable::parse('2026-09-01')->addDays($day)->toDateString(), [
+            [test()->gab->id, strokesOverPar(1)],
+            [test()->manu->id, strokesOverPar(17)],
+            [test()->sean->id, strokesOverPar(12)],
+        ]));
+    }
+}
+
+/**
+ * The number of queries run by $callback.
+ */
+function queriesDuring(Closure $callback): int
+{
+    $queries = 0;
+    DB::listen(function () use (&$queries): void {
+        $queries++;
+    });
+    $callback();
+
+    return $queries;
 }
