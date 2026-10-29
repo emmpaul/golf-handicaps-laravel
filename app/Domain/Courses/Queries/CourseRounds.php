@@ -3,6 +3,7 @@
 namespace App\Domain\Courses\Queries;
 
 use App\Models\Round;
+use App\Models\RoundHole;
 use App\Models\RoundPlayer;
 use Illuminate\Database\Eloquent\Builder;
 
@@ -15,6 +16,21 @@ final class CourseRounds
     public function exist(string $courseName, string $tees): bool
     {
         return $this->onCourse(Round::query(), $courseName, $tees)->exists();
+    }
+
+    /**
+     * The par total of the most recent round of the course and tees, by date of play, then date
+     * of saving and id, as Next; null when no round is left on them.
+     */
+    public function latestPar(string $courseName, string $tees): ?int
+    {
+        $latest = $this->onCourse(Round::query(), $courseName, $tees)
+            ->orderByDesc('rounds.played_on')
+            ->orderByDesc('rounds.created_at')
+            ->orderByDesc('rounds.id')
+            ->value('rounds.id');
+
+        return $latest === null ? null : (int) RoundHole::query()->where('round_id', $latest)->sum('par');
     }
 
     /**
