@@ -56,7 +56,7 @@ export function StrokesGrid({ perHole }: { perHole: number[] }) {
                         </span>
                         <span
                             aria-hidden
-                            className="h-6 font-heading text-lg leading-6 font-extrabold"
+                            className="font-heading text-lg h-6 leading-6 font-extrabold"
                         >
                             {holeCount(count)}
                         </span>

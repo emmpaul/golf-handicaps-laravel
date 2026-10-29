@@ -163,7 +163,7 @@ function CellInput({
                 }
                 onBlur={onBlur}
                 className={cn(
-                    'block w-full min-w-0 rounded-none border border-input bg-transparent px-0.5 text-center font-heading text-base font-semibold tabular-nums',
+                    'font-heading text-base block w-full min-w-0 rounded-none border border-input bg-transparent px-0.5 text-center font-semibold tabular-nums',
                     'transition-[background-color,border-color] duration-(--dur-micro) ease-out outline-none',
                     'hover:not-read-only:border-foreground focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring focus-visible:outline-solid',
                     'aria-invalid:border-destructive aria-invalid:bg-destructive/10',
@@ -179,7 +179,7 @@ function CellInput({
 function WideGrid({ rows, ...cell }: GridProps) {
     return (
         <ScrollFrame label="Carte à corriger" labelWidth="6rem">
-            <table className="border-separate border-spacing-0.5 p-1 text-sm tabular-nums lg:w-full">
+            <table className="text-sm border-separate border-spacing-0.5 p-1 tabular-nums lg:w-full">
                 <thead>
                     <tr>
                         <th
@@ -192,7 +192,7 @@ function WideGrid({ rows, ...cell }: GridProps) {
                             <th
                                 key={column}
                                 scope="col"
-                                className="px-0.5 text-center font-heading text-base font-extrabold"
+                                className="font-heading text-base px-0.5 text-center font-extrabold"
                             >
                                 {columnTitle(column)}
                             </th>
@@ -301,7 +301,7 @@ function PhoneGrid({ rows, ...cell }: GridProps) {
                                 >
                                     <span
                                         className={cn(
-                                            'block font-heading leading-none',
+                                            'font-heading block leading-none',
                                             total
                                                 ? 'text-sm font-extrabold'
                                                 : 'text-lg font-extrabold',
@@ -313,7 +313,7 @@ function PhoneGrid({ rows, ...cell }: GridProps) {
                                         <GridCell
                                             row={distance}
                                             column={column}
-                                            className="mt-1 h-11 text-sm font-medium text-muted-foreground"
+                                            className="text-sm mt-1 h-11 font-medium text-muted-foreground"
                                             {...cell}
                                         />
                                     ) : null}

@@ -257,7 +257,7 @@ export function RoundEditor({
     return (
         <div className="flex min-w-0 flex-col gap-4">
             {importContext?.readByAi ? (
-                <p className="font-medium text-ai">
+                <p className="text-ai font-medium">
                     Carte lue par l’IA, vérifie chaque case
                 </p>
             ) : null}
@@ -446,7 +446,7 @@ export function RoundEditor({
                         role="status"
                         data-testid="autosave-status"
                         className={cn(
-                            'inline-flex items-center gap-2 text-sm',
+                            'text-sm inline-flex items-center gap-2',
                             autosave.status.error
                                 ? 'text-destructive'
                                 : 'text-muted-foreground',

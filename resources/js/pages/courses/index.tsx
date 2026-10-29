@@ -113,7 +113,7 @@ function CourseRow({
                     <h2 className="font-heading text-xl leading-tight font-bold [overflow-wrap:anywhere]">
                         {course.courseName}
                     </h2>
-                    <span className="flex flex-wrap gap-x-4 text-sm text-muted-foreground">
+                    <span className="text-sm flex flex-wrap gap-x-4 text-muted-foreground">
                         <span>Tees {course.tees}</span>
                         <span>Par {course.par}</span>
                     </span>
@@ -207,7 +207,7 @@ export default function CoursesIndex({
                     <div
                         aria-hidden
                         className={cn(
-                            'hidden bg-band px-2 py-1.5 text-sm font-medium text-band-ink',
+                            'bg-band text-sm text-band-ink hidden px-2 py-1.5 font-medium',
                             sgt ? COURSE_COLUMNS.sgt : COURSE_COLUMNS.plain,
                         )}
                     >

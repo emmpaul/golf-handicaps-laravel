@@ -58,7 +58,7 @@ export default function RoundsIndex({ rounds }: { rounds: RoundListItem[] }) {
                     <div
                         aria-hidden
                         className={cn(
-                            'hidden bg-band px-2 py-1.5 text-sm font-medium text-band-ink md:grid',
+                            'bg-band text-sm text-band-ink hidden px-2 py-1.5 font-medium md:grid',
                             REGISTER_COLUMNS,
                         )}
                     >
@@ -83,22 +83,22 @@ export default function RoundsIndex({ rounds }: { rounds: RoundListItem[] }) {
                                 >
                                     <time
                                         dateTime={round.playedOn}
-                                        className="col-start-2 row-start-1 text-right text-sm text-muted-foreground tabular-nums md:col-start-1 md:text-left md:font-heading md:text-base md:font-semibold md:text-foreground"
+                                        className="text-sm md:font-heading md:text-base col-start-2 row-start-1 text-right text-muted-foreground tabular-nums md:col-start-1 md:text-left md:font-semibold md:text-foreground"
                                     >
                                         {formatPlayedOn(round.playedOn)}
                                     </time>
                                     <span className="col-start-1 row-start-1 flex min-w-0 flex-wrap items-baseline gap-x-2 md:col-span-2 md:col-start-2 md:grid md:grid-cols-subgrid">
-                                        <span className="min-w-0 font-heading text-lg leading-tight font-bold [overflow-wrap:anywhere]">
+                                        <span className="font-heading text-lg min-w-0 leading-tight font-bold [overflow-wrap:anywhere]">
                                             {round.courseName}
                                         </span>
-                                        <span className="text-sm text-muted-foreground md:text-base md:text-foreground">
+                                        <span className="text-sm md:text-base text-muted-foreground md:text-foreground">
                                             <span className="md:hidden">
                                                 Tees{' '}
                                             </span>
                                             <span>{round.tees}</span>
                                         </span>
                                     </span>
-                                    <span className="col-start-1 row-start-2 flex flex-wrap gap-x-3 text-sm md:col-start-4 md:row-start-1 md:text-base">
+                                    <span className="text-sm md:text-base col-start-1 row-start-2 flex flex-wrap gap-x-3 md:col-start-4 md:row-start-1">
                                         {round.players.map(
                                             ({ name, gross }) => (
                                                 <span
@@ -115,7 +115,7 @@ export default function RoundsIndex({ rounds }: { rounds: RoundListItem[] }) {
                                     </span>
                                     <span
                                         data-testid="round-winner"
-                                        className="col-start-2 row-start-2 text-right text-sm text-muted-foreground md:col-start-5 md:row-start-1 md:text-left"
+                                        className="text-sm col-start-2 row-start-2 text-right text-muted-foreground md:col-start-5 md:row-start-1 md:text-left"
                                     >
                                         {/* Sous l'en-tête « Gagnant net » à partir de 768 px : le libellé reste pour les lecteurs d'écran. */}
                                         <span className="md:sr-only">

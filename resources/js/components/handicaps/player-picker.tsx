@@ -28,7 +28,7 @@ export function PlayerPicker({
                     aria-current={
                         player.id === selectedPlayerId ? 'page' : undefined
                     }
-                    className="flex min-h-11 min-w-0 items-center justify-center px-2 font-heading text-lg font-semibold [overflow-wrap:anywhere] transition-[color,background-color] duration-(--dur-micro) ease-out not-last:border-r not-last:border-foreground not-aria-[current=page]:hover:bg-muted focus-visible:outline-2 focus-visible:-outline-offset-4 focus-visible:outline-ring aria-[current=page]:bg-primary aria-[current=page]:text-primary-foreground md:min-h-8"
+                    className="font-heading text-lg flex min-h-11 min-w-0 items-center justify-center px-2 font-semibold [overflow-wrap:anywhere] transition-[color,background-color] duration-(--dur-micro) ease-out not-last:border-r not-last:border-foreground not-aria-[current=page]:hover:bg-muted focus-visible:outline-2 focus-visible:-outline-offset-4 focus-visible:outline-ring aria-[current=page]:bg-primary aria-[current=page]:text-primary-foreground md:min-h-8"
                 >
                     {player.name}
                 </Link>

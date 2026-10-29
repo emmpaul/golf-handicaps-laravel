@@ -116,10 +116,10 @@ export function StrokesPlanner({
                                             )
                                         }
                                     />
-                                    <span className="min-w-0 font-heading text-xl font-semibold [overflow-wrap:anywhere]">
+                                    <span className="font-heading text-xl min-w-0 font-semibold [overflow-wrap:anywhere]">
                                         {player.name}
                                     </span>{' '}
-                                    <span className="ml-auto text-sm text-muted-foreground tabular-nums">
+                                    <span className="text-sm ml-auto text-muted-foreground tabular-nums">
                                         {player.indexT === null
                                             ? NO_INDEX
                                             : `Index ${formatTenths(player.indexT)}`}

@@ -26,7 +26,7 @@ export function RatingLink({
             data-testid={testId}
             className={cn(
                 ACTION_LINK,
-                'w-fit gap-x-4 text-sm tabular-nums',
+                'text-sm w-fit gap-x-4 tabular-nums',
                 className,
             )}
         >

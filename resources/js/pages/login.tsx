@@ -20,7 +20,7 @@ export default function Login() {
             {/* Formulaire centré dans la hauteur restante, version en bas de page. */}
             <div className="flex flex-1 flex-col justify-center gap-6">
                 <div className="flex flex-col gap-3 border-t-2 border-foreground pt-4">
-                    <p className="flex items-center gap-2 font-heading text-xl leading-none font-extrabold">
+                    <p className="font-heading text-xl flex items-center gap-2 leading-none font-extrabold">
                         <BrandMark /> Golf
                     </p>
                     <h1 className="font-heading text-3xl leading-tight font-extrabold tracking-(--tracking-display)">

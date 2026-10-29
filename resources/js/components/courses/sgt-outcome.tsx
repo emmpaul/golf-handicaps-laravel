@@ -35,7 +35,7 @@ function SgtCourse({ course }: { course: CourseWithLookup }) {
     }
 
     return (
-        <div className="flex flex-col gap-1 text-sm">
+        <div className="text-sm flex flex-col gap-1">
             {sgtCourseName === null ? null : (
                 // Nom et lieu du parcours SGT en deux éléments, sans point médian.
                 <span className="flex min-w-0 flex-wrap gap-x-3 [overflow-wrap:anywhere] text-muted-foreground">
@@ -88,7 +88,7 @@ function Outcome({ course, id }: { course: CourseWithLookup; id: string }) {
                         key={tee.name}
                         className="flex flex-wrap items-center justify-between gap-2 border-t py-1.5"
                     >
-                        <span className="flex gap-x-3 text-sm">
+                        <span className="text-sm flex gap-x-3">
                             <span className="font-medium">{tee.name}</span>
                             <span className="tabular-nums">
                                 {ratingText(tee.ratingT, tee.slope)}
@@ -118,7 +118,7 @@ function Outcome({ course, id }: { course: CourseWithLookup; id: string }) {
                         key={candidate.id}
                         className="flex flex-wrap items-center justify-between gap-2 border-t py-1.5"
                     >
-                        <span className="flex min-w-0 flex-col text-sm">
+                        <span className="text-sm flex min-w-0 flex-col">
                             <span className="font-medium [overflow-wrap:anywhere]">
                                 {candidate.name}
                             </span>

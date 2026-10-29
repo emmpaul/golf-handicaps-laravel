@@ -15,7 +15,7 @@ export function ProblemList({ problems }: { problems: Problem[] }) {
     return (
         <ul
             aria-label="Problèmes"
-            className="flex flex-col gap-1 text-sm text-destructive"
+            className="text-sm flex flex-col gap-1 text-destructive"
         >
             {[...counts].map(([message, count]) => (
                 <li key={message}>

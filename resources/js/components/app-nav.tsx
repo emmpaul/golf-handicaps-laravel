@@ -38,7 +38,7 @@ export function AppNav() {
                 >
                     <Link
                         href={home.url()}
-                        className="mr-auto flex shrink-0 items-center gap-2 font-heading text-xl leading-none font-extrabold max-md:min-h-11"
+                        className="font-heading text-xl mr-auto flex shrink-0 items-center gap-2 leading-none font-extrabold max-md:min-h-11"
                     >
                         <BrandMark /> Golf
                     </Link>
@@ -46,7 +46,7 @@ export function AppNav() {
                         <NavLink
                             key={href}
                             href={href}
-                            className="hidden h-11 shrink-0 items-center border-y-2 border-transparent text-sm text-muted-foreground transition-[color,border-color] duration-(--dur-micro) ease-out hover:text-foreground aria-[current=page]:border-b-foreground aria-[current=page]:font-medium aria-[current=page]:text-foreground md:flex"
+                            className="text-sm hidden h-11 shrink-0 items-center border-y-2 border-transparent text-muted-foreground transition-[color,border-color] duration-(--dur-micro) ease-out hover:text-foreground aria-[current=page]:border-b-foreground aria-[current=page]:font-medium aria-[current=page]:text-foreground md:flex"
                         >
                             {label}
                         </NavLink>
@@ -62,7 +62,7 @@ export function AppNav() {
                         <li key={href} className="flex">
                             <NavLink
                                 href={href}
-                                className="group flex flex-1 flex-col items-center justify-center gap-0.5 text-xs text-muted-foreground aria-[current=page]:font-medium aria-[current=page]:text-foreground"
+                                className="group text-xs flex flex-1 flex-col items-center justify-center gap-0.5 text-muted-foreground aria-[current=page]:font-medium aria-[current=page]:text-foreground"
                             >
                                 <span
                                     data-slot="tab-pill"

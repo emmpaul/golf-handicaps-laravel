@@ -62,7 +62,7 @@ export function NetLeaderboard({ entries }: { entries: LeaderboardEntry[] }) {
                         >
                             {entry.name}
                             {entry.net === null ? (
-                                <span className="block font-sans text-sm leading-tight font-normal text-muted-foreground">
+                                <span className="text-sm block font-sans leading-tight font-normal text-muted-foreground">
                                     {` ${NO_INDEX}`}
                                 </span>
                             ) : null}

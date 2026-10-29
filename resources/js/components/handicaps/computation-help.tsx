@@ -21,7 +21,7 @@ const LINES = [
  */
 export function ComputationHelp() {
     return (
-        <details className="group max-w-2xl border-t pt-3 text-sm">
+        <details className="group text-sm max-w-2xl border-t pt-3">
             <summary className="w-fit cursor-pointer font-medium underline-offset-3 hover:underline max-md:min-h-11 max-md:content-center">
                 Comment l’index est calculé
             </summary>
