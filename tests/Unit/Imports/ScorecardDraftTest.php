@@ -8,7 +8,9 @@
  * - the length of a row not checked: the line of 17 scores gives a draft;
  * - a total accepted when it is not an integer: the « 38 » string gives a draft;
  * - the number of lines not bounded: the 5 lines give a draft;
- * - a row read from the wrong key (strokeIndex read from par): the pars or toArray() differ.
+ * - a row read from the wrong key (strokeIndex read from par): the pars or toArray() differ;
+ * - the tees kept as read: « Red 6241yd » stays in the draft and matches no known course;
+ * - the distance suffix stripped without its unit (any final number): « Combo 2 » loses its 2.
  */
 
 use App\Domain\Imports\ScorecardDraft;
@@ -58,3 +60,17 @@ test('empty cells and an empty card stay a draft', function () {
 
     expect($draft?->toArray())->toBe($card);
 });
+
+test('the tees lose the distance read after their name', function (string $read, string $tees) {
+    $card = referenceDraftArray();
+    $card['tees'] = $read;
+
+    expect(ScorecardDraft::fromArray($card)?->tees)->toBe($tees);
+})->with([
+    // The three real cards read on 2026-10-28 (task 9.3).
+    'IMG_3064' => ['Red 6241yd', 'Red'],
+    'Paynes Valley' => ['Blue 6212yd', 'Blue'],
+    'Calanova' => ['Yellow 5881yd', 'Yellow'],
+    'in metres' => ['White 5400 m', 'White'],
+    'a number without unit' => ['Combo 2', 'Combo 2'],
+]);

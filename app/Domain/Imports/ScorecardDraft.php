@@ -55,7 +55,7 @@ final readonly class ScorecardDraft
             return null;
         }
 
-        return new self($courseName, $tees, $playedOn, $par, $strokeIndex, $distance, $players);
+        return new self($courseName, self::teesName($tees), $playedOn, $par, $strokeIndex, $distance, $players);
     }
 
     /**
@@ -72,6 +72,15 @@ final readonly class ScorecardDraft
             'distance' => $this->distance,
             'players' => $this->players,
         ];
+    }
+
+    /**
+     * The name of the tees without the distance the AI may read after it: GSPro prints
+     * « Red 6241yd », the known courses are keyed by « Red ».
+     */
+    private static function teesName(?string $tees): ?string
+    {
+        return $tees === null ? null : (string) preg_replace('/\s*\d+\s*(yd|yds|m)\b\s*$/i', '', $tees);
     }
 
     /**
