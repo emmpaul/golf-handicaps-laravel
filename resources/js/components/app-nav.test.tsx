@@ -91,7 +91,7 @@ describe('AppNav on a round sub-page', () => {
         ).toBe('/handicaps');
     });
 
-    it('shows no badge on Importer before the deferred count arrives', () => {
+    it('shows no badge on Importer without the count (no session)', () => {
         expect(
             importer().querySelector('[data-slot="pending-badge"]'),
         ).toBeNull();

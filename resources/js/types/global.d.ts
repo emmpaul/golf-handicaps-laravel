@@ -15,7 +15,7 @@ declare module '@inertiajs/core' {
                 version: string;
                 commit: string | null;
             };
-            /** Imports prêts à vérifier sans round, prop différée (design D7). */
+            /** Imports prêts à vérifier sans round, lus avec la page ; absent sans session (D7, DO35). */
             pendingImports?: number;
             [key: string]: unknown;
         };

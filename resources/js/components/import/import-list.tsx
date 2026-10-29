@@ -211,14 +211,15 @@ function ImportLine({ item }: { item: ImportListItem }) {
 
 /**
  * Les 20 derniers imports, du plus récent au plus ancien (spec « Liste des
- * imports »). Tant qu'un import est en attente ou en lecture, seule la prop
- * `imports` se recharge toutes les 2 s ; le poll s'arrête ensuite.
+ * imports »). Tant qu'un import est en attente ou en lecture, les props
+ * `imports` et `pendingImports` (pastille d'Importer, DO35) se rechargent
+ * toutes les 2 s ; le poll s'arrête ensuite.
  */
 export function ImportList({ imports }: { imports: ImportListItem[] }) {
     const waiting = imports.some(isWaiting);
     const { start, stop } = usePoll(
         POLL_INTERVAL_MS,
-        { only: ['imports'] },
+        { only: ['imports', 'pendingImports'] },
         { autoStart: false },
     );
 
