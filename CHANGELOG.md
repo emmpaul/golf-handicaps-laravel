@@ -95,6 +95,12 @@ All notable changes to this application, version by version. The format follows 
 - Home dashboard: the index of each player with the delta of his latest round and the provisional mark, the latest round with its gross scores and net winners, and the imports to review with a link to the latest.
 - Handicaps page: one player at a time, chosen in `?joueur=`, with his index, his delta and the history of his rounds, the differentials that count in the current index marked.
 - Match strokes page: the course handicap of 2 to 4 players on a known course, in the « Écart » or « Complet » mode, and the strokes of each hole on a two-row grid, computed in the browser; the shared case table `tests/fixtures/course-handicap.json` is read by Pest and Vitest.
+- Course rating lookup on Simulator Golf Tour: the worker alone fetches the SGT course list (kept 24 h in the Laravel cache) and the scorecard image of the course with the same par as the round (`LookUpCourseRating`, `SgtClient`, pure name and tee matching in `App\Domain\Courses\Sgt`), and the AI reads its "Slope/Rating" line (`SgtScorecardReader`, 2,000 input and 1,500 output tokens at most, under the shared monthly AI budget, every billed call counted in `ai_usage`); no value applies before a confirmation.
+- Lookup statuses on the Courses page ("Recherche en cours", "Proposition à confirmer", "Parcours SGT à choisir", "Tee à choisir", "Saisie manuelle", "Introuvable sur SGT", "Recherche échouée", "Confirmé") with their note, the SGT course and its "Carte SGT" and "The Course View" links, and the actions "Confirmer", "Retenir", "Choisir" and "Relancer la recherche" (`POST /courses/ratings/{courseRating}/…`); the page reloads every 2 s while a lookup runs.
+- `golf:queue-rating-lookups` artisan command, run by the `migrate` service after `golf:recompute-stats`: it queues the lookup of every course and tees of a round without a rating row and prints "N recherches de rating mises en file.".
+- `SGT_LOOKUP` variable (`on` by default): `off` ends every lookup in "Saisie manuelle" without any request to SGT, any other value stops the application at boot.
+- Demonstration data: BETHPAGE BLACK / Red confirmed from SGT at 71,4 / 144, PAYNES VALLEY / Blue with a proposal to confirm and CALA NOVA / White not found on SGT, written before the rounds so that no lookup is queued.
+- ADR 0012 (course rating lookup on Simulator Golf Tour), the lookup in the Index et ratings section of `ARCHITECTURE.md` and its rollback in `docs/deployment.md`.
 
 ### Changed
 
@@ -117,6 +123,9 @@ All notable changes to this application, version by version. The format follows 
 - `docker-compose.yml` passes `ANTHROPIC_API_KEY`, `AI_MODEL`, `AI_MONTHLY_BUDGET_USD` and `AI_BUDGET_TIME_ZONE` to `migrate`, `web` and `worker`; `.env.example` and `docs/deployment.md` document them.
 - The round editor accepts the totals and names read on a card; the shared case table `tests/fixtures/round-checks.json` gains the checks of the totals read.
 - `--color-ai` marks "Carte lue par l’IA, vérifie chaque case" on the correction screen instead of a cell filled by the AI.
+- `course_ratings` gains the lookup columns of the Next.js app (`source`, `status`, `sgt_course_id`, `sgt_course_name`, `sgt_course_location`, `candidates`, `tees_read`, `proposed_tee`, `note`) and its `rating_t` and `slope` become nullable; existing rows become "Confirmé" with the `manual` source.
+- "Retirer la rating" keeps the lookup: the proposal, the tees read or the candidates come back instead of the row being deleted.
+- `docker-compose.yml` passes `SGT_LOOKUP` to `migrate`, `web` and `worker`, and its `migrate` service runs `golf:queue-rating-lookups` last; `.env.example` and `docs/deployment.md` document them.
 
 ### Removed
 

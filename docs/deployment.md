@@ -4,15 +4,15 @@ L'application tourne sur un hôte Docker piloté par [Dokploy](https://dokploy.c
 
 ## La stack
 
-| Service   | Rôle                                                                                                   | Sain quand                              |
-| --------- | ------------------------------------------------------------------------------------------------------ | --------------------------------------- |
-| `pgsql`   | PostgreSQL 18, données dans le volume `pgdata`                                                         | `pg_isready` répond                     |
-| `migrate` | `php artisan migrate --force`, puis `golf:initial-players`, puis `golf:recompute-stats`, puis s'arrête | sort en 0 (il reste alors `Exited (0)`) |
-| `web`     | FrankenPHP sur le port 8080, sans port publié                                                          | `/up` répond 200                        |
-| `worker`  | `php artisan queue:work`, relancé chaque heure par `--max-time=3600`                                   | son battement a moins de 300 s          |
-| `backup`  | `pg_dump` au démarrage puis toutes les 24 h dans le volume `backups`                                   | un dump réussi a moins de 26 h          |
+| Service   | Rôle                                                                                                                                     | Sain quand                              |
+| --------- | ---------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------- |
+| `pgsql`   | PostgreSQL 18, données dans le volume `pgdata`                                                                                           | `pg_isready` répond                     |
+| `migrate` | `php artisan migrate --force`, puis `golf:initial-players`, puis `golf:recompute-stats`, puis `golf:queue-rating-lookups`, puis s'arrête | sort en 0 (il reste alors `Exited (0)`) |
+| `web`     | FrankenPHP sur le port 8080, sans port publié                                                                                            | `/up` répond 200                        |
+| `worker`  | `php artisan queue:work`, relancé chaque heure par `--max-time=3600`, seul service qui joint Simulator Golf Tour                         | son battement a moins de 300 s          |
+| `backup`  | `pg_dump` au démarrage puis toutes les 24 h dans le volume `backups`                                                                     | un dump réussi a moins de 26 h          |
 
-`web` et `worker` démarrent seulement après la sortie en 0 de `migrate`. Si une migration, la création des joueurs initiaux ou le recalcul de l'historique d'index échoue, ils ne démarrent pas sur la nouvelle image et restent sur `Created`. Lire alors `docker logs "$P-migrate-1"`, corriger, redéployer. Ce que deviennent les conteneurs de l'ancienne version pendant ce temps reste à observer sur le staging. `migrate`, `web` et `worker` montent le volume `storage` sur `storage/app` : `migrate`, créé avant les deux autres, remplit seul un volume neuf, sinon `web` et `worker`, créés en même temps, copient chacun le contenu de l'image et le second échoue (`file exists`, issue #14). Le contrôle de « Volume `storage` neuf » le vérifie. Les journaux partent sur la sortie d'erreur des conteneurs (`docker logs`, onglet Logs de Dokploy). Aucun fichier de journal ne grossit dans un conteneur.
+`web` et `worker` démarrent seulement après la sortie en 0 de `migrate`. Si une migration, la création des joueurs initiaux, le recalcul de l'historique d'index ou la mise en file des recherches de rating échoue, ils ne démarrent pas sur la nouvelle image et restent sur `Created`. Lire alors `docker logs "$P-migrate-1"`, corriger, redéployer. Ce que deviennent les conteneurs de l'ancienne version pendant ce temps reste à observer sur le staging. `migrate`, `web` et `worker` montent le volume `storage` sur `storage/app` : `migrate`, créé avant les deux autres, remplit seul un volume neuf, sinon `web` et `worker`, créés en même temps, copient chacun le contenu de l'image et le second échoue (`file exists`, issue #14). Le contrôle de « Volume `storage` neuf » le vérifie. Les journaux partent sur la sortie d'erreur des conteneurs (`docker logs`, onglet Logs de Dokploy). Aucun fichier de journal ne grossit dans un conteneur.
 
 ## Lancer les commandes de cette page
 
@@ -39,7 +39,7 @@ URL=http://127.0.0.1:8080
 
 Le code d'accès de cette stack locale est `smoke-passcode`. Pour la retirer avec ses volumes : `docker compose -f docker-compose.yml -f docker-compose.smoke.yml --env-file docker/smoke.env down -v`.
 
-Toutes les commandes de cette page ont été lancées telles quelles sur la stack locale le 2026-10-28, restauration comprise. Celles qui ne marchent que sur le serveur le disent.
+Toutes les commandes de cette page ont été lancées telles quelles sur la stack locale le 2026-10-28, restauration comprise. Celles qui ne marchent que sur le serveur le disent. Celles de la recherche des ratings (« Déployer une version », étape 5, et « Retour arrière de la recherche des ratings ») ont seulement été relues : elles restent à lancer sur le staging.
 
 ## Image
 
@@ -86,26 +86,29 @@ Dans Dokploy, créer un projet, puis un service de type Compose :
 
 Onglet Environment. Dokploy écrit ces lignes dans un `.env` à côté de `docker-compose.yml`, et compose les passe aux conteneurs.
 
-| Variable                | Exemple                        | Rôle                                                                                                                                                                                                                                                              |
-| ----------------------- | ------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `IMAGE_TAG`             | `main`, `v0.1.0`               | Tag de l'image. `main` par défaut.                                                                                                                                                                                                                                |
-| `APP_KEY`               | `base64:…`                     | Obligatoire, compose refuse de démarrer sans. Chiffre les sessions.                                                                                                                                                                                               |
-| `APP_PASSCODE`          | `birdie-2026`                  | Code d'accès partagé. Sans lui, `/up` répond 500 et `web` n'est jamais sain (ADR 0007).                                                                                                                                                                           |
-| `APP_URL`               | `https://golf.example.org`     | Adresse publique, en `https`.                                                                                                                                                                                                                                     |
-| `DB_PASSWORD`           | une chaîne aléatoire           | Obligatoire. Lu une seule fois, à la création du volume `pgdata` (voir plus bas).                                                                                                                                                                                 |
-| `TRUSTED_PROXIES`       | `10.0.1.0/24`                  | Sous-réseau du proxy de Dokploy (étape 6). Jamais `*`.                                                                                                                                                                                                            |
-| `INITIAL_PLAYERS`       | `Gab,Manu,Sean`                | Facultatif. Joueurs créés par `migrate` sur une base sans joueur, chacun avec son nom en majuscules pour alias. Sans effet dès qu'un joueur existe. Un nom en double, sans tenir compte de la casse, fait échouer `migrate` : `web` et `worker` ne démarrent pas. |
-| `APP_NAME`              | `Handicaps golf`               | Facultatif, c'est le défaut.                                                                                                                                                                                                                                      |
-| `DB_DATABASE`           | `golf`                         | Facultatif, c'est le défaut. Les commandes de cette page supposent `golf`.                                                                                                                                                                                        |
-| `DB_USERNAME`           | `golf`                         | Facultatif, c'est le défaut.                                                                                                                                                                                                                                      |
-| `LOG_LEVEL`             | `info`                         | Facultatif, c'est le défaut.                                                                                                                                                                                                                                      |
-| `APP_DISPLAY_TIMEZONE`  | `America/Montreal`             | Facultatif, c'est le défaut.                                                                                                                                                                                                                                      |
-| `ANTHROPIC_API_KEY`     | la clé de la console Anthropic | Facultatif. Clé de la lecture des photos de carte par l'IA. Sans elle, l'écran d'import affiche la lecture désactivée et la saisie manuelle reste possible. Ne jamais l'inscrire ailleurs que dans Dokploy.                                                       |
-| `AI_MODEL`              | `claude-sonnet-5-5`            | Facultatif, c'est le défaut. Modèle de la lecture. Il doit avoir un tarif dans `config/golf.php` (voir plus bas).                                                                                                                                                 |
-| `AI_MONTHLY_BUDGET_USD` | `5`                            | Facultatif, c'est le défaut. Plafond de dépense de l'IA par mois, en dollars.                                                                                                                                                                                     |
-| `AI_BUDGET_TIME_ZONE`   | `America/Montreal`             | Facultatif, c'est le défaut. Fuseau dans lequel le mois du budget commence et finit.                                                                                                                                                                              |
+| Variable                | Exemple                        | Rôle                                                                                                                                                                                                                                                                                             |
+| ----------------------- | ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `IMAGE_TAG`             | `main`, `v0.1.0`               | Tag de l'image. `main` par défaut.                                                                                                                                                                                                                                                               |
+| `APP_KEY`               | `base64:…`                     | Obligatoire, compose refuse de démarrer sans. Chiffre les sessions.                                                                                                                                                                                                                              |
+| `APP_PASSCODE`          | `birdie-2026`                  | Code d'accès partagé. Sans lui, `/up` répond 500 et `web` n'est jamais sain (ADR 0007).                                                                                                                                                                                                          |
+| `APP_URL`               | `https://golf.example.org`     | Adresse publique, en `https`.                                                                                                                                                                                                                                                                    |
+| `DB_PASSWORD`           | une chaîne aléatoire           | Obligatoire. Lu une seule fois, à la création du volume `pgdata` (voir plus bas).                                                                                                                                                                                                                |
+| `TRUSTED_PROXIES`       | `10.0.1.0/24`                  | Sous-réseau du proxy de Dokploy (étape 6). Jamais `*`.                                                                                                                                                                                                                                           |
+| `INITIAL_PLAYERS`       | `Gab,Manu,Sean`                | Facultatif. Joueurs créés par `migrate` sur une base sans joueur, chacun avec son nom en majuscules pour alias. Sans effet dès qu'un joueur existe. Un nom en double, sans tenir compte de la casse, fait échouer `migrate` : `web` et `worker` ne démarrent pas.                                |
+| `APP_NAME`              | `Handicaps golf`               | Facultatif, c'est le défaut.                                                                                                                                                                                                                                                                     |
+| `DB_DATABASE`           | `golf`                         | Facultatif, c'est le défaut. Les commandes de cette page supposent `golf`.                                                                                                                                                                                                                       |
+| `DB_USERNAME`           | `golf`                         | Facultatif, c'est le défaut.                                                                                                                                                                                                                                                                     |
+| `LOG_LEVEL`             | `info`                         | Facultatif, c'est le défaut.                                                                                                                                                                                                                                                                     |
+| `APP_DISPLAY_TIMEZONE`  | `America/Montreal`             | Facultatif, c'est le défaut.                                                                                                                                                                                                                                                                     |
+| `ANTHROPIC_API_KEY`     | la clé de la console Anthropic | Facultatif. Clé de la lecture des photos de carte par l'IA. Sans elle, l'écran d'import affiche la lecture désactivée et la saisie manuelle reste possible. Ne jamais l'inscrire ailleurs que dans Dokploy.                                                                                      |
+| `AI_MODEL`              | `claude-sonnet-5-5`            | Facultatif, c'est le défaut. Modèle de la lecture. Il doit avoir un tarif dans `config/golf.php` (voir plus bas).                                                                                                                                                                                |
+| `AI_MONTHLY_BUDGET_USD` | `5`                            | Facultatif, c'est le défaut. Plafond de dépense de l'IA par mois, en dollars.                                                                                                                                                                                                                    |
+| `AI_BUDGET_TIME_ZONE`   | `America/Montreal`             | Facultatif, c'est le défaut. Fuseau dans lequel le mois du budget commence et finit.                                                                                                                                                                                                             |
+| `SGT_LOOKUP`            | `on`, `off`                    | Facultatif, `on` par défaut. Recherche des ratings sur Simulator Golf Tour par le worker. `off` coupe toute requête vers SGT : chaque recherche finit en « Saisie manuelle » avec « Recherche SGT désactivée ». Toute autre valeur fait échouer `migrate`, et `web` et `worker` restent arrêtés. |
 
 Les quatre variables de l'IA vont à `migrate`, `web` et `worker`, et l'image n'en contient aucune. Un `AI_MODEL` sans tarif dans `config/golf.php`, comme un `AI_BUDGET_TIME_ZONE` inconnu, fait échouer le démarrage de l'application avec un message qui nomme la variable : `migrate` sort en erreur, `web` et `worker` restent arrêtés sur `Created` (`docker logs "$P-migrate-1"` donne la raison). Passer à un modèle nouveau demande donc d'ajouter son tarif à `config/golf.php` dans une version de l'image, avant de changer `AI_MODEL`. La clé ajoutée ou changée prend effet au redéploiement suivant (voir « Déployer une version »). L'ADR 0011 décrit la lecture et le budget.
+
+`SGT_LOOKUP` va aussi à `migrate`, `web` et `worker`. Une valeur autre que `on` ou `off` fait échouer le démarrage de l'application avec un message qui commence par `SGT_LOOKUP` : `migrate` sort en erreur, `web` et `worker` restent sur `Created`, comme pour `AI_MODEL`. Seul le worker fait des requêtes sortantes vers `simulatorgolftour.com`, en HTTPS : la liste des parcours (`/courses`, gardée 24 h dans le cache en base) et l'image de la carte d'un parcours trouvé (`/public/assets/courseImages/scorecards/scorecard_<id>.jpg`), avec un `User-Agent` qui nomme l'application, 20 s au plus par requête. `migrate` et `web` ne font que mettre les recherches en file. La carte est ensuite lue par l'IA, sous le même budget mensuel que les photos. L'ADR 0012 décrit la recherche.
 
 L'image accepte des photos de carte jusqu'à 20 Mo (`docker/php/uploads.ini`, copié dans la configuration de PHP) et les convertit en WebP par l'extension `imagick`. Il n'y a rien à régler dans Dokploy.
 
@@ -193,6 +196,15 @@ Content-Type: application/json
 2. Avant une version qui apporte une migration, forcer un dump (voir « Sauvegarde ») et noter son nom. C'est lui qu'on restaure si le retour arrière en a besoin.
 3. Deploy. `migrate` applique les migrations en attente, puis `web` et `worker` repartent sur la nouvelle image.
 4. Vérifier l'état des services et `/api/version`, comme à la première installation.
+5. Lire la fin du journal de `migrate` :
+
+    ```sh
+    docker logs --tail 5 "$P-migrate-1"
+    ```
+
+    La dernière ligne dit « N recherches de rating mises en file. » (« 0 recherche de rating mise en file. » quand chaque parcours a déjà sa ligne). Le worker traite ces recherches dans les minutes qui suivent.
+
+6. Ouvrir `/courses` et confirmer chaque proposition, après l'avoir comparée à sa « Carte SGT ». Aucun index ne change avant une confirmation.
 
 Avec `IMAGE_TAG=main`, si `/api/version` montre encore l'ancien `commit`, l'hôte a gardé l'ancienne image `:main` en cache. Tirer la nouvelle sur le serveur, puis redéployer :
 
@@ -353,6 +365,28 @@ git diff --name-only <ancien-tag> <nouveau-tag> -- database/migrations
 Puis lire la méthode `up()` de chacune.
 
 Le retour à l'image précédente sera essayé à la première paire de versions publiées, `v0.1.0` puis `v0.1.1`, et noté ici.
+
+### Retour arrière de la recherche des ratings
+
+La version qui apporte la recherche SGT rend `rating_t` et `slope` facultatifs dans `course_ratings`, que l'ancien code ne sait pas lire. Il faut donc défaire sa migration, et la défaire avec la nouvelle image : l'ancienne n'a pas le fichier de la migration, et `migrate:rollback` y passerait la ligne en écrivant `Migration not found`, sans rien défaire.
+
+1. Arrêter le worker, pour qu'aucune recherche n'écrive pendant le retour :
+
+    ```sh
+    docker stop "$P-worker-1"
+    ```
+
+2. Défaire la migration depuis le web, qui tourne encore sur la nouvelle image :
+
+    ```sh
+    docker exec "$P-web-1" php artisan migrate:rollback --step=1 --force
+    ```
+
+    La sortie nomme `2026_10_29_000011_add_lookup_to_course_ratings_table` suivi de `DONE`. Les ratings confirmées restent, avec `rating_t` et `slope` de nouveau obligatoires ; les lignes sans valeur confirmée (propositions, recherches en cours) sont effacées.
+
+3. Dans Dokploy, remettre l'ancien `IMAGE_TAG`, puis Deploy. Les jobs `LookUpCourseRating` restés dans la file échouent sur l'ancienne image et partent dans `failed_jobs`, sans toucher aux données.
+
+Les recherches perdues repartent au redéploiement suivant de la nouvelle version : `golf:queue-rating-lookups` les remet en file.
 
 ## Fermer toutes les sessions
 
