@@ -7,6 +7,7 @@
  */
 
 use App\Integrations\Ai\ScorecardPhotoReader;
+use App\Integrations\Ai\SgtScorecardReader;
 use Illuminate\Http\Client\StrayRequestException;
 use Illuminate\Support\Facades\Http;
 use Laravel\Ai\Enums\Lab;
@@ -16,6 +17,13 @@ use Laravel\Ai\Enums\Lab;
 test('a prompt of the reading agent without a faked answer throws instead of leaving', function () {
     expect(fn () => (new ScorecardPhotoReader)->prompt('Lis la carte', provider: Lab::Anthropic, model: 'claude-sonnet-5-5'))
         ->toThrow(RuntimeException::class, 'Attempted prompt [Lis la carte] without a fake agent response.');
+});
+
+// Course-rating-sgt, design D11. Mutation that turns this test red: the SgtScorecardReader line
+// removed from the beforeEach.
+test('a prompt of the SGT scorecard agent without a faked answer throws instead of leaving', function () {
+    expect(fn () => (new SgtScorecardReader)->prompt('Lis la carte SGT', provider: Lab::Anthropic, model: 'claude-sonnet-5-5'))
+        ->toThrow(RuntimeException::class, 'Attempted prompt [Lis la carte SGT] without a fake agent response.');
 });
 
 // Mutation that turns this test red: Http::preventStrayRequests() removed from the beforeEach.

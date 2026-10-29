@@ -3,6 +3,7 @@
 use App\Domain\Rounds\Actions\CreateRound;
 use App\Domain\Rounds\RoundCard;
 use App\Integrations\Ai\ScorecardPhotoReader;
+use App\Integrations\Ai\SgtScorecardReader;
 use App\Models\Player;
 use App\Models\PlayerRoundStat;
 use App\Models\Round;
@@ -28,6 +29,7 @@ pest()->beforeEach(function () {
     }
 
     ScorecardPhotoReader::fake()->preventStrayPrompts();
+    SgtScorecardReader::fake()->preventStrayPrompts();
     Http::preventStrayRequests();
 })->in('Feature', 'Unit');
 
@@ -191,6 +193,38 @@ function referenceReading(): array
 function billedAnswer(array $card): StructuredTextResponse
 {
     return new StructuredTextResponse($card, (string) json_encode($card), new TextUsage(3000, 1200), new Meta);
+}
+
+/**
+ * An answer of the SGT scorecard agent billed 1 500 input tokens and 300 output tokens
+ * (course-rating-sgt, design D11).
+ *
+ * @param  array<string, mixed>  $reading
+ */
+function billedSgtReading(array $reading): StructuredTextResponse
+{
+    return new StructuredTextResponse($reading, (string) json_encode($reading), new TextUsage(1500, 300), new Meta);
+}
+
+/**
+ * What the AI reads on tests/fixtures/sgt/scorecard_30.jpg (Bethpage Black): the « Slope/Rating »
+ * line of its five tees and the par 71, as the schema of the agent asks.
+ *
+ * @return array{found: bool, par: int, tees: list<array{name: string, rating: float, slope: int}>}
+ */
+function bethpageSgtReading(): array
+{
+    return [
+        'found' => true,
+        'par' => 71,
+        'tees' => [
+            ['name' => 'Blue', 'rating' => 77.5, 'slope' => 155],
+            ['name' => 'White', 'rating' => 74.2, 'slope' => 148],
+            ['name' => 'Red', 'rating' => 71.4, 'slope' => 144],
+            ['name' => 'Junior', 'rating' => 71.0, 'slope' => 120],
+            ['name' => 'PAR3', 'rating' => 54.0, 'slope' => 120],
+        ],
+    ];
 }
 
 /**
