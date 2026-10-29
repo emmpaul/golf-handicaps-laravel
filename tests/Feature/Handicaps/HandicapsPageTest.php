@@ -141,7 +141,27 @@ describe('with a session', function () {
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page->has('history', $count)));
 
-        // The players and their current statistics (2), the history of the selected player (1).
+        // The players and their current statistics (2), the history of the selected player (1),
+        // the count of the imports to check shared with every page (1, DO35).
+        expect($queries)->toBe(4);
+    })->with([10, 30]);
+
+    test('loading the deferred stats makes the same number of queries whatever the number of rounds', function (int $count) {
+        createPlayersOnTest('Gab', 'Manu', 'Sean');
+        createDailyRoundsOfThree($count);
+        $queries = null;
+
+        $this->get('/handicaps?joueur='.$this->manu->id)
+            ->assertOk()
+            ->assertInertia(function (Assert $page) use (&$queries, $count): void {
+                $queries = queriesDuring(fn () => $page->loadDeferredProps(
+                    fn (Assert $reload) => $reload->where('scoringStats.rounds', $count)));
+            });
+
+        // M9, DO39: the players and their current statistics, to choose the player (2), and the
+        // one aggregate query of PlayerScoringStats (1); the history is not read again.
+        // Mutations: the history computed eagerly again (not a closure) → 4; the stats read per
+        // round → grows with the rounds.
         expect($queries)->toBe(3);
     })->with([10, 30]);
 });

@@ -26,7 +26,8 @@ class HandicapController extends Controller
         return Inertia::render('handicaps/index', [
             'players' => $players,
             'selectedPlayerId' => $selectedId,
-            'history' => $selectedId === null ? [] : $history->get($selectedId),
+            // A closure: the deferred load of the stats does not read the history again (DO39).
+            'history' => fn (): array => $selectedId === null ? [] : $history->get($selectedId),
             'scoringStats' => Inertia::defer(fn (): ?array => $selectedId === null ? null : $scoringStats->get($selectedId)),
         ]);
     }
