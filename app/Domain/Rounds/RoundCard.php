@@ -25,7 +25,7 @@ final readonly class RoundCard
      * @param  string|null  $playedOn  `Y-m-d`
      * @param  list<Hole>  $holes  the 18 holes, hole 1 first
      * @param  list<Line>  $lines  the lines of players in the order of the card, 18 strokes each;
-     *                            readName and totals only for a line read on the card
+     *                             readName and totals only for a line read on the card
      * @param  Totals|null  $parTotals  the totals of the par read on the card
      */
     public function __construct(
