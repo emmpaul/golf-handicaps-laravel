@@ -11,6 +11,7 @@ import {
     vi,
 } from 'vite-plus/test';
 
+import { STROKE_INDEXES } from '@/tests/reference-round';
 import CoursesIndex from '@/pages/courses/index';
 
 // Spec course-ratings « Page Parcours », « Saisie et correction à la main »,
@@ -45,6 +46,7 @@ const courses = [
         par: 71,
         ratingT: 714,
         slope: 144,
+        strokeIndexes: STROKE_INDEXES,
     },
     {
         courseName: 'PAYNES VALLEY',
@@ -52,6 +54,7 @@ const courses = [
         par: 72,
         ratingT: null,
         slope: null,
+        strokeIndexes: STROKE_INDEXES,
     },
 ];
 

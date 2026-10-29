@@ -12,6 +12,8 @@ export type CourseOverview = {
     par: number;
     ratingT: number | null;
     slope: number | null;
+    /** Stroke index of each hole, holes 1 to 18, from the latest round on this course and tees. */
+    strokeIndexes: number[];
 };
 
 /**
