@@ -9,10 +9,13 @@
  * - the players of the course looked up with the case (course_name = ? and tees = ?): Sean, on
  *   « Bethpage Black / RED », stays at 170;
  * - an insert without on conflict: the second rating typed for « bethpage black / red » is
- *   refused by the unique index (UniqueConstraintViolationException).
+ *   refused by the unique index (UniqueConstraintViolationException);
+ * - a do update that leaves source and status (design D7 of course-rating-sgt): the row of the
+ *   lookup, without source, refuses the rating (course_ratings_rating_source_check).
  */
 
 use App\Domain\Courses\Actions\SaveCourseRating;
+use App\Domain\Courses\CourseRatingStatus;
 use App\Domain\Courses\Exceptions\UnknownCourse;
 use App\Models\CourseRating;
 
@@ -43,6 +46,18 @@ test('a typed rating is written and recomputes the players of the course', funct
         ->and(differentialsByName())->toBe(['Gab' => 5, 'Manu' => 130, 'Sean' => 130]);
 });
 
+test('a rating typed on a proposal confirms it by hand and keeps what SGT read', function () {
+    CourseRating::query()->delete();
+    CourseRating::factory()->proposed()->create();
+
+    app(SaveCourseRating::class)->handle('BETHPAGE BLACK', 'Red', 700, 130);
+
+    $rating = CourseRating::query()->sole();
+    expect([$rating->rating_t, $rating->slope, $rating->source, $rating->status, $rating->proposed_tee])
+        ->toBe([700, 130, 'manual', CourseRatingStatus::Confirmed, 'Red'])
+        ->and(array_column($rating->tees_read ?? [], 'name'))->toBe(['Blue', 'White', 'Red', 'Junior', 'PAR3']);
+});
+
 test('a correction in another case updates the same row', function () {
     app(SaveCourseRating::class)->handle('BETHPAGE BLACK', 'Red', 714, 144);
 
@@ -57,6 +72,7 @@ test('a course and tees without round are refused and nothing is written', funct
     expect(fn () => app(SaveCourseRating::class)->handle('PAYNES VALLEY', 'Blue', 714, 144))
         ->toThrow(UnknownCourse::class, 'Parcours introuvable');
 
-    expect(CourseRating::query()->count())->toBe(0)
+    // Only the row of the lookup of the reference card, without rating (SGT_LOOKUP off).
+    expect(ratingRows())->toBe([['BETHPAGE BLACK', 'Red', null, null]])
         ->and(differentialsByName())->toBe(['Gab' => 10, 'Manu' => 170, 'Sean' => 170]);
 });

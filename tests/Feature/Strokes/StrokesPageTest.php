@@ -44,6 +44,8 @@ describe('with a session', function () {
         $paynes['holes'][0]['par'] = 5;
         createRoundCard($paynes);
         createRoundCard(referenceCardData($this->gab->id, $this->manu->id));
+        // The rows of the lookups of both rounds (SGT_LOOKUP off) give way to the rating alone.
+        CourseRating::query()->delete();
         CourseRating::factory()->bethpageRed()->create();
 
         $writes = [];

@@ -13,7 +13,9 @@
  * - the photos directory not emptied first: the stale file stays on the disk;
  * - the demonstration rating written by CourseRating::factory() instead of SaveCourseRating:
  *   the differentials are not recomputed and Manu stays at 170 on the reference round;
- * - DemoCourseRatingsSeeder called before DemoRoundsSeeder: SaveCourseRating finds no round on
+ * - DemoCourseRatingsSeeder called after DemoRoundsSeeder: each round finds no row and its
+ *   lookup ends in « Saisie manuelle » (SGT_LOOKUP off), not in the statuses of the literal list;
+ * - DemoConfirmedRatingSeeder called before DemoRoundsSeeder: SaveCourseRating finds no round on
  *   BETHPAGE BLACK / Red and the seeding fails with « Parcours introuvable ».
  */
 
@@ -124,6 +126,7 @@ test('two runs on an emptied base write the same rounds', function () {
 
     Round::query()->delete();
     Player::query()->delete();
+    CourseRating::query()->delete();
 
     $this->seed(DemoDatabaseSeeder::class);
 
@@ -153,11 +156,17 @@ test('the demonstration refuses a base that already has a round and writes nothi
         ->and(Round::query()->pluck('course_name')->all())->toBe(['OLD COURSE']);
 });
 
-test('the demonstration rates BETHPAGE BLACK / Red only and computes the index history of every round', function () {
+test('the demonstration rates BETHPAGE BLACK / Red, proposes PAYNES VALLEY / Blue, finds no CALA NOVA and computes the index history of every round', function () {
     $this->seed(DemoDatabaseSeeder::class);
 
-    expect(CourseRating::query()->get(['course_name', 'tees', 'rating_t', 'slope'])->toArray())
-        ->toBe([['course_name' => 'BETHPAGE BLACK', 'tees' => 'Red', 'rating_t' => 714, 'slope' => 144]])
+    expect(CourseRating::query()->orderBy('course_name')->get()->map(fn (CourseRating $rating): array => [
+        $rating->course_name, $rating->tees, $rating->rating_t, $rating->slope, $rating->status->value,
+    ])->all())
+        ->toBe([
+            ['BETHPAGE BLACK', 'Red', 714, 144, 'confirmed'],
+            ['CALA NOVA', 'White', null, null, 'not_found'],
+            ['PAYNES VALLEY', 'Blue', null, null, 'proposed'],
+        ])
         ->and(PlayerRoundStat::query()->count())->toBe(RoundPlayer::query()->count());
 
     $reference = Round::query()->whereDate('played_on', '2026-10-17')->sole();
