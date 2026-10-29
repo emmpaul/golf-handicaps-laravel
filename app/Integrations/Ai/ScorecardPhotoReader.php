@@ -79,6 +79,7 @@ class ScorecardPhotoReader implements Agent, HasProviderOptions, HasStructuredOu
         Ses lignes, de haut en bas : les numéros de trou, PAR, INDEX (difficulté du trou, de 1 à 18, sans totaux), la distance de chaque trou, puis une ligne par joueur, avec son nom à gauche, ses 18 scores et ses totaux. Les lignes de joueur vides sont à ignorer.
         Certains scores sont encadrés ou cerclés selon leur écart au par : recopie seulement le chiffre.
 
+        Pour les tees, recopie seulement leur nom, sans la distance affichée à côté : « Red 6241yd » donne « Red ».
         Recopie exactement ce qui est affiché, même si une somme te paraît fausse : ne corrige rien, ne calcule rien. Recopie le texte de la date tel qu'affiché, sans le convertir. Pour une case vide ou illisible, mets null plutôt que de deviner.
         TEXT;
 
