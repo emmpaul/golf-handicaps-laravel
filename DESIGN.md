@@ -14,19 +14,19 @@ L'application est le tableau des scores du groupe : papier bleuté froid, encre 
 
 `resources/css/tokens.css` est la source de vérité : tokens clairs dans `@theme static`, couleurs sombres dans le bloc `@media (prefers-color-scheme: dark)`. `resources/css/app.css` pointe les variables shadcn (`--background`, `--primary`, `--destructive`…) vers ces tokens ; le mode sombre ne change que `tokens.css`.
 
-| Token             | Clair     | Sombre    | Rôle                                                      |
-| ----------------- | --------- | --------- | --------------------------------------------------------- |
-| `--color-paper`   | `#F4F7FB` | `#0A111F` | fond de page, en-tête, `html` et `body`, `theme-color`    |
-| `--color-paper-2` | `#E8EEF3` |           | survol de ligne, `muted`, `popover`, voile des dialogues  |
-| `--color-paper-3` | `#D9E1E9` |           | ligne sélectionnée, `::selection`, `accent` de shadcn     |
-| `--color-ink`     | `#0F1D3E` | `#EAEFF4` | texte, action principale, filet de 2 px, onglet courant   |
-| `--color-ink-2`   | `#46566E` | `#A9B9CA` | texte secondaire, marque « au-dessus du par » (`--bogey`) |
-| `--color-ink-3`   | `#5B6777` |           | texte indicatif, contour des champs                       |
-| `--color-rule`    | `#CAD2DA` |           | filet de 1 px                                             |
-| `--color-signal`  | `#CB1E21` | `#F86B65` | sous le par (`--birdie`), jamais un fond de bouton        |
-| `--color-error`   | `#9B540C` | `#EB9854` | `destructive` et erreurs                                  |
-| `--color-ai`      | `#018090` |           | case remplie par l'IA                                     |
-| `--color-focus`   | `#0B66D6` |           | contour de focus de 2 px                                  |
+| Token             | Clair     | Sombre    | Rôle                                                                        |
+| ----------------- | --------- | --------- | --------------------------------------------------------------------------- |
+| `--color-paper`   | `#F4F7FB` | `#0A111F` | fond de page, en-tête, `html` et `body`, `theme-color`                      |
+| `--color-paper-2` | `#E8EEF3` |           | survol de ligne, `muted`, `popover`, voile des dialogues                    |
+| `--color-paper-3` | `#D9E1E9` |           | ligne sélectionnée, `::selection`, `accent` de shadcn                       |
+| `--color-ink`     | `#0F1D3E` | `#EAEFF4` | texte, action principale, filet de 2 px, onglet courant                     |
+| `--color-ink-2`   | `#46566E` | `#A9B9CA` | texte secondaire, marque « au-dessus du par » (`--bogey`)                   |
+| `--color-ink-3`   | `#5B6777` |           | texte indicatif, contour des champs                                         |
+| `--color-rule`    | `#CAD2DA` |           | filet de 1 px                                                               |
+| `--color-signal`  | `#CB1E21` | `#F86B65` | sous le par (`--birdie`), jamais un fond de bouton                          |
+| `--color-error`   | `#9B540C` | `#EB9854` | `destructive` et erreurs                                                    |
+| `--color-ai`      | `#018090` |           | repère « Carte lue par l’IA, vérifie chaque case » de l'écran de correction |
+| `--color-focus`   | `#0B66D6` |           | contour de focus de 2 px                                                    |
 
 Une case sombre vide n'a pas de valeur hex fixée par la spec ; sa valeur OKLCH est dans `tokens.css`. Les valeurs hex de la spec sont des littéraux dans `resources/js/tests/theme-contrast.test.ts`, qui vérifie aussi les contrastes : 4,5:1 pour le texte courant et secondaire sur chaque fond, 3:1 pour le contour de champ, le contour de focus et la marque « au-dessus du par », dans les deux modes.
 
@@ -61,6 +61,15 @@ Composants des joueurs et des rounds, portés de Next avec les mêmes classes (d
 - `rounds/delete-round` : suppression confirmée par `AlertDialog`, « Suppression du round… » jusqu'à la page suivante.
 - `round-editor/*` : l'éditeur partagé par la saisie et la correction. `round-editor` tient l'état local et compte les problèmes sur son bouton ; `score-grid` est la grille (une colonne par trou à partir de 768 px, une ligne par trou en dessous, mêmes noms accessibles « Ligne 1 trou 9 ») avec OUT, IN et TOT calculés en lecture seule ; `line-players` choisit ou crée le joueur de chaque ligne ; `date-field` ouvre le calendrier (lundi en premier, clavier et doigt) ; `problem-list` liste les messages, les identiques regroupés ; `form-state` porte l'état et le pré-remplissage d'un parcours connu. Une case en erreur prend `aria-invalid`, donc le contour rouille.
 - `resources/js/lib/format.ts` : `formatPlayedOn('2026-10-17')` donne « 17 octobre 2026 », lu comme jour civil, sans passer par UTC.
+
+Composants de l'import des cartes, portés de Next avec les mêmes classes (design D7 et D8 de `scorecard-ai-import`) :
+
+- `import/import-upload` : envoi d'une photo. Sur écran tactile (`pointer: coarse`), « Prendre une photo » en bouton plein ouvre l'appareil photo arrière, « Choisir une photo » reste dessous, sans libellé entre les deux ; sans pointeur grossier, seul « Choisir une photo ». Chaque bouton est un libellé autour d'un champ fichier masqué (`sr-only`) nommé « Photo de la carte », qui garde le focus clavier. `Pending` dit « Préparation de la photo… » puis « Envoi de la photo… », les boutons désactivés. Sans clé d'IA, le message « Lecture des photos désactivée : aucune clé d’IA n’est configurée. » et « Saisie manuelle » remplacent l'envoi.
+- `import/decode-photo` : décode la photo dans le navigateur (`createImageBitmap`) et la réencode en JPEG de 3000 px au plus sur le grand côté.
+- `import/unreadable-photo` : « Format de photo non lisible, exporte-la en JPEG » et le lien « Saisie manuelle », quand le navigateur ne sait pas décoder le fichier.
+- `import/import-list` : les 20 derniers imports, date en heure de Montréal, état en `Badge`, raison d'un échec, actions par état (« Vérifier », « Supprimer », « Voir le round », « Relancer la lecture » seulement avec une clé). L'orbe de `PendingOrb` tourne sur un import en attente ou en lecture seulement, sans `role="status"` : le badge change déjà à chaque rafraîchissement (toutes les 2 s tant qu'un import attend). La relance dit « Relance de la lecture… » sur sa ligne et désactive ses seules actions.
+- `import/delete-import` : suppression confirmée par `AlertDialog`, « Suppression de l’import… » jusqu'à la page suivante ; « Annuler » n'envoie rien.
+- `round-editor/*` gagne, sur l'écran de correction d'un import seulement (prop `importContext`) : le repère « Carte lue par l’IA, vérifie chaque case » en `text-ai`, en tête, quand la carte vient d'une lecture ; la photo à côté de la grille ; la raison d'un échec en `Alert` ; « lu « GAB » » sous le libellé de chaque ligne lue (`line-players`) ; les cases OUT, IN et TOT modifiables d'une ligne lue ; le surlignage des cases vides de la lecture à l'ouverture ; l'indicateur d'enregistrement de l'autosave (`autosave.ts`) dans un `role="status"`, « Enregistrement… » avec l'orbe, puis « Enregistré » ou « Modifications non enregistrées » en couleur d'erreur. `rounds/create` et `rounds/edit` n'en passent rien et ne changent pas.
 
 Composants de l'index et des ratings, portés de Next avec les mêmes classes (design D7 de `handicap-index`) :
 
