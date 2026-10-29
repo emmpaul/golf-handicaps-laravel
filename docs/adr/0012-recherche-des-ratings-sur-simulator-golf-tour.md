@@ -32,6 +32,7 @@ L'index d'un joueur dépend de la rating et du slope de chaque parcours et tees 
 - `{courseRating}` des quatre routes de la recherche n'a pas de `whereUuid()` : un `POST` sur un identifiant qui n'est pas un uuid recevrait 405 de la route de repli, qui ne répond qu'à `GET`. Sans contrainte, le contrôle d'uuid de `HasUuids` rend 404 avant toute requête.
 - Une lecture `found` vraie sans aucun tee est inexploitable (« Lecture IA impossible ») : elle finirait sinon en « Tee à choisir » sans tee à retenir.
 - La note de la recherche reste en base après une confirmation, mais la page ne la montre pas sur une ligne confirmée.
+- Mesure locale du 2026-10-29 (`claude-sonnet-5-5`, clé réelle, une seule lecture, relance de BETHPAGE BLACK / Red sur la base de `make demo`) : le worker a lu la liste SGT (2 752 parcours, gardée en cache) puis `scorecard_30.jpg`, et l'IA a rendu les cinq tees de la carte (Blue 77,5 / 155, White 74,2 / 148, Red 71,4 / 144, Junior 71,0 / 120, PAR3 54,0 / 120), tee Red proposé à 71,4 / 144. Usage : 1 239 tokens d'entrée (62 % de la borne de 2 000) et 128 de sortie (9 % de 1 500), 3 758 micro-dollars. Sous 80 % des deux bornes : `rating_max_input_tokens` et `rating_max_output_tokens` ne changent pas.
 - `migrate:rollback` ne défait la migration qu'avec la nouvelle image : l'ancienne n'a pas son fichier et la passe (« Migration not found »). Le retour arrière de `docs/deployment.md` arrête le worker, défait la migration depuis le web encore sur la nouvelle image, puis redéploie l'ancienne.
 
 ## Conséquences
