@@ -85,6 +85,18 @@ test('a hole in one on a par 3 counts as an eagle or better', function () {
         ->toBe([[1, 3, 10, 4, 0], [6, 17, 56, 22, 0], 700]);
 });
 
+test('the delta of a par is the shown average minus the par, a half below the par included', function () {
+    // M7, DO40: 2 on hole 3 makes Gab's par 3 average 11 / 4 = 2,75, shown « 2,8 »; the delta is
+    // that average minus 3, « −0,2 », not the exact −0,25 rounded away from zero (« −0,3 »).
+    // Mutation: the delta rounded from the exact value (($over <=> 0) × rounded(|over|)) → −3.
+    $strokes = $this->gabStrokes;
+    $strokes[2] = 2;
+    createRoundCard(referenceCardOn('2026-10-17', [[$this->gab->id, $strokes]]));
+
+    expect(app(PlayerScoringStats::class)->get($this->gab->id)['pars'][0])
+        ->toBe(['par' => 3, 'holes' => 4, 'averageT' => 28, 'deltaT' => -2, 'tint' => ScoreTint::Good]);
+});
+
 test('every round counts, not only the 20 of the index', function () {
     foreach (range(1, 21) as $day) {
         createRoundCard(referenceCardOn(sprintf('2026-09-%02d', $day), [[$this->manu->id, $this->manuStrokes]]));

@@ -55,8 +55,12 @@ final class PlayerScoringStats
             )))
             ->first();
 
-        $rounds = (int) ($row->rounds ?? 0);
-        if ($row === null || $rounds === 0) {
+        if ($row === null) {
+            return null;
+        }
+
+        $rounds = (int) $row->rounds;
+        if ($rounds === 0) {
             return null;
         }
 
@@ -79,8 +83,8 @@ final class PlayerScoringStats
     }
 
     /**
-     * The average of $sum strokes on $holes holes of par $par in tenths, its signed delta to the
-     * par in tenths and its tint; null when the par was never played.
+     * The average of $sum strokes on $holes holes of par $par in tenths, the signed delta of that
+     * rounded average to the par in tenths and its tint; null when the par was never played.
      *
      * @return array{par: int, holes: int, averageT: int, deltaT: int, tint: ScoreTint}|null
      */
@@ -90,13 +94,15 @@ final class PlayerScoringStats
             return null;
         }
 
-        $over = 10 * ($sum - $par * $holes);
+        $averageT = self::rounded(10 * $sum, $holes);
 
         return [
             'par' => $par,
             'holes' => $holes,
-            'averageT' => self::rounded(10 * $sum, $holes),
-            'deltaT' => ($over <=> 0) * self::rounded(abs($over), $holes),
+            'averageT' => $averageT,
+            // The delta of the average shown, so that « 2,8 » on a par 3 reads « −0,2 » (DO40);
+            // the tint stays decided on the exact values.
+            'deltaT' => $averageT - 10 * $par,
             'tint' => ScoreTint::of($sum, $par, $holes),
         ];
     }

@@ -123,7 +123,7 @@ Sous le graphique des différentiels, la page Handicaps SHALL montrer « STATS �
 - **THEN** le bloc « STATS » n'apparaît pas
 
 ### Requirement: Règles de calcul des statistiques
-L'écart d'un trou SHALL valoir le score moins le par de ce trou enregistré avec le round. Les arrondis MUST se faire sur la valeur exacte, au plus proche, la moitié vers le haut : un dixième pour les moyennes et les écarts, un entier pour les pourcentages. Chaque pourcentage est rapporté à tous les trous joués du joueur ; les pourcentages ne sont pas ajustés pour faire 100.
+L'écart d'un trou SHALL valoir le score moins le par de ce trou enregistré avec le round. Les arrondis MUST se faire sur la valeur exacte, au plus proche, la moitié vers le haut : un dixième pour les moyennes, un entier pour les pourcentages. L'écart d'une moyenne par par est celui de la moyenne affichée, arrondie, au par, pour que la case reste cohérente. Chaque pourcentage est rapporté à tous les trous joués du joueur ; les pourcentages ne sont pas ajustés pour faire 100.
 
 #### Scenario: Moitié vers le haut
 - **GIVEN** Manu n'a joué que la carte de référence, où ses quatre par 3 valent 3, 3, 4 et 3
@@ -158,7 +158,7 @@ Sous les trois valeurs, la page Handicaps SHALL répartir les trous joués en ci
 - **THEN** la barre, fond `oklch(0.2 0.006 260)`, coins de 6 px, montre des segments séparés de 2 px de largeurs 16,7 %, 61,1 %, 22,2 % et 0 %, aux couleurs `oklch(0.7 0.17 25 / 0.55)` (birdies), `oklch(0.97 0.003 260 / 0.85)` (pars), `oklch(0.6 0.01 260 / 0.7)` (bogeys) et `oklch(0.4 0.01 260)` (double bogey +) ; un segment d'eagle prend `oklch(0.7 0.17 25)`
 
 ### Requirement: Moyennes par par
-Sous la répartition, la page Handicaps SHALL montrer une case par par (3, 4, 5) que le joueur a joué : « PAR 3 », la moyenne de ses scores sur ces trous, et l'écart de cette moyenne au par, précédé de « + » s'il est positif ou nul et de « − » sinon. L'écart, comparé avant arrondi, est en `oklch(0.8 0.14 145)` jusqu'à 0,3, en gris jusqu'à 1,0, en `oklch(0.7 0.17 25)` au-delà. Un par jamais joué n'a pas de case.
+Sous la répartition, la page Handicaps SHALL montrer une case par par (3, 4, 5) que le joueur a joué : « PAR 3 », la moyenne de ses scores sur ces trous, et l'écart de cette moyenne affichée au par, précédé de « + » s'il est positif ou nul et de « − » sinon. La teinte de l'écart, décidée sur la moyenne exacte, avant arrondi, est en `oklch(0.8 0.14 145)` jusqu'à 0,3, en gris jusqu'à 1,0, en `oklch(0.7 0.17 25)` au-delà. Un par jamais joué n'a pas de case.
 
 #### Scenario: Un round
 - **GIVEN** Gab n'a joué que la carte de référence
@@ -174,6 +174,11 @@ Sous la répartition, la page Handicaps SHALL montrer une case par par (3, 4, 5)
 - **GIVEN** Manu n'a joué que la carte de référence
 - **WHEN** l'utilisateur ouvre `/handicaps` sur Manu
 - **THEN** les cases montrent « 3,3 » et « +0,3 » en vert, « 5,1 » et « +1,1 » en rouge, « 6,3 » et « +1,3 » en rouge
+
+#### Scenario: Demi-valeur sous le par
+- **GIVEN** Gab n'a joué que la carte de référence, avec 2 au trou 3 : ses quatre par 3 font 11 coups
+- **WHEN** l'utilisateur ouvre `/handicaps` sur Gab
+- **THEN** la case du par 3 montre « 2,8 » (2,75 arrondi vers le haut) et « −0,2 » en vert, l'écart de « 2,8 » à 3, et non « −0,3 »
 
 ### Requirement: Mise en page du bloc STATS
 À 390 px, le bloc STATS SHALL suivre le design : « STATS » 34 px sous le graphique ; les trois valeurs en colonnes égales, 16 px de marge verticale, valeur en Geist Mono 500, 30 px, libellé en Geist Mono 500, 10 px, gris ; la barre 18 px dessous ; une ligne de 40 px par classe ; les cases par par 22 px dessous, séparées de 1 px, coins du groupe de 12 px, fond `oklch(0.17 0.006 260)`.
