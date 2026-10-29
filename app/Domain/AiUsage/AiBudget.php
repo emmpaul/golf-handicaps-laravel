@@ -13,13 +13,14 @@ final class AiBudget
 {
     /**
      * Whether a call is allowed: the total of the month plus the cost of the worst call still
-     * fits the ceiling.
+     * fits the ceiling. The worst call is that of a photo unless the caller gives its own, as
+     * the reading of an SGT scorecard does.
      */
-    public function canSpend(CarbonImmutable $now): bool
+    public function canSpend(CarbonImmutable $now, ?int $maxCallCostMicroUsd = null): bool
     {
         $spent = (int) AiUsage::query()->where('month', $this->month($now))->sum('cost_micro_usd');
 
-        return $spent + AiPricing::maxCallCost() <= $this->ceiling();
+        return $spent + ($maxCallCostMicroUsd ?? AiPricing::maxCallCost()) <= $this->ceiling();
     }
 
     /**
