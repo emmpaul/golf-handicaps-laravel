@@ -42,4 +42,21 @@ describe('AppVersion', () => {
         expect(screen.getByText('v0.0.0').tagName).toBe('SPAN');
         expect(screen.queryByRole('link')).toBeNull();
     });
+
+    // V3, DO45: the closed scale of the theme has no `text-xs` (it gave no
+    // style): the line is in Geist Mono 500, 11 px (`text-section`), grey.
+    // Mutation: `text-xs` back → red.
+    it('writes the line in Geist Mono 11 px, grey', () => {
+        render(<AppVersion version="0.6.0" commit={null} />);
+
+        const footer = screen.getByRole('contentinfo');
+
+        expect(footer).toHaveClass(
+            'font-mono',
+            'text-section',
+            'tracking-normal',
+            'text-ink-2',
+        );
+        expect(footer).not.toHaveClass('text-xs');
+    });
 });
