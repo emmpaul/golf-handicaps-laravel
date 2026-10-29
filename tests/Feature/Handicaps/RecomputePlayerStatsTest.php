@@ -61,6 +61,28 @@ test('the reference card with 71,4 / 144 typed for « Bethpage Black / red » gi
         ->toBe([5, 130]);
 });
 
+// Mutation that turns this test red: the rating read in tees_read when rating_t is null (the
+// tee Red read at 71,4 / 144 then gives 5 and 130).
+test('a proposal of 71,4 / 144 not confirmed leaves Gab and Manu at 1,0 and 17,0', function () {
+    CourseRating::factory()->proposed()->create();
+
+    $round = createRoundCard(referenceCardData($this->gab->id, $this->manu->id));
+
+    expect(PlayerRoundStat::query()->where('round_id', $round->id)->orderBy('gross')->pluck('differential_t')->all())
+        ->toBe([10, 170]);
+});
+
+// Mutation that turns this test red: a rating confirmed from SGT ignored (only source manual
+// read), Gab and Manu then at 10 and 170.
+test('the proposal confirmed from SGT gives Gab 0,5 and Manu 13,0', function () {
+    CourseRating::factory()->confirmedFromSgt()->create();
+
+    $round = createRoundCard(referenceCardData($this->gab->id, $this->manu->id));
+
+    expect(PlayerRoundStat::query()->where('round_id', $round->id)->orderBy('gross')->pluck('differential_t')->all())
+        ->toBe([5, 130]);
+});
+
 test('a rating of « BETHPAGE BLACK / Red » leaves a round on « BETHPAGE BLACK / Blue » without rating', function () {
     CourseRating::factory()->bethpageRed()->create();
     $red = createRoundCard(referenceCardData($this->gab->id, $this->manu->id));

@@ -17,6 +17,7 @@
 use App\Domain\Handicaps\Queries\RoundLeaderboard;
 use App\Models\CourseRating;
 use App\Models\Player;
+use App\Models\Round;
 
 beforeEach(function () {
     $this->gab = Player::factory()->create(['name' => 'Gab']);
@@ -55,4 +56,48 @@ test('a round on a rated course is ranked with the course handicap', function ()
         ['playerId' => $this->gab->id, 'name' => 'Gab', 'gross' => 72, 'indexBeforeT' => 10, 'playingHandicap' => 2, 'net' => 70, 'rank' => 2],
         ['playerId' => $this->manu->id, 'name' => 'Manu', 'gross' => 88, 'indexBeforeT' => 170, 'playingHandicap' => 22, 'net' => 66, 'rank' => 1],
     ]);
+});
+
+/**
+ * Gab (+1) and Manu (+17) on PAYNES VALLEY / Blue on 2026-10-10, without rating: their index
+ * before the reference card is 1,0 and 17,0. Then the reference card on BETHPAGE BLACK / Red.
+ */
+function referenceCardAfterPaynesValley(Player $gab, Player $manu): Round
+{
+    $paynes = referenceCardOn('2026-10-10', [
+        [$gab->id, strokesOverPar(1)],
+        [$manu->id, strokesOverPar(17)],
+    ]);
+    $paynes['courseName'] = 'PAYNES VALLEY';
+    $paynes['tees'] = 'Blue';
+    createRoundCard($paynes);
+
+    return createRoundCard(referenceCardData($gab->id, $manu->id));
+}
+
+// Mutations that turn this test red: the round rated as soon as its row exists, whatever
+// rating_t (a TypeError on the null rating), or the rating read in tees_read (71,4 / 144 of the
+// tee Red, handicaps 2 and 22).
+test('a proposal of 71,4 / 144 not confirmed leaves the round without rating', function () {
+    CourseRating::factory()->proposed()->create();
+    $round = referenceCardAfterPaynesValley($this->gab, $this->manu);
+
+    expect(app(RoundLeaderboard::class)->rating($round))->toBe(['rated' => false, 'ratingT' => 710, 'slope' => 113])
+        ->and(app(RoundLeaderboard::class)->for($round))->toBe([
+            ['playerId' => $this->gab->id, 'name' => 'Gab', 'gross' => 72, 'indexBeforeT' => 10, 'playingHandicap' => 1, 'net' => 71, 'rank' => 1],
+            ['playerId' => $this->manu->id, 'name' => 'Manu', 'gross' => 88, 'indexBeforeT' => 170, 'playingHandicap' => 17, 'net' => 71, 'rank' => 1],
+        ]);
+});
+
+// Mutation that turns this test red: the round rated only on a source manual, the handicaps
+// then 1 and 17.
+test('the proposal confirmed from SGT ranks the round with the course handicap', function () {
+    CourseRating::factory()->confirmedFromSgt()->create();
+    $round = referenceCardAfterPaynesValley($this->gab, $this->manu);
+
+    expect(app(RoundLeaderboard::class)->rating($round))->toBe(['rated' => true, 'ratingT' => 714, 'slope' => 144])
+        ->and(app(RoundLeaderboard::class)->for($round))->toBe([
+            ['playerId' => $this->gab->id, 'name' => 'Gab', 'gross' => 72, 'indexBeforeT' => 10, 'playingHandicap' => 2, 'net' => 70, 'rank' => 2],
+            ['playerId' => $this->manu->id, 'name' => 'Manu', 'gross' => 88, 'indexBeforeT' => 170, 'playingHandicap' => 22, 'net' => 66, 'rank' => 1],
+        ]);
 });

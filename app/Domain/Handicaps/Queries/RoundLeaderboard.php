@@ -61,21 +61,23 @@ final class RoundLeaderboard
 
     /**
      * The rating used for the differentials and the leaderboard of the round, port of ratingFor:
-     * the one typed for its course and tees, without case nor surrounding spaces (compared in
-     * SQL), or the par total of the round and 113.
+     * the one confirmed for its course and tees, without case nor surrounding spaces (compared in
+     * SQL), or the par total of the round and 113. A row of the lookup without confirmed value
+     * counts as no rating (design D1 of course-rating-sgt).
      *
      * @return array{rated: bool, ratingT: int, slope: int}
      */
     public function rating(Round $round): array
     {
-        $typed = CourseRating::query()
+        $confirmed = CourseRating::query()
             ->whereRaw('lower(trim(course_name)) = lower(trim(?))', [$round->course_name])
             ->whereRaw('lower(trim(tees)) = lower(trim(?))', [$round->tees])
             ->first(['rating_t', 'slope']);
 
-        return $typed === null
+        // The CHECKs of course_ratings set rating_t and slope together.
+        return $confirmed?->rating_t === null || $confirmed->slope === null
             ? ['rated' => false, 'ratingT' => $this->par($round) * 10, 'slope' => 113]
-            : ['rated' => true, 'ratingT' => $typed->rating_t, 'slope' => $typed->slope];
+            : ['rated' => true, 'ratingT' => $confirmed->rating_t, 'slope' => $confirmed->slope];
     }
 
     /**
