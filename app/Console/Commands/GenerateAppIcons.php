@@ -10,8 +10,8 @@ use Illuminate\Support\Facades\File;
 use RuntimeException;
 
 /**
- * Draws the home screen icons with GD: the green flag of BrandMark and of the Next app glyph,
- * on an ink background, in the light palette. Coordinates are hundredths of the side; the
+ * Draws the home screen icons with GD: the flag of BrandMark and of the Next app glyph, on the
+ * background of the dark design (design D10 of visual-redesign, decision Q10). Coordinates are hundredths of the side; the
  * drawing stays in the central 80 % for the round masks of Android.
  *
  * The PNG files are committed: rerun the command when the palette changes.
@@ -20,17 +20,17 @@ use RuntimeException;
 #[Description('Draw the home screen icons (192, 512 and the 180 px apple-touch-icon)')]
 class GenerateAppIcons extends Command
 {
-    /** --color-paper, light mode: the mast and the hole. */
-    private const int PAPER = 0xF4F7FB;
+    /** --color-ink: the mast and the hole. */
+    private const int INK = 0xF4F5F7;
 
-    /** --color-ink, light mode: the background. */
-    private const int INK = 0x0F1D3E;
+    /** --color-bg: the background. */
+    private const int BG = 0x060709;
 
-    /** --color-ink-2, light mode: the green. */
-    private const int INK_2 = 0x46566E;
+    /** --color-surface-3: the green. */
+    private const int SURFACE_3 = 0x191B1D;
 
-    /** --color-signal, light mode: the pennant, the "under par" red. */
-    private const int SIGNAL = 0xCB1E21;
+    /** --color-signal: the pennant, the "under par" red. */
+    private const int SIGNAL = 0xF66D67;
 
     /**
      * Side in pixels of each icon, keyed by its path under the root directory.
@@ -72,12 +72,12 @@ class GenerateAppIcons extends Command
         $image = imagecreatetruecolor($side, $side);
         $at = static fn (float $hundredths): int => (int) round($hundredths * $side / 100);
 
-        imagefilledrectangle($image, 0, 0, $side - 1, $side - 1, self::INK);
+        imagefilledrectangle($image, 0, 0, $side - 1, $side - 1, self::BG);
         // Green, then the hole.
-        imagefilledellipse($image, $at(50), $at(75), $at(64), $at(18), self::INK_2);
-        imagefilledellipse($image, $at(51), $at(74.5), $at(10), $at(5), self::PAPER);
+        imagefilledellipse($image, $at(50), $at(75), $at(64), $at(18), self::SURFACE_3);
+        imagefilledellipse($image, $at(51), $at(74.5), $at(10), $at(5), self::INK);
         // Mast.
-        imagefilledrectangle($image, $at(49), $at(16), $at(53) - 1, $at(75) - 1, self::PAPER);
+        imagefilledrectangle($image, $at(49), $at(16), $at(53) - 1, $at(75) - 1, self::INK);
         // Pennant: a rectangle, as in the Next glyph.
         imagefilledrectangle($image, $at(53), $at(16), $at(81) - 1, $at(36) - 1, self::SIGNAL);
 

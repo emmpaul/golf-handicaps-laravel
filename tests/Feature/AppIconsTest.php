@@ -1,8 +1,11 @@
 <?php
 
 /*
- * Mutation that turns these tests red: change GenerateAppIcons::SIGNAL (the pennant colour,
- * 0xCB1E21) to 0xCB1E22, then rerun "vendor/bin/sail artisan app:icons".
+ * Spec visual-theme (visual-redesign), « Marque d'app dans l'en-tête »: « Même marque sur l'écran
+ * d'accueil »; design D10, decision Q10.
+ *
+ * Mutation that turns these tests red: the background of GenerateAppIcons left at the former
+ * ink 0x0F1D3E (then "vendor/bin/sail artisan app:icons"): the corner reads #0F1D3E.
  */
 
 use Illuminate\Support\Facades\File;
@@ -36,10 +39,10 @@ function expectAppIcons(string $root): void
         [$width, $height, $type] = getimagesize($path) ?: [0, 0, 0];
 
         expect([$width, $height, $type])->toBe([$side, $side, IMAGETYPE_PNG], $file)
-            ->and(pixelAt($path, 2, 2))->toBe('#0F1D3E', "$file corner")
-            ->and(pixelAt($path, 30, 75))->toBe('#46566E', "$file green")
-            ->and(pixelAt($path, 51, 40))->toBe('#F4F7FB', "$file mast")
-            ->and(pixelAt($path, 67, 26))->toBe('#CB1E21', "$file pennant");
+            ->and(pixelAt($path, 2, 2))->toBe('#060709', "$file corner")
+            ->and(pixelAt($path, 30, 75))->toBe('#191B1D', "$file green")
+            ->and(pixelAt($path, 51, 40))->toBe('#F4F5F7', "$file mast")
+            ->and(pixelAt($path, 67, 26))->toBe('#F66D67', "$file pennant");
     }
 }
 
