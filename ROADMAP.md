@@ -76,7 +76,7 @@ Refonte visuelle selon le design « Golf handicap app redesign » du mainteneur 
 
 - déployer la stack Laravel sur `golf2.emmanuelpaul.com`, avec `SGT_LOOKUP=off`, et y importer une copie de la base Next, Next restant en production : fait le 2026-10-29 ;
 - comparer, pour chaque joueur, l'index et les rounds (liste, scores, différentiels) entre Next et `golf2`, en réimportant une copie fraîche au besoin : comparaison bonne le 2026-10-29 ;
-- déménager : arrêter les saisies sur Next, dernier import, domaine principal passé à la stack Laravel, `golf2` retiré, Next gardé arrêté 30 jours.
+- déménager : arrêter les saisies sur Next, dernier import, domaine principal passé à la stack Laravel, `golf2` retiré, Next gardé arrêté 30 jours : fait le 2026-10-29, sans dernier import (Next et la stack Laravel avaient les mêmes comptes après l'arrêt de Next). Next et son volume `golf-data` restent arrêtés jusqu'au 2026-11-28, puis sont supprimés.
 
 Commande `golf:import-sqlite`, puis cutover, fait à la main par le mainteneur.
 
