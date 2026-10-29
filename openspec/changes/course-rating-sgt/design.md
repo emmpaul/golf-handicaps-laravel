@@ -158,7 +158,7 @@ Une migration modifie la table :
 - Réponse facturée de l'agent : `new StructuredTextResponse($lecture, json_encode($lecture), new TextUsage(1500, 300), new Meta)`, comme `billedAnswer()` de 8 ; une réponse en tableau simple a un usage nul. Les tests qui ont besoin d'une clé la posent par `config(['ai.providers.anthropic.key' => 'test-key'])`.
 - Fixtures copiées de Next sous `tests/fixtures/sgt/` (`courses.html`, `scorecard_30.jpg`, `README.md` mis à jour), servies par `Http::fake` avec `Http::response(file_get_contents(…))`.
 - Cache : `CACHE_STORE=array` dans `phpunit.xml` ; le test des 24 h avance l'horloge (`$this->travel(25)->hours()`) et compte les requêtes par `Http::assertSentCount`.
-- Délai : le test de `SgtClient` fait lever `ConnectionException` par `Http::fake` et vérifie `SgtUnavailable` ; un test lit les options de la requête envoyée (`Http::assertSent` sur `timeout` 20 et `connect_timeout` 10).
+- Délai : le test de `SgtClient` fait lever `ConnectionException` par `Http::fake` et vérifie `SgtUnavailable` ; un test lit les options de la requête envoyée (`timeout` 20 et `connect_timeout` 10) dans la closure de `Http::fake`, qui les reçoit en second argument : `Http::assertSent` ne voit que la requête, sans ses options (relu dans `PendingRequest::buildStubHandler()`, tâche 4.2).
 
 ### D12. Données de développement
 
