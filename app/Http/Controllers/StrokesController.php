@@ -18,7 +18,7 @@ class StrokesController extends Controller
     {
         return Inertia::render('strokes/index', [
             'players' => array_map(
-                fn (array $player): array => ['id' => $player['id'], 'name' => $player['name'], 'indexT' => $player['indexT']],
+                fn (array $player): array => ['id' => $player['id'], 'name' => $player['name'], 'indexT' => $player['indexT'], 'colorSlot' => $player['colorSlot']],
                 $standings->get(),
             ),
             // The page needs no lookup of the ratings (course-rating-sgt, design D8).

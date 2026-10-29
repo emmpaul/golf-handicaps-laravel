@@ -60,9 +60,9 @@ describe('with a session', function () {
             ->assertInertia(fn (Assert $page) => $page
                 ->component('strokes/index')
                 ->where('players', [
-                    ['id' => $this->gab->id, 'name' => 'Gab', 'indexT' => 5],
-                    ['id' => $this->manu->id, 'name' => 'Manu', 'indexT' => 170],
-                    ['id' => $this->sean->id, 'name' => 'Sean', 'indexT' => null],
+                    ['id' => $this->gab->id, 'name' => 'Gab', 'indexT' => 5, 'colorSlot' => 0],
+                    ['id' => $this->manu->id, 'name' => 'Manu', 'indexT' => 170, 'colorSlot' => 1],
+                    ['id' => $this->sean->id, 'name' => 'Sean', 'indexT' => null, 'colorSlot' => 2],
                 ])
                 ->where('courses', [
                     [

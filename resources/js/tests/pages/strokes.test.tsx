@@ -16,18 +16,26 @@ import { GAB, MANU, SEAN, STROKE_INDEXES } from '@/tests/reference-round';
 
 // Spec match-strokes « Page Coups protégée et sans écriture », « Préparation
 // d'une partie », « Modes de calcul des coups », « Handicap de jeu négatif »,
-// « Total des coups d'un joueur » and « Rating du parcours choisi ». Head needs
-// the head manager of createInertiaApp and renders nothing here.
+// « Total des coups d'un joueur », « Grille des coups par trou » and « Rating
+// du parcours choisi » (MODIFIED by visual-redesign), « Mise en page de la
+// page Coups » and « Bloc de résultat des coups ». Head needs the head manager
+// of createInertiaApp and renders nothing here; usePage is simulated for the
+// top row.
 // Mutations: « 1 coups » for one stroke → the « Complet » test goes red; the
 // fifth player still checkable (MAX_PLAYERS check dropped) → the fifth player
 // test goes red; the course rating ignored (`undefined` passed to
 // matchStrokes) → the BETHPAGE BLACK test goes red; a grid shown at 0 stroke
-// → the PAYNES VALLEY test goes red; « · » between rating and slope → the
-// rating line test goes red.
+// → the PAYNES VALLEY test goes red; the list opened on « Choisir un
+// parcours » (no course chosen) → the opening test goes red; the rating line
+// written « Rating 71,4 » / « Slope 144 » apart → the rating line test goes
+// red; a stroke given on the hole of index 17 (allocation from index 2) → the
+// 16 strokes grid test reads a stroke on hole 14 and goes red; the hint of
+// « Écart » kept under « Complet » → the mode test goes red.
 
 vi.mock('@inertiajs/react', async (importOriginal) => ({
     ...(await importOriginal<typeof import('@inertiajs/react')>()),
     Head: () => null,
+    usePage: () => ({ url: '/strokes', props: {} }),
 }));
 
 const ALEX = '0190a6b2-7c3e-7000-8000-000000000011';
@@ -35,12 +43,12 @@ const RORY = '0190a6b2-7c3e-7000-8000-000000000012';
 const TOM = '0190a6b2-7c3e-7000-8000-000000000013';
 
 const players = [
-    { id: ALEX, name: 'Alex', indexT: 125 },
-    { id: GAB, name: 'Gab', indexT: 10 },
-    { id: MANU, name: 'Manu', indexT: 174 },
-    { id: RORY, name: 'Rory', indexT: -16 },
-    { id: SEAN, name: 'Sean', indexT: null },
-    { id: TOM, name: 'Tom', indexT: 50 },
+    { id: ALEX, name: 'Alex', indexT: 125, colorSlot: 3 },
+    { id: GAB, name: 'Gab', indexT: 10, colorSlot: 0 },
+    { id: MANU, name: 'Manu', indexT: 174, colorSlot: 1 },
+    { id: RORY, name: 'Rory', indexT: -16, colorSlot: 4 },
+    { id: SEAN, name: 'Sean', indexT: null, colorSlot: 2 },
+    { id: TOM, name: 'Tom', indexT: 50, colorSlot: 5 },
 ];
 
 const courses = [
@@ -64,8 +72,7 @@ const courses = [
     },
 ];
 
-const PROMPT =
-    'Choisis 2 à 4 joueurs et un parcours pour voir les coups reçus.';
+const PROMPT = 'Choisissez au moins 2 joueurs avec un index.';
 
 let spies: MockInstance[];
 
@@ -98,18 +105,27 @@ async function choose(names: string[], course: string) {
     await userEvent.selectOptions(screen.getByLabelText('Parcours'), course);
 }
 
-/** The total sentence of each chosen player, in the order shown. */
-function totals(): string[] {
-    return screen
-        .getAllByTestId('strokes-total')
-        .map((total) => total.textContent ?? '');
+/** The result blocks, in the order shown. */
+function blocks(): HTMLElement[] {
+    return within(
+        screen.getByRole('list', { name: 'Coups reçus' }),
+    ).getAllByRole('listitem');
 }
 
-/** The result item of one player. */
+/** The name and total of each chosen player, « Manu reçoit 16 coups ». */
+function totals(): string[] {
+    return blocks().map(
+        (block) =>
+            `${within(block).getByTestId('strokes-name').textContent} ${within(block).getByTestId('strokes-total').textContent}`,
+    );
+}
+
+/** The result block of one player. */
 function result(name: string): HTMLElement {
-    return within(screen.getByRole('list', { name: 'Coups reçus' }))
-        .getByText(new RegExp(`^${name} `))
-        .closest('li') as HTMLElement;
+    return blocks().find(
+        (block) =>
+            within(block).getByTestId('strokes-name').textContent === name,
+    ) as HTMLElement;
 }
 
 describe('Strokes page', () => {
@@ -137,25 +153,47 @@ describe('Strokes page', () => {
         ).toBe(checkbox('Sean'));
     });
 
+    it('draws the row of Gab at 52 px with the box of 22 px, his swatch and « Index 1,0 » in grey', async () => {
+        render(<StrokesIndex players={players} courses={courses} />);
+
+        await userEvent.click(checkbox('Gab'));
+
+        const row = screen.getByTestId('player-choice-Gab');
+
+        expect(row.className).toContain('min-h-13');
+        expect(checkbox('Gab').checked).toBe(true);
+        expect(checkbox('Gab').className).toContain('checked:bg-ink');
+        expect(
+            row.querySelector('[data-slot="checkbox-wrapper"]')?.className,
+        ).toContain('size-[22px]');
+        expect(
+            row.querySelector('.bg-player-1[aria-hidden="true"]'),
+        ).not.toBeNull();
+        expect(within(row).getByText('Gab').className).toContain('text-label');
+        expect(within(row).getByText('Index 1,0').className).toContain(
+            'text-meta',
+        );
+    });
+
     it('greys Sean out with « pas encore d’index », his box disabled', () => {
         render(<StrokesIndex players={players} courses={courses} />);
 
         const row = screen.getByTestId('player-choice-Sean');
 
         expect(row.getAttribute('data-disabled')).toBe('true');
-        expect(row.classList.contains('opacity-55')).toBe(true);
+        expect(row.classList.contains('opacity-45')).toBe(true);
         expect(within(row).getByText("pas encore d'index").textContent).toBe(
             "pas encore d'index",
         );
         expect(checkbox('Sean')).toBeDisabled();
     });
 
-    it('asks for 2 to 4 players while only one is checked', async () => {
+    it('asks for at least 2 players with an index, in a dashed frame, while only one is checked', async () => {
         render(<StrokesIndex players={players} courses={courses} />);
 
         await choose(['Gab'], 'BETHPAGE BLACK / Red');
 
-        expect(screen.getByText(PROMPT).textContent).toBe(PROMPT);
+        expect(screen.getByText(PROMPT).className).toContain('border-dashed');
         expect(screen.queryByTestId('strokes-total')).toBeNull();
     });
 
@@ -195,7 +233,18 @@ describe('Strokes page', () => {
         ]);
     });
 
-    it('shows « Rating 71,4 » and « Slope 144 » apart, in a link to /courses', async () => {
+    it('opens the list of the courses on the first known course, « BETHPAGE BLACK / Red »', () => {
+        render(<StrokesIndex players={players} courses={courses} />);
+
+        const list = screen.getByLabelText('Parcours') as HTMLSelectElement;
+
+        expect(list.selectedOptions[0].textContent).toBe(
+            'BETHPAGE BLACK / Red',
+        );
+        expect(screen.queryByText('Choisir un parcours')).toBeNull();
+    });
+
+    it('writes « rating 71,4 · slope 144 » in a grey underlined link to /courses', async () => {
         render(<StrokesIndex players={players} courses={courses} />);
 
         await choose(['Gab', 'Manu'], 'BETHPAGE BLACK / Red');
@@ -203,16 +252,13 @@ describe('Strokes page', () => {
         const link = screen.getByTestId('course-rating');
 
         expect(link.getAttribute('href')).toBe('/courses');
-        expect(within(link).getByText('Rating 71,4').textContent).toBe(
-            'Rating 71,4',
-        );
-        expect(within(link).getByText('Slope 144').textContent).toBe(
-            'Slope 144',
-        );
-        expect(link.textContent).not.toContain('·');
+        expect(link.textContent).toBe('rating 71,4 · slope 144');
+        expect(link.className).toContain('underline');
+        expect(link.className).toContain('text-meta-12');
+        expect(link.className).toContain('text-ink-2');
     });
 
-    it('shows « Sans rating (par 72, slope 113) » for PAYNES VALLEY, in a link to /courses', async () => {
+    it('writes « sans rating (slope 113) » for PAYNES VALLEY, in a link to /courses', async () => {
         render(<StrokesIndex players={players} courses={courses} />);
 
         await choose([], 'PAYNES VALLEY / Blue');
@@ -220,7 +266,77 @@ describe('Strokes page', () => {
         const link = screen.getByTestId('course-rating');
 
         expect(link.getAttribute('href')).toBe('/courses');
-        expect(link.textContent).toBe('Sans rating (par 72, slope 113)');
+        expect(link.textContent).toBe('sans rating (slope 113)');
+    });
+
+    it('offers « Écart » and « Complet » in a segmented control, each with its explanation', async () => {
+        render(<StrokesIndex players={players} courses={courses} />);
+
+        const ecart = screen.getByRole('radio', { name: 'Écart' });
+        const complet = screen.getByRole('radio', { name: 'Complet' });
+
+        expect((ecart as HTMLInputElement).checked).toBe(true);
+        expect(ecart.closest('[role="radiogroup"]')?.className).toContain(
+            'rounded-12',
+        );
+        expect(
+            screen.getByText(
+                'Le meilleur joueur joue scratch, les autres reçoivent la différence.',
+            ),
+        ).toBeInTheDocument();
+
+        await userEvent.click(complet);
+
+        expect((complet as HTMLInputElement).checked).toBe(true);
+        expect(
+            screen.getByText(
+                'Chaque joueur reçoit son handicap de jeu complet.',
+            ),
+        ).toBeInTheDocument();
+        expect(
+            screen.queryByText(
+                'Le meilleur joueur joue scratch, les autres reçoivent la différence.',
+            ),
+        ).toBeNull();
+    });
+
+    it('shows Manu « reçoit 16 coups », « 16 » at 48 px and 18 cells, holes 3 and 14 at « · » read « aucun coup »', async () => {
+        render(
+            <StrokesIndex
+                players={players}
+                courses={[
+                    {
+                        courseName: 'BETHPAGE BLACK',
+                        tees: 'Red',
+                        par: 71,
+                        ratingT: null,
+                        slope: null,
+                        strokeIndexes: STROKE_INDEXES,
+                    },
+                ]}
+            />,
+        );
+
+        await choose(['Gab', 'Manu'], 'BETHPAGE BLACK / Red');
+
+        const manu = result('Manu');
+        const cells = within(manu).getAllByRole('img');
+
+        expect(within(manu).getByTestId('strokes-total').textContent).toBe(
+            'reçoit 16 coups',
+        );
+        expect(within(manu).getByTestId('strokes-count').textContent).toBe(
+            '16',
+        );
+        expect(within(manu).getByTestId('strokes-count').className).toContain(
+            'text-display-l',
+        );
+        expect(cells).toHaveLength(18);
+        expect(
+            cells
+                .filter((cell) => cell.lastElementChild?.textContent === '·')
+                .map((cell) => cell.getAttribute('aria-label')),
+        ).toEqual(['Trou 3 : aucun coup', 'Trou 14 : aucun coup']);
     });
 
     it('makes a player at −1,6 « rend 2 coups » in « Complet »', async () => {
@@ -241,8 +357,8 @@ describe('Strokes page', () => {
         render(
             <StrokesIndex
                 players={[
-                    { id: GAB, name: 'Gab', indexT: 10 },
-                    { id: RORY, name: 'Rory', indexT: -16 },
+                    { id: GAB, name: 'Gab', indexT: 10, colorSlot: 0 },
+                    { id: RORY, name: 'Rory', indexT: -16, colorSlot: 4 },
                 ]}
                 courses={[
                     {
@@ -261,6 +377,9 @@ describe('Strokes page', () => {
         await userEvent.click(screen.getByRole('radio', { name: 'Complet' }));
 
         expect(totals()).toEqual(['Gab reçoit 1 coup', 'Rory rend 2 coups']);
+        expect(
+            within(result('Rory')).getByTestId('strokes-count').textContent,
+        ).toBe('\u22122');
         expect(
             within(result('Rory'))
                 .getAllByRole('img')
@@ -305,9 +424,9 @@ describe('Strokes page', () => {
         render(
             <StrokesIndex
                 players={[
-                    { id: GAB, name: 'Gab', indexT: 6 },
-                    { id: MANU, name: 'Manu', indexT: 174 },
-                    { id: SEAN, name: 'Sean', indexT: 125 },
+                    { id: GAB, name: 'Gab', indexT: 6, colorSlot: 0 },
+                    { id: MANU, name: 'Manu', indexT: 174, colorSlot: 1 },
+                    { id: SEAN, name: 'Sean', indexT: 125, colorSlot: 2 },
                 ]}
                 courses={courses}
             />,
