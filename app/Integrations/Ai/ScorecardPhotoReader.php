@@ -2,7 +2,15 @@
 
 namespace App\Integrations\Ai;
 
+use Illuminate\Contracts\JsonSchema\JsonSchema;
+use Illuminate\Http\Client\RequestException;
+use Illuminate\JsonSchema\Types\Type;
 use Laravel\Ai\Contracts\Agent;
+use Laravel\Ai\Contracts\HasProviderOptions;
+use Laravel\Ai\Contracts\HasStructuredOutput;
+use Laravel\Ai\Enums\Lab;
+use Laravel\Ai\Exceptions\FailoverableException;
+use Laravel\Ai\Files\Image;
 use Laravel\Ai\Promptable;
 
 /*
@@ -53,13 +61,101 @@ use Laravel\Ai\Promptable;
  * - Migrations: the SDK only publishes create_agent_conversations_table, used by agents that
  *   remember conversations. This agent does not: nothing is published.
  */
-class ScorecardPhotoReader implements Agent
+/**
+ * Reads the whole photo of a GSPro scorecard with a vision model of Anthropic, once per attempt
+ * (design D3). It sends the photo and fixed instructions, nothing of the application: no
+ * player, alias, round nor index.
+ */
+class ScorecardPhotoReader implements Agent, HasProviderOptions, HasStructuredOutput
 {
     use Promptable;
 
-    // The reading instructions, the schema, the bounds and the image come with task 5.4.
+    /** The fixed instructions of src/ai/completer.ts, for the whole photo and its date. */
+    private const string INSTRUCTIONS = <<<'TEXT'
+        Tu lis la photo d'une carte de score du simulateur de golf GSPro. La carte peut n'occuper qu'une partie de la photo, prise de biais.
+
+        En haut, un bandeau donne le nom du parcours, puis une ligne de réglages qui contient les tees (par exemple « Red ») et la date (par exemple « DATE: 10/17/2026 »).
+        Le tableau a une colonne par trou, de 1 à 18, avec trois colonnes de totaux : OUT après le trou 9 (trous 1 à 9), IN après le trou 18 (trous 10 à 18) et TOT (OUT + IN).
+        Ses lignes, de haut en bas : les numéros de trou, PAR, INDEX (difficulté du trou, de 1 à 18, sans totaux), la distance de chaque trou, puis une ligne par joueur, avec son nom à gauche, ses 18 scores et ses totaux. Les lignes de joueur vides sont à ignorer.
+        Certains scores sont encadrés ou cerclés selon leur écart au par : recopie seulement le chiffre.
+
+        Recopie exactement ce qui est affiché, même si une somme te paraît fausse : ne corrige rien, ne calcule rien. Recopie le texte de la date tel qu'affiché, sans le convertir. Pour une case vide ou illisible, mets null plutôt que de deviner.
+        TEXT;
+
+    private const string PROMPT = 'Recopie cette carte de score.';
+
     public function instructions(): string
     {
-        return '';
+        return self::INSTRUCTIONS;
+    }
+
+    /**
+     * The card of src/ai/card.ts plus the date text; every value nullable, no bound (the SDK
+     * strips them): ScorecardDraft::fromArray() checks the shape.
+     *
+     * @return array<string, Type>
+     */
+    public function schema(JsonSchema $schema): array
+    {
+        $holes = fn (): Type => $schema->array()->items($schema->integer()->nullable())->required();
+        $holeRow = fn (): Type => $schema->object([
+            'holes' => $holes(),
+            'out' => $schema->integer()->nullable()->required(),
+            'in' => $schema->integer()->nullable()->required(),
+            'total' => $schema->integer()->nullable()->required(),
+        ])->required();
+
+        return [
+            'courseName' => $schema->string()->nullable()->required(),
+            'tees' => $schema->string()->nullable()->required(),
+            'dateText' => $schema->string()->nullable()->required(),
+            'par' => $holeRow(),
+            'strokeIndex' => $holes(),
+            'distance' => $holeRow(),
+            'players' => $schema->array()->items($schema->object([
+                'name' => $schema->string()->nullable()->required(),
+                'scores' => $holeRow(),
+            ]))->required(),
+        ];
+    }
+
+    /**
+     * The output bound, thinking included; without it the SDK asks for 64 000 tokens.
+     */
+    public function maxTokens(): int
+    {
+        return config()->integer('golf.ai.max_output_tokens');
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function providerOptions(Lab|string $provider): array
+    {
+        return ['output_config' => ['effort' => 'low']];
+    }
+
+    /**
+     * One call for the photo of the photos disk, with the model of AI_MODEL.
+     *
+     * @throws FailoverableException|RequestException on an error of the API, without usage
+     */
+    public function read(string $photoPath): ReadingResult
+    {
+        $jpeg = ScorecardImage::forReading($photoPath);
+
+        try {
+            $response = $this->prompt(
+                self::PROMPT,
+                attachments: [Image::fromPath($jpeg, 'image/jpeg')],
+                provider: Lab::Anthropic,
+                model: config()->string('golf.ai.model'),
+                timeout: 90,
+            );
+        } finally {
+            @unlink($jpeg);
+        }
+
+        return new ReadingResult($response->toArray(), $response->usage);
     }
 }
