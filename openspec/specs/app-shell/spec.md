@@ -21,22 +21,20 @@ Sous 768 px de large, le système SHALL afficher les cinq sections (Importer, Ro
 - **THEN** les cinq sections sont dans la navigation du haut et aucune barre n'est fixée en bas
 
 ### Requirement: Adresses des sections
-Les liens de section SHALL viser `/import` (Importer), `/rounds` (Rounds), `/handicaps` (Handicaps), `/strokes` (Coups) et `/players` (Joueurs), dans cet ordre. Tant qu'une section n'a pas sa page, son adresse et ses sous-adresses MUST répondre 200 avec une page « Section à venir » dans le cadre commun, sans donnée du groupe.
+Les liens de section SHALL viser `/import` (Importer), `/rounds` (Rounds), `/handicaps` (Handicaps), `/strokes` (Coups) et `/players` (Joueurs), dans cet ordre. Chaque section MUST servir sa propre page ; aucune adresse ne sert plus de page « Section à venir », et une sous-adresse qu'aucune page ne sert répond 404.
 
 #### Scenario: Section sans page
-- **GIVEN** la section Handicaps n'a pas encore sa page
-- **WHEN** l'utilisateur ouvre `/handicaps`
-- **THEN** le système répond 200 avec le titre « Handicaps », le texte « Section à venir », la navigation et la ligne de version
+- **GIVEN** les cinq sections ont leur page
+- **WHEN** l'utilisateur ouvre `/handicaps` puis `/strokes`
+- **THEN** le système répond 200 avec la page Handicaps puis la page Coups, et aucune des deux réponses ne contient « Section à venir »
 
 #### Scenario: Sous-adresse d'une section sans page
-- **GIVEN** la section Handicaps n'a pas encore sa page
-- **WHEN** l'utilisateur ouvre `/handicaps/0190a6b2-7c3e-7000-8000-000000000001`
-- **THEN** le système répond 200 avec la page « Section à venir » de Handicaps
+- **WHEN** l'utilisateur ouvre `/handicaps/0190a6b2-7c3e-7000-8000-000000000001`, puis `/strokes/xyz`
+- **THEN** le système répond 404 les deux fois
 
 #### Scenario: Section qui a sa page
-- **GIVEN** les sections Importer, Rounds et Joueurs ont leur page
-- **WHEN** l'utilisateur ouvre `/import`, `/rounds` puis `/players`
-- **THEN** aucune des trois réponses ne contient « Section à venir »
+- **WHEN** l'utilisateur ouvre `/import`, `/rounds`, `/handicaps`, `/strokes` puis `/players`
+- **THEN** chacune répond 200 avec la page de sa section, et aucune réponse ne contient « Section à venir »
 
 #### Scenario: Sous-adresse inconnue de l'import
 - **WHEN** l'utilisateur ouvre `/import/xyz`

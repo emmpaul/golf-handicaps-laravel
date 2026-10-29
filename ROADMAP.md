@@ -54,7 +54,7 @@ Photo, job de file, lecture par l'IA, écran de correction, budget mensuel.
 
 ## 7. `home-and-match-strokes`
 
-**Dépend de** : 6, 8. **Statut** : proposé.
+**Dépend de** : 6, 8. **Statut** : fait. Le changement est archivé ; reste au mainteneur la visite de `/`, `/handicaps` et `/strokes` sur le staging après le déploiement.
 
 Tableau de bord, dont le bloc « Imports à vérifier » qui lit les imports de 8, page des handicaps, coups rendus en match.
 
