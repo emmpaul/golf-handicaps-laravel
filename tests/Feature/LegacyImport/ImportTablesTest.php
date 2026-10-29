@@ -3,11 +3,14 @@
 use App\Domain\AiUsage\AiBudget;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
 use Tests\Support\LegacySqlite\LegacySqliteFixture;
 
 beforeEach(function () {
     Storage::fake('photos');
+    // The pending rating of the base is requeued after the commit: kept in the fake queue.
+    Queue::fake();
     $this->travelTo(CarbonImmutable::parse('2026-10-29 03:12:45', 'UTC'));
     $this->base = LegacySqliteFixture::countsSet();
     [$this->exitCode, $this->lines] = importSqlite($this->base->path, ['--uploads' => $this->base->uploads]);

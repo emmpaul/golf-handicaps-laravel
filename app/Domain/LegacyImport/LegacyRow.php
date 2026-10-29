@@ -57,6 +57,27 @@ final readonly class LegacyRow
         return $value;
     }
 
+    /**
+     * A column of JSON text, decoded then encoded again for a jsonb column: a text that is not
+     * JSON fails the import before PostgreSQL sees it.
+     *
+     * @throws LegacyImportFailed
+     */
+    public function nullableJson(string $column): ?string
+    {
+        $json = $this->nullableString($column);
+        if ($json === null) {
+            return null;
+        }
+
+        $decoded = json_decode($json);
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            throw $this->unreadable($column);
+        }
+
+        return (string) json_encode($decoded);
+    }
+
     private function unreadable(string $column): LegacyImportFailed
     {
         return new LegacyImportFailed("Valeur illisible : {$this->table}.{$column}");

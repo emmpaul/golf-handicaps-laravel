@@ -8,7 +8,7 @@ beforeEach(fn () => Storage::fake('photos'));
 
 /**
  * A base of two players and the reference card played by both on 2026-10-17 (round 1), whose
- * holes are changed by $changeHoles.
+ * holes are changed by $changeHoles, with the statistics of D15 (the pars and the strokes stay).
  *
  * @param  Closure(list<array{par: int, strokeIndex: int, distance: int|null}>): list<array{par: int, strokeIndex: int, distance: int|null}>  $changeHoles
  */
@@ -22,7 +22,9 @@ function baseWithReferenceRound(Closure $changeHoles): LegacySqliteFixture
         ->round(1, 'BETHPAGE BLACK', 'Red', '2026-10-17', 1792251843742, $changeHoles($card['holes']), [
             [1, $card['lines'][0]['strokes']],
             [2, $card['lines'][1]['strokes']],
-        ]);
+        ])
+        ->stats(1, 1, 72, 72, 10, null, 10, true)
+        ->stats(1, 2, 88, 88, 170, null, 170, true);
 }
 
 // Spec « Distance 0 ».

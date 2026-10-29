@@ -73,6 +73,25 @@ test('a path out of the uploads folder is refused and never read', function () {
         ->and(nonEmptyTargetTables())->toBe([]);
 });
 
+// Design D9, decision of the orchestrator: two sources that give the same file are refused,
+// before any write.
+// Mutation that turns it red: the collision ignored (the second copy overwrites the first).
+test('two photos that give the same file on the disk are refused with both paths', function () {
+    $card = referenceCardData(null, null);
+    $base = LegacySqliteFixture::referenceRound(photoPath: 'uploads/a.webp')
+        ->round(2, 'BETHPAGE BLACK', 'Red', '2026-10-24', 1792856643742, $card['holes'], [[1, $card['lines'][0]['strokes']]], 'uploads/a.jpg')
+        ->stats(2, 1, 72, 72, 10, 10, 10, true)
+        ->webpPhoto('a.webp')
+        ->jpegPhoto('a.jpg');
+
+    [$exitCode, $lines] = importSqlite($base->path, ['--uploads' => $base->uploads]);
+
+    expect($exitCode)->toBe(1)
+        ->and($lines)->toBe(['Photos de même destination :', 'uploads/a.jpg et uploads/a.webp → imports/a.webp'])
+        ->and(nonEmptyTargetTables())->toBe([])
+        ->and(Storage::disk('photos')->allFiles())->toBe([]);
+});
+
 // Mutation that turns it red: only the photos of the rounds counted (the import adds one).
 test('photos referenced without --uploads are refused with their count', function () {
     $base = LegacySqliteFixture::referenceRound(photoPath: 'uploads/3f2a.webp')->import(1, 'uploads/9b7c.webp', 1792251800000);

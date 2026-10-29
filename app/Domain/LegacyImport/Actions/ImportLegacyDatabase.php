@@ -2,6 +2,7 @@
 
 namespace App\Domain\LegacyImport\Actions;
 
+use App\Domain\Courses\CourseRatingStatus;
 use App\Domain\Handicaps\Actions\RecomputePlayerStats;
 use App\Domain\Imports\ImportStatus;
 use App\Domain\Imports\ScorecardDraft;
@@ -14,7 +15,9 @@ use App\Domain\LegacyImport\LegacyImportCorrection;
 use App\Domain\LegacyImport\LegacyPhotos;
 use App\Domain\LegacyImport\LegacyRow;
 use App\Domain\LegacyImport\LegacySchema;
+use App\Domain\LegacyImport\StatsComparison;
 use App\Domain\LegacyImport\TargetTables;
+use App\Jobs\LookUpCourseRating;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
@@ -38,6 +41,13 @@ final class ImportLegacyDatabase
 
     private LegacyPhotos $photos;
 
+    /**
+     * The course_ratings still looked up in Next, requeued after the commit (design D12).
+     *
+     * @var list<string>
+     */
+    private array $pendingLookups = [];
+
     /** The instant of the import, one for the whole command. */
     private string $now;
 
@@ -60,6 +70,7 @@ final class ImportLegacyDatabase
         $this->photos = LegacyPhotos::check($this->legacy, $uploadsDir);
 
         $this->ids = new IdMap;
+        $this->pendingLookups = [];
         $this->now = CarbonImmutable::now('UTC')->format('Y-m-d H:i:s');
         $this->report = new ImportReport($dryRun);
         $this->report->unreferencedFiles = $this->photos->unreferencedFiles();
@@ -84,6 +95,9 @@ final class ImportLegacyDatabase
                 // player_round_stats is not copied: the history is replayed by the computation
                 // of the port (design D7, D11).
                 $this->recomputePlayerStats->handle(DB::table('round_players')->distinct()->pluck('player_id')->all());
+                $this->report->statsCompared = StatsComparison::compare($this->legacy, $this->ids);
+                $this->report->ratingLookups = count($this->pendingLookups);
+                $this->countRows();
 
                 if ($dryRun) {
                     throw new DryRunCancelled;
@@ -98,8 +112,23 @@ final class ImportLegacyDatabase
         }
 
         Storage::disk(LegacyPhotos::DISK)->delete(array_values(array_diff($emptiedPhotos, $this->photos->destinations())));
+        foreach ($this->pendingLookups as $courseRatingId) {
+            LookUpCourseRating::dispatch($courseRatingId);
+        }
 
         return $this->report;
+    }
+
+    /**
+     * The rows of each table on both sides, and the jobs of Next left out (design D13); read
+     * inside the transaction, so that a dry run counts what it would have written.
+     */
+    private function countRows(): void
+    {
+        foreach (TargetTables::TABLES as $table) {
+            $this->report->tables[$table] = [$this->legacy->connection()->table($table)->count(), DB::table($table)->count()];
+        }
+        $this->report->jobsIgnored = $this->legacy->connection()->table('jobs')->count();
     }
 
     /**
@@ -191,9 +220,13 @@ final class ImportLegacyDatabase
     private function importCourseRatings(): void
     {
         foreach ($this->rowsWithIds('course_ratings') as $rating) {
+            $id = $this->ids->uuid('course_ratings', $rating->int('id'), "course_ratings, rating {$rating->int('id')}");
             $updatedAt = self::instant($rating->int('updated_at'));
+            if ($rating->string('status') === CourseRatingStatus::Pending->value) {
+                $this->pendingLookups[] = $id;
+            }
             $this->insert('course_ratings', "rating {$rating->int('id')}", [
-                'id' => $this->ids->uuid('course_ratings', $rating->int('id'), "course_ratings, rating {$rating->int('id')}"),
+                'id' => $id,
                 'course_name' => $rating->string('course_name'),
                 'tees' => $rating->string('tees'),
                 'rating_t' => $rating->nullableInt('rating_t'),
@@ -203,8 +236,8 @@ final class ImportLegacyDatabase
                 'sgt_course_id' => $rating->nullableInt('sgt_course_id'),
                 'sgt_course_name' => $rating->nullableString('sgt_course_name'),
                 'sgt_course_location' => $rating->nullableString('sgt_course_location'),
-                'candidates' => $rating->nullableString('candidates'),
-                'tees_read' => $rating->nullableString('tees_read'),
+                'candidates' => $rating->nullableJson('candidates'),
+                'tees_read' => $rating->nullableJson('tees_read'),
                 'proposed_tee' => $rating->nullableString('proposed_tee'),
                 'note' => $rating->nullableString('note'),
                 'created_at' => $updatedAt,

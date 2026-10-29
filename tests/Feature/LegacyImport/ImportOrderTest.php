@@ -64,7 +64,9 @@ test('two rounds of the same day created in the same second keep their SQLite or
     $base = LegacySqliteFixture::atLevel()
         ->player(1, 'Gab', 1791400000000)
         ->round(1, 'BETHPAGE BLACK', 'Red', '2026-10-17', 1792251843100, $holes, [[1, strokesOverPar(17)]])
-        ->round(2, 'BETHPAGE BLACK', 'Red', '2026-10-17', 1792251843900, $holes, [[1, strokesOverPar(1)]]);
+        ->round(2, 'BETHPAGE BLACK', 'Red', '2026-10-17', 1792251843900, $holes, [[1, strokesOverPar(1)]])
+        ->stats(1, 1, 88, 88, 170, null, 170, true)
+        ->stats(2, 1, 72, 72, 10, 170, 90, true);
 
     importSqlite($base->path);
 
