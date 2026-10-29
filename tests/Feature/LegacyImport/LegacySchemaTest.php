@@ -84,14 +84,18 @@ test('the legacy connection refuses any write', function () {
         ->toThrow(QueryException::class, 'attempt to write a readonly database');
 });
 
-// Same mutation, if the import ever wrote on the source: the file is compared byte for byte.
-test('the source file is unchanged by an import that succeeds then one that fails', function () {
-    $base = LegacySqliteFixture::atLevel('0004')->player(1, 'Gab', 1792251843742);
+// Mutation that turns it red: the check of bytes 18-19 of the header removed from
+// LegacyDatabase::open() (the base is then read, its -wal and -shm files created, and the
+// import succeeds).
+test('a base in WAL mode is refused, read without creating a -wal or -shm file', function () {
+    $base = LegacySqliteFixture::atLevel('0004')->player(1, 'Gab', 1792251843742)->inWalMode();
     $fingerprint = hash_file('sha256', $base->path);
 
-    [$firstExitCode] = importSqlite($base->path);
-    [$secondExitCode] = importSqlite($base->path);
+    [$exitCode, $lines] = importSqlite($base->path);
 
-    expect([$firstExitCode, $secondExitCode])->toBe([0, 1])
-        ->and(hash_file('sha256', $base->path))->toBe($fingerprint);
+    expect($exitCode)->toBe(1)
+        ->and($lines)->toBe(['Base en WAL : copier par VACUUM INTO (docs/deployment.md, Bascule depuis Next).'])
+        ->and([file_exists($base->path.'-wal'), file_exists($base->path.'-shm')])->toBe([false, false])
+        ->and(hash_file('sha256', $base->path))->toBe($fingerprint)
+        ->and(nonEmptyTargetTables())->toBe([]);
 });
