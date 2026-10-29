@@ -129,9 +129,9 @@ describe('Strokes page', () => {
     it('names each box by the player and his index, read apart', () => {
         render(<StrokesIndex players={players} courses={courses} />);
 
-        expect(
-            screen.getByRole('checkbox', { name: 'Gab Index 1,0' }),
-        ).toBe(checkbox('Gab'));
+        expect(screen.getByRole('checkbox', { name: 'Gab Index 1,0' })).toBe(
+            checkbox('Gab'),
+        );
         expect(
             screen.getByRole('checkbox', { name: "Sean pas encore d'index" }),
         ).toBe(checkbox('Sean'));
