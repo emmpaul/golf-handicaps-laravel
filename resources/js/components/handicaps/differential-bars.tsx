@@ -15,10 +15,16 @@ const FLOOR_PX = 4;
 
 /**
  * Au-delà de 10 barres, valeur et date ne tiennent plus sur chaque barre
- * (11,8 px par barre à 390 px pour 20 rounds, une date fait 27 px) : elles
- * s'écrivent une barre sur deux, la plus récente toujours (DO46).
+ * (8,3 px par barre à 320 px pour 20 rounds, une date fait 27 px) : elles
+ * s'écrivent une barre sur deux jusqu'à 16, une sur trois au-delà, la plus
+ * récente toujours (DO46).
  */
 const ALL_LABELLED_UP_TO = 10;
+const EVERY_OTHER_UP_TO = 16;
+
+/** Pas des étiquettes pour `count` barres : 1, 2 ou 3. */
+const labelStep = (count: number) =>
+    count <= ALL_LABELLED_UP_TO ? 1 : count <= EVERY_OTHER_UP_TO ? 2 : 3;
 
 /** « 2 », « 5,5 », « 11 » : le dixième nul est omis au-dessus d'une barre. */
 const barLabel = (differentialT: number) =>
@@ -81,9 +87,7 @@ export function DifferentialBars({
                     {bars.map((round, index) => {
                         const fromNewest = bars.length - 1 - index;
                         // The others keep their value and date for screen readers.
-                        const shown =
-                            bars.length <= ALL_LABELLED_UP_TO ||
-                            fromNewest % 2 === 0;
+                        const shown = fromNewest % labelStep(bars.length) === 0;
                         // Narrow bars: the labels of the edge bars stay inside the chart.
                         const narrow = bars.length > ALL_LABELLED_UP_TO;
                         const align =
