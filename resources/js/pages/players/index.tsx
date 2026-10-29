@@ -1,4 +1,6 @@
 import { Form, Head } from '@inertiajs/react';
+import { XIcon } from 'lucide-react';
+import { useState } from 'react';
 import {
     destroy as removeAlias,
     store as storeAlias,
@@ -8,11 +10,10 @@ import {
     update as updatePlayer,
 } from '@/actions/App/Http/Controllers/PlayerController';
 import { ComputationHelp } from '@/components/handicaps/computation-help';
-import { PageTitle } from '@/components/page-title';
+import { PageTopRow } from '@/components/page-top-row';
+import { PlayerSwatch } from '@/components/player-swatch';
 import { InlineForm } from '@/components/players/inline-form';
-import { Button } from '@/components/ui/button';
-import { formatIndex } from '@/lib/format';
-import { cn } from '@/lib/utils';
+import { formatTenths, NO_VALUE } from '@/lib/format';
 
 export type PlayerOverview = {
     id: string;
@@ -21,165 +22,188 @@ export type PlayerOverview = {
     /** Index d'après le dernier round joué, en dixièmes ; `null` sans round. */
     indexT: number | null;
     provisional: boolean;
+    /** Rang de couleur du joueur, 0 à 5 (D6). */
+    colorSlot: number;
 };
 
-/**
- * Colonnes de la table à partir de 1 024 px : joueur et index, alias,
- * renommer, nouvel alias. En dessous, chaque rangée empile ces quatre parties.
- */
-const PLAYER_COLUMNS =
-    'lg:grid lg:grid-cols-[12rem_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)] lg:items-start lg:gap-x-6';
+/** État écrit sous l'index (spec players « Index sur la page Joueurs »). */
+function indexState({ indexT, provisional }: PlayerOverview): string {
+    if (indexT === null) {
+        return "PAS D'INDEX";
+    }
+
+    return provisional ? 'PROVISOIRE' : 'INDEX';
+}
+
+/** Pastille d'un alias (32 px) et son bouton de retrait, sans confirmation (spec `players`). */
+function AliasPill({
+    player,
+    alias,
+}: {
+    player: PlayerOverview;
+    alias: PlayerOverview['aliases'][number];
+}) {
+    return (
+        <li className="flex h-8 items-center gap-1 rounded-pill bg-surface-2 pr-1 pl-2.5 font-mono text-meta-12">
+            <span data-slot="alias">{alias.alias}</span>
+            <Form
+                action={removeAlias({ player: player.id, alias: alias.id })}
+                options={{ preserveScroll: true }}
+            >
+                {({ processing }) => (
+                    <button
+                        type="submit"
+                        disabled={processing}
+                        aria-label={`Retirer l’alias ${alias.alias} de ${player.name}`}
+                        className="flex size-6 items-center justify-center rounded-full text-ink-2 focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-solid disabled:cursor-not-allowed disabled:text-ink-3"
+                    >
+                        <XIcon aria-hidden="true" className="size-3" />
+                    </button>
+                )}
+            </Form>
+        </li>
+    );
+}
 
 /**
- * Joueurs du groupe : index actuel, ajout, renommage, alias ajoutés et retirés
- * (spec `players`), puis l'explication du calcul. La liste arrive triée par nom
- * sans tenir compte de la casse, chaque joueur avec ses alias par ordre
- * alphabétique.
+ * Une ligne de joueur (spec « Mise en page de la page Joueurs ») : pastille,
+ * nom, index et son état à droite ; dessous « ALIAS », ses pastilles et
+ * « Modifier ». Ouverte, elle montre le renommage et l'ajout d'alias.
+ */
+function PlayerLine({
+    player,
+    open,
+    onToggle,
+}: {
+    player: PlayerOverview;
+    open: boolean;
+    onToggle: () => void;
+}) {
+    const panelId = `player-edit-${player.id}`;
+
+    return (
+        <li className="border-b border-rule-soft py-4">
+            <div className="flex min-h-11 items-center gap-2.5">
+                <PlayerSwatch colorSlot={player.colorSlot} size={10} />
+                <h2 className="min-w-0 text-name-m [overflow-wrap:anywhere]">
+                    {player.name}
+                </h2>
+                <span
+                    data-testid="player-index"
+                    className="ml-auto flex flex-none flex-col items-end gap-1 font-mono"
+                >
+                    <span className="text-num-l">
+                        {player.indexT === null
+                            ? NO_VALUE
+                            : formatTenths(player.indexT)}
+                    </span>
+                    <span className="text-caption text-ink-2">
+                        {indexState(player)}
+                    </span>
+                </span>
+            </div>
+            <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                <span className="mr-1 font-mono text-section text-ink-2 uppercase">
+                    Alias
+                </span>
+                {player.aliases.length > 0 ? (
+                    <ul
+                        aria-label={`Alias de ${player.name}`}
+                        className="flex flex-wrap gap-1.5"
+                    >
+                        {player.aliases.map((alias) => (
+                            <AliasPill
+                                key={alias.id}
+                                player={player}
+                                alias={alias}
+                            />
+                        ))}
+                    </ul>
+                ) : (
+                    <span className="text-body-13 text-ink-2">Aucun alias</span>
+                )}
+                <button
+                    type="button"
+                    aria-expanded={open}
+                    aria-controls={open ? panelId : undefined}
+                    onClick={onToggle}
+                    className="ml-auto flex min-h-8 items-center text-link-13 text-ink-2"
+                >
+                    {open ? 'Fermer' : 'Modifier'}
+                </button>
+            </div>
+            {open ? (
+                <div id={panelId} className="mt-3.5 flex flex-col gap-2">
+                    <InlineForm
+                        key={`name-${player.name}`}
+                        action={updatePlayer(player.id)}
+                        errorBag={`rename-${player.id}`}
+                        field="name"
+                        label={`Nom de ${player.name}`}
+                        submit="Renommer"
+                        defaultValue={player.name}
+                    />
+                    <InlineForm
+                        action={storeAlias(player.id)}
+                        errorBag={`alias-${player.id}`}
+                        field="alias"
+                        label={`Nouvel alias de ${player.name}`}
+                        submit="Ajouter l’alias"
+                    />
+                    <p className="text-body-12 text-ink-2">
+                        Les alias servent à reconnaître le joueur sur les photos
+                        de carte.
+                    </p>
+                </div>
+            ) : null}
+        </li>
+    );
+}
+
+/**
+ * Joueurs du groupe : ajout, puis une ligne par joueur avec son index actuel,
+ * ses alias et, repliés derrière « Modifier », le renommage et l'ajout
+ * d'alias (spec `players`) ; un seul joueur ouvert à la fois. Puis
+ * l'explication du calcul. La liste arrive triée par nom sans tenir compte de
+ * la casse, chaque joueur avec ses alias par ordre alphabétique.
  */
 export default function PlayersIndex({
     players,
 }: {
     players: PlayerOverview[];
 }) {
+    const [openId, setOpenId] = useState<string | null>(null);
+
     return (
         <>
             <Head title="Joueurs" />
-            <PageTitle>Joueurs</PageTitle>
-            {/* La table des joueurs : l'ajout en première rangée, sur téléphone comme sur ordinateur. */}
-            <div className="flex min-w-0 flex-col">
-                <section
-                    aria-labelledby="add-player-title"
-                    className="flex flex-col gap-2 border-t-2 border-foreground px-2 py-3 lg:flex-row lg:items-start lg:gap-6"
-                >
-                    <h2
-                        id="add-player-title"
-                        className="font-heading text-xl font-bold lg:w-48 lg:shrink-0 lg:pt-0.5"
-                    >
-                        Ajouter un joueur
-                    </h2>
-                    <div className="min-w-0 lg:w-96">
-                        <InlineForm
-                            action={storePlayer()}
-                            errorBag="addPlayer"
-                            field="name"
-                            label="Nouveau joueur"
-                            submit="Ajouter"
-                        />
-                    </div>
-                </section>
-                <div
-                    aria-hidden
-                    className={cn(
-                        'bg-band text-sm text-band-ink hidden px-2 py-1.5 font-medium',
-                        PLAYER_COLUMNS,
-                    )}
-                >
-                    <span>Joueur</span>
-                    <span>Alias</span>
-                    <span>Renommer</span>
-                    <span>Nouvel alias</span>
-                </div>
-                <ul
-                    aria-label="Joueurs"
-                    className="max-lg:border-t-2 max-lg:border-foreground"
-                >
-                    {players.map((player) => (
-                        <li
-                            key={player.id}
-                            className={cn(
-                                'flex flex-col gap-3 border-b px-2 py-3',
-                                PLAYER_COLUMNS,
-                            )}
-                        >
-                            <div className="flex flex-wrap items-baseline justify-between gap-x-3 lg:flex-col lg:gap-0.5">
-                                <h2 className="font-heading text-2xl leading-tight font-bold [overflow-wrap:anywhere]">
-                                    {player.name}
-                                </h2>
-                                <span
-                                    data-testid="player-index"
-                                    className="text-sm text-muted-foreground tabular-nums"
-                                >
-                                    Index{' '}
-                                    {formatIndex(
-                                        player.indexT,
-                                        player.provisional,
-                                    )}
-                                </span>
-                            </div>
-                            <div className="text-sm flex flex-wrap items-center gap-x-2 gap-y-1 lg:min-h-8">
-                                {/* Sous l'en-tête « Alias » à partir de 1 024 px : le libellé reste pour les lecteurs d'écran. */}
-                                <span className="text-muted-foreground lg:sr-only">
-                                    Alias :
-                                </span>{' '}
-                                {player.aliases.length > 0 ? (
-                                    <ul
-                                        aria-label={`Alias de ${player.name}`}
-                                        className="flex flex-wrap gap-x-3"
-                                    >
-                                        {player.aliases.map((alias) => (
-                                            <li
-                                                key={alias.id}
-                                                className="flex items-center gap-1"
-                                            >
-                                                <span
-                                                    data-slot="alias"
-                                                    className="font-medium"
-                                                >
-                                                    {alias.alias}
-                                                </span>
-                                                {/* Retrait sans confirmation (spec `players`). */}
-                                                <Form
-                                                    action={removeAlias({
-                                                        player: player.id,
-                                                        alias: alias.id,
-                                                    })}
-                                                    options={{
-                                                        preserveScroll: true,
-                                                    }}
-                                                >
-                                                    {({ processing }) => (
-                                                        <Button
-                                                            type="submit"
-                                                            variant="ghost"
-                                                            size="xs"
-                                                            disabled={
-                                                                processing
-                                                            }
-                                                            className="text-muted-foreground max-md:min-h-11"
-                                                            aria-label={`Retirer l’alias ${alias.alias} de ${player.name}`}
-                                                        >
-                                                            Retirer
-                                                        </Button>
-                                                    )}
-                                                </Form>
-                                            </li>
-                                        ))}
-                                    </ul>
-                                ) : (
-                                    <span>Aucun alias</span>
-                                )}
-                            </div>
-                            <InlineForm
-                                key={`name-${player.name}`}
-                                action={updatePlayer(player.id)}
-                                errorBag={`rename-${player.id}`}
-                                field="name"
-                                label={`Nom de ${player.name}`}
-                                submit="Renommer"
-                                defaultValue={player.name}
-                            />
-                            <InlineForm
-                                action={storeAlias(player.id)}
-                                errorBag={`alias-${player.id}`}
-                                field="alias"
-                                label={`Nouvel alias de ${player.name}`}
-                                submit="Ajouter l’alias"
-                            />
-                        </li>
-                    ))}
-                </ul>
+            <PageTopRow />
+            <h1 className="text-title">Joueurs</h1>
+            <section aria-label="Ajouter un joueur" className="mt-5">
+                <InlineForm
+                    action={storePlayer()}
+                    errorBag="addPlayer"
+                    field="name"
+                    label="Nouveau joueur"
+                    submit="Ajouter"
+                    filled
+                />
+            </section>
+            <ul aria-label="Joueurs" className="mt-6 border-t border-rule">
+                {players.map((player) => (
+                    <PlayerLine
+                        key={player.id}
+                        player={player}
+                        open={openId === player.id}
+                        onToggle={() =>
+                            setOpenId(openId === player.id ? null : player.id)
+                        }
+                    />
+                ))}
+            </ul>
+            <div className="mt-7">
+                <ComputationHelp />
             </div>
-            <ComputationHelp />
         </>
     );
 }

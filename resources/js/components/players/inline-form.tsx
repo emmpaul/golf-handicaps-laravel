@@ -9,7 +9,9 @@ import { Pending } from '@/components/ui/pending';
  * Un champ et un bouton, avec le refus du serveur sous le champ (« Ce joueur
  * existe déjà », « Le nom est obligatoire »), relié au champ par
  * `aria-describedby`. Chaque formulaire a son sac d'erreurs : une erreur
- * `name` de l'ajout ne s'affiche pas sous les champs de renommage.
+ * `name` de l'ajout ne s'affiche pas sous les champs de renommage. Champ et
+ * bouton de 48 px côte à côte (design, page Joueurs) : le bouton plein pour
+ * l'ajout d'un joueur, à contour et de 130 px dans un joueur ouvert.
  */
 export function InlineForm({
     action,
@@ -18,6 +20,7 @@ export function InlineForm({
     label,
     submit,
     defaultValue = '',
+    filled = false,
 }: {
     action: RouteDefinition<'post' | 'patch'>;
     errorBag: string;
@@ -25,6 +28,8 @@ export function InlineForm({
     label: string;
     submit: string;
     defaultValue?: string;
+    /** Bouton plein (« Ajouter ») au lieu du bouton à contour de 130 px. */
+    filled?: boolean;
 }) {
     const errorId = useId();
 
@@ -34,7 +39,7 @@ export function InlineForm({
             errorBag={errorBag}
             resetOnSuccess
             options={{ preserveScroll: true }}
-            className="flex flex-col gap-1"
+            className="flex flex-col gap-1.5"
         >
             {({ errors, processing }) => (
                 <>
@@ -53,7 +58,10 @@ export function InlineForm({
                         />
                         <Button
                             type="submit"
-                            variant="outline"
+                            variant={filled ? 'default' : 'outline'}
+                            className={
+                                filled ? undefined : 'w-[130px] text-label-14'
+                            }
                             disabled={processing}
                         >
                             {submit}
@@ -67,7 +75,7 @@ export function InlineForm({
                         <p
                             id={errorId}
                             role="alert"
-                            className="text-sm text-destructive"
+                            className="text-body-12 text-signal"
                         >
                             {errors[field]}
                         </p>
