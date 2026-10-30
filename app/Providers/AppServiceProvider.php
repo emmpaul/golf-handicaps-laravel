@@ -3,10 +3,12 @@
 namespace App\Providers;
 
 use App\Http\Session\AnonymousDatabaseSessionHandler;
+use App\Support\QueryClock;
 use App\Support\WorkerHeartbeat;
 use Carbon\CarbonImmutable;
 use DateTimeZone;
 use Illuminate\Contracts\Foundation\Application;
+use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Queue\Events\JobFailed;
 use Illuminate\Queue\Events\JobProcessed;
 use Illuminate\Support\Facades\Date;
@@ -25,7 +27,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->scoped(QueryClock::class);
     }
 
     /**
@@ -38,6 +40,17 @@ class AppServiceProvider extends ServiceProvider
         $this->ensureSgtConfiguration();
         $this->configureSessionStorage();
         $this->configureWorkerHeartbeat();
+        $this->configureQueryClock();
+    }
+
+    /**
+     * Add the time of each SQL query to the clock of the current request, read by
+     * AddServerTiming (design D1). Registered once at boot; app() resolves the clock of the
+     * request running the query.
+     */
+    protected function configureQueryClock(): void
+    {
+        DB::listen(fn (QueryExecuted $query) => app(QueryClock::class)->record($query->time ?? 0.0));
     }
 
     /**

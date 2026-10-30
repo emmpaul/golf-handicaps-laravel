@@ -2,6 +2,7 @@
 
 use App\Domain\DomainException;
 use App\Http\Middleware\AddSecurityHeaders;
+use App\Http\Middleware\AddServerTiming;
 use App\Http\Middleware\EnsurePasscodeConfigured;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\RequirePasscode;
@@ -24,8 +25,13 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         // Outermost, the headers reach every response, the 500 of a missing passcode included;
-        // right inside, the passcode check is the first that can refuse a request.
-        $middleware->prepend([AddSecurityHeaders::class, EnsurePasscodeConfigured::class]);
+        // Server-Timing next, on the same responses (optimize-performance, design D1); right
+        // inside, the passcode check is the first that can refuse a request.
+        $middleware->prepend([
+            AddSecurityHeaders::class,
+            AddServerTiming::class,
+            EnsurePasscodeConfigured::class,
+        ]);
 
         $middleware->web(append: [
             HandleInertiaRequests::class,
