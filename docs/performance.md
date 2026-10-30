@@ -77,24 +77,24 @@ Lecture : le plancher réseau (Cloudflare jusqu'à l'origine) vaut environ 50 ms
 
 Mesure de la version en production avant ce changement, prise le 2026-10-29 avec `golf:perf-probe`, 20 essais par page, depuis le poste du mainteneur et à travers le conteneur de Sail (`make perf-probe URL=https://golf.emmanuelpaul.com`). C'est la mesure de comparaison de la mesure « après » (design D2).
 
-| Adresse | Visite | Statut | Médiane (ms) | 90e centile (ms) | Min (ms) | app (ms) | db-count | Taille (o) |
-| --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| `/robots.txt` | page | 200 | 136 | 556 | 43 | — | — | 24 |
-| `/up` | page | 200 | 172 | 633 | 73 | — | — | 3315 |
-| `/api/version` | page | 200 | 164 | 338 | 105 | — | — | 71 |
-| `/login` | page | 200 | 209 | 403 | 141 | — | — | 13216 |
-| `/` | page | 200 | 196 | 293 | 120 | — | — | 14624 |
-| `/handicaps` | page | 200 | 216 | 286 | 168 | — | — | 15847 |
-| `/strokes` | page | 200 | 238 | 360 | 115 | — | — | 14913 |
-| `/rounds` | page | 200 | 225 | 463 | 148 | — | — | 15561 |
-| `/players` | page | 200 | 269 | 510 | 140 | — | — | 14540 |
-| `/courses` | page | 200 | 241 | 517 | 154 | — | — | 19292 |
-| `/import` | page | 200 | 193 | 305 | 108 | — | — | 16136 |
-| `/rounds` | Inertia | 200 | 200 | 318 | 98 | — | — | 2557 |
-| `/handicaps` | Inertia | 200 | 188 | 209 | 116 | — | — | 2271 |
-| `/strokes` | Inertia | 200 | 190 | 368 | 110 | — | — | 1909 |
-| `/players` | Inertia | 200 | 201 | 263 | 124 | — | — | 1082 |
-| `/import` | Inertia | 200 | 174 | 219 | 148 | — | — | 2330 |
+| Adresse        | Visite  | Statut | Médiane (ms) | 90e centile (ms) | Min (ms) | app (ms) | db-count | Taille (o) |
+| -------------- | ------- | ------ | -----------: | ---------------: | -------: | -------: | -------: | ---------: |
+| `/robots.txt`  | page    | 200    |          136 |              556 |       43 |        — |        — |         24 |
+| `/up`          | page    | 200    |          172 |              633 |       73 |        — |        — |       3315 |
+| `/api/version` | page    | 200    |          164 |              338 |      105 |        — |        — |         71 |
+| `/login`       | page    | 200    |          209 |              403 |      141 |        — |        — |      13216 |
+| `/`            | page    | 200    |          196 |              293 |      120 |        — |        — |      14624 |
+| `/handicaps`   | page    | 200    |          216 |              286 |      168 |        — |        — |      15847 |
+| `/strokes`     | page    | 200    |          238 |              360 |      115 |        — |        — |      14913 |
+| `/rounds`      | page    | 200    |          225 |              463 |      148 |        — |        — |      15561 |
+| `/players`     | page    | 200    |          269 |              510 |      140 |        — |        — |      14540 |
+| `/courses`     | page    | 200    |          241 |              517 |      154 |        — |        — |      19292 |
+| `/import`      | page    | 200    |          193 |              305 |      108 |        — |        — |      16136 |
+| `/rounds`      | Inertia | 200    |          200 |              318 |       98 |        — |        — |       2557 |
+| `/handicaps`   | Inertia | 200    |          188 |              209 |      116 |        — |        — |       2271 |
+| `/strokes`     | Inertia | 200    |          190 |              368 |      110 |        — |        — |       1909 |
+| `/players`     | Inertia | 200    |          201 |              263 |      124 |        — |        — |       1082 |
+| `/import`      | Inertia | 200    |          174 |              219 |      148 |        — |        — |       2330 |
 
 Lecture :
 
