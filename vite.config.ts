@@ -4,7 +4,7 @@ import babel from '@rolldown/plugin-babel';
 import tailwindcss from '@tailwindcss/vite';
 import react, { reactCompilerPreset } from '@vitejs/plugin-react';
 import laravel from 'laravel-vite-plugin';
-import { fontsource } from 'laravel-vite-plugin/fonts';
+import { local } from 'laravel-vite-plugin/fonts';
 import { defineConfig, lazyPlugins } from 'vite-plus';
 
 export default defineConfig({
@@ -12,16 +12,27 @@ export default defineConfig({
         laravel({
             input: ['resources/css/app.css', 'resources/js/app.tsx'],
             refresh: true,
+            // Design D3: one latin WOFF2 per weight, preloaded. Without the
+            // optional fontaine package the plugin computes no fallback, so
+            // the metric-adjusted fallbacks are written in app.css (plan B).
             fonts: [
-                fontsource('Geist', {
-                    weights: [400, 500, 600],
-                    subsets: ['latin', 'latin-ext'],
+                local('Geist', {
+                    variants: [400, 500, 600].map((weight) => ({
+                        src: `node_modules/@fontsource/geist/files/geist-latin-${weight}-normal.woff2`,
+                        weight,
+                    })),
                     variable: '--font-geist',
+                    optimizedFallbacks: false,
+                    fallbacks: ['"Geist fallback"'],
                 }),
-                fontsource('Geist Mono', {
-                    weights: [500, 600],
-                    subsets: ['latin', 'latin-ext'],
+                local('Geist Mono', {
+                    variants: [500, 600].map((weight) => ({
+                        src: `node_modules/@fontsource/geist-mono/files/geist-mono-latin-${weight}-normal.woff2`,
+                        weight,
+                    })),
                     variable: '--font-geist-mono',
+                    optimizedFallbacks: false,
+                    fallbacks: ['"Geist Mono fallback"'],
                 }),
             ],
         }),

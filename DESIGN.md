@@ -75,7 +75,9 @@ Les capitales passent par `uppercase` : le DOM garde la casse d'origine, et les 
 ## Polices
 
 - Geist (400, 500, 600) pour le texte, les titres, les noms et les boutons ; Geist Mono (500, 600) pour les chiffres, les libellés de section et de colonne, les métas. Tout nombre affiché en colonne est en Geist Mono, pour que « 1 » et « 8 » aient la même largeur.
-- Servies par les deux `fontsource()` de `vite.config.ts` depuis les paquets `@fontsource` verrouillés, variables `--font-geist` et `--font-geist-mono`, sous-ensembles `latin` et `latin-ext`. Aucune page ne charge de ressource d'un autre domaine, Google Fonts compris ; `tests/Feature/PageAssetsTest.php` le vérifie.
+- Servies par les deux `local()` de `vite.config.ts` depuis les paquets `@fontsource` verrouillés, variables `--font-geist` et `--font-geist-mono`. Un seul fichier par graisse : le WOFF2 du sous-ensemble `latin`, qui couvre le français (é, è, à, ç, œ). Aucun WOFF, aucun `latin-ext` : un caractère hors du sous-ensemble s'affiche dans la police de repli, sans téléchargement. La page précharge ces cinq fichiers et rien d'autre ; `tests/Feature/FontLoadingTest.php` le vérifie sur le build.
+- Avant l'arrivée de Geist, le texte s'affiche en « Geist fallback » et « Geist Mono fallback » : Arial aux métriques ajustées (`size-adjust`, `ascent-override`, `descent-override`), écrites dans `resources/css/app.css` pour que la page ne saute pas au changement de police.
+- Aucune page ne charge de ressource d'un autre domaine, Google Fonts compris ; `tests/Feature/PageAssetsTest.php` le vérifie.
 - Sentient, présente dans l'archive du design, n'est pas livrée : le design final ne s'en sert pas, et sa licence interdit de la publier dans un dépôt public.
 
 ## Cadre et mesures
