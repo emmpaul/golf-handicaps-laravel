@@ -87,7 +87,8 @@ services:
 
     web:
         <<: *app
-        command: ['frankenphp', 'run', '--config', '/etc/caddy/Caddyfile']
+        # Pas de command : la CMD de l'image lance FrankenPHP en mode worker par Octane (ADR 0015).
+        # Redéployer une image précédente par IMAGE_TAG relance donc aussi sa propre commande.
         depends_on:
             migrate:
                 condition: service_completed_successfully

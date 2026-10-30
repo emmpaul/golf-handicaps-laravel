@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 # Image de production unique (design D2) : la commande lancée choisit le rôle.
-#   web     : frankenphp run --config /etc/caddy/Caddyfile (par défaut)
+#   web     : php artisan octane:frankenphp … (par défaut, mode worker, ADR 0015)
 #   worker  : php artisan queue:work …
 #   migrate : php artisan migrate --force
 # Image publique : aucun secret au build, toute la configuration arrive par l'environnement.
@@ -63,14 +63,18 @@ COPY --from=vendor /app/vendor ./vendor
 COPY --from=assets /app/public/build ./public/build
 COPY docker/Caddyfile /etc/caddy/Caddyfile
 COPY --chmod=755 docker/entrypoint.sh /usr/local/bin/entrypoint
+# Script du worker FrankenPHP (gabarit d'Octane) posé au build : public/ n'est pas modifiable
+# par l'utilisateur app, et octane:frankenphp le copierait sinon au démarrage.
 RUN --mount=type=bind,from=composer,source=/usr/bin/composer,target=/usr/local/bin/composer \
     composer dump-autoload --no-dev --no-scripts --classmap-authoritative \
     && php artisan package:discover --ansi \
+    && cp vendor/laravel/octane/src/Commands/stubs/frankenphp-worker.php public/frankenphp-worker.php \
     && chown -R app:app storage bootstrap/cache /data/caddy /config/caddy
 
 ENV APP_ENV=production \
     APP_DEBUG=false \
-    LOG_CHANNEL=stderr
+    LOG_CHANNEL=stderr \
+    OCTANE_SERVER=frankenphp
 # Sha complet du commit, passé par la CI ; vide hors CI, et GET /api/version répond commit: null.
 ARG GIT_COMMIT=""
 ENV APP_COMMIT=$GIT_COMMIT
@@ -84,4 +88,6 @@ EXPOSE 8080
 # chaque service de docker-compose.yml déclare le sien.
 HEALTHCHECK NONE
 ENTRYPOINT ["entrypoint"]
-CMD ["frankenphp", "run", "--config", "/etc/caddy/Caddyfile"]
+# Commande de web (docker-compose.yml n'en déclare pas, ADR 0015) : workers en nombre auto,
+# chacun relancé après 500 requêtes contre toute fuite de mémoire.
+CMD ["php", "artisan", "octane:frankenphp", "--host=0.0.0.0", "--port=8080", "--caddyfile=/etc/caddy/Caddyfile", "--workers=auto", "--max-requests=500"]
