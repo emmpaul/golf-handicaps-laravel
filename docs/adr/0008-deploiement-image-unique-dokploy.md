@@ -2,7 +2,7 @@
 
 ## Statut
 
-Acceptée, 2026-10-28 (changement OpenSpec `production-deployment`).
+Acceptée, 2026-10-28 (changement OpenSpec `production-deployment`). Remplacée en partie par [0015](0015-mode-worker-octane-frankenphp.md), 2026-10-29 : la décision « FrankenPHP en mode classique » (D1). Le reste reste en vigueur.
 
 ## Contexte
 
@@ -24,7 +24,7 @@ L'application a quatre rôles : servir le web, traiter la file (import par l'IA,
 
 ## Décision
 
-- **FrankenPHP en mode classique.** Le web tourne sous `frankenphp run` avec `docker/Caddyfile` : `auto_https off`, `admin off`, écoute HTTP sur `:8080`. Caddy sert les fichiers de `public/` sans PHP et envoie toute autre adresse à `index.php`. Les assets de `/build/*` portent une empreinte et partent avec `Cache-Control: public, max-age=31536000, immutable`.
+- **FrankenPHP en mode classique** (remplacée par 0015 : mode worker par Laravel Octane). Le web tourne sous `frankenphp run` avec `docker/Caddyfile` : `auto_https off`, `admin off`, écoute HTTP sur `:8080`. Caddy sert les fichiers de `public/` sans PHP et envoie toute autre adresse à `index.php`. Les assets de `/build/*` portent une empreinte et partent avec `Cache-Control: public, max-age=31536000, immutable`.
 - **Une image, quatre étapes.** Le `Dockerfile` part de `dunglas/frankenphp` en PHP 8.5, épinglé par tag exact et digest. L'étape `base` ajoute les extensions (`pdo_pgsql`, `pcntl`, `intl`, `opcache`), `php.ini-production` et l'utilisateur `app` (uid 1000). L'étape `vendor` lance `composer install --no-dev` depuis `composer.json` et `composer.lock` seuls. L'étape `assets` compile Vite avec Node 22 et PNPM, et seul `public/build` en sort. L'étape `runtime` assemble le code, `vendor` et `public/build`, pose `APP_ENV=production`, `APP_DEBUG=false`, `LOG_CHANNEL=stderr`, et inscrit le sha du commit dans `APP_COMMIT`. La même image sert le web, le worker et les migrations selon la commande lancée. Elle ne contient aucun secret.
 - **Caches au démarrage.** `docker/entrypoint.sh` lance `php artisan optimize`, puis la commande du service. L'environnement de Dokploy est alors connu, et changer une variable demande un redéploiement, pas une image.
 - **Stack `docker-compose.yml` en cinq services.** `pgsql` (PostgreSQL 18, volume `pgdata`, `pg_isready`), `migrate` (`php artisan migrate --force`, une fois par déploiement), `web` (sain quand `/up` répond 200), `worker` (`queue:work --tries=2 --sleep=3 --timeout=420 --max-time=3600`, sain tant que son battement a moins de 300 s) et `backup`. `web` et `worker` ne démarrent qu'après la sortie en 0 de `migrate`. Ils partagent le volume `storage`. Aucun port n'est publié : Dokploy relie son domaine au port 8080 de `web`. `APP_KEY` et `DB_PASSWORD` sont exigés par compose. `APP_PASSCODE` ne l'est pas, pour que son absence fasse tomber `/up` (ADR 0007).

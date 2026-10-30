@@ -1,16 +1,16 @@
 # Déploiement
 
-L'application tourne sur un hôte Docker piloté par [Dokploy](https://dokploy.com), en projet compose. La stack est `docker-compose.yml`, à la racine du dépôt. Elle lance l'image que la CI publie sur GitHub Container Registry, `ghcr.io/emmpaul/golf-handicaps-laravel`. Les décisions sont dans l'ADR 0008.
+L'application tourne sur un hôte Docker piloté par [Dokploy](https://dokploy.com), en projet compose. La stack est `docker-compose.yml`, à la racine du dépôt. Elle lance l'image que la CI publie sur GitHub Container Registry, `ghcr.io/emmpaul/golf-handicaps-laravel`. Les décisions sont dans l'ADR 0008, et le mode worker du web dans l'ADR 0015.
 
 ## La stack
 
-| Service   | Rôle                                                                                                                                     | Sain quand                              |
-| --------- | ---------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------- |
-| `pgsql`   | PostgreSQL 18, données dans le volume `pgdata`                                                                                           | `pg_isready` répond                     |
-| `migrate` | `php artisan migrate --force`, puis `golf:initial-players`, puis `golf:recompute-stats`, puis `golf:queue-rating-lookups`, puis s'arrête | sort en 0 (il reste alors `Exited (0)`) |
-| `web`     | FrankenPHP sur le port 8080, sans port publié                                                                                            | `/up` répond 200                        |
-| `worker`  | `php artisan queue:work`, relancé chaque heure par `--max-time=3600`, seul service qui joint Simulator Golf Tour                         | son battement a moins de 300 s          |
-| `backup`  | `pg_dump` au démarrage puis toutes les 24 h dans le volume `backups`                                                                     | un dump réussi a moins de 26 h          |
+| Service   | Rôle                                                                                                                                                                 | Sain quand                              |
+| --------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------- |
+| `pgsql`   | PostgreSQL 18, données dans le volume `pgdata`                                                                                                                       | `pg_isready` répond                     |
+| `migrate` | `php artisan migrate --force`, puis `golf:initial-players`, puis `golf:recompute-stats`, puis `golf:queue-rating-lookups`, puis s'arrête                             | sort en 0 (il reste alors `Exited (0)`) |
+| `web`     | FrankenPHP en mode worker par Laravel Octane (`octane:frankenphp`) : Laravel reste chargé, chaque worker est relancé après 500 requêtes. Port 8080, sans port publié | `/up` répond 200                        |
+| `worker`  | `php artisan queue:work`, relancé chaque heure par `--max-time=3600`, seul service qui joint Simulator Golf Tour                                                     | son battement a moins de 300 s          |
+| `backup`  | `pg_dump` au démarrage puis toutes les 24 h dans le volume `backups`                                                                                                 | un dump réussi a moins de 26 h          |
 
 `web` et `worker` démarrent seulement après la sortie en 0 de `migrate`. Si une migration, la création des joueurs initiaux, le recalcul de l'historique d'index ou la mise en file des recherches de rating échoue, ils ne démarrent pas sur la nouvelle image et restent sur `Created`. Lire alors `docker logs "$P-migrate-1"`, corriger, redéployer. Ce que deviennent les conteneurs de l'ancienne version pendant ce temps reste à observer sur le staging. `migrate`, `web` et `worker` montent le volume `storage` sur `storage/app` : `migrate`, créé avant les deux autres, remplit seul un volume neuf, sinon `web` et `worker`, créés en même temps, copient chacun le contenu de l'image et le second échoue (`file exists`, issue #14). Le contrôle de « Volume `storage` neuf » le vérifie. Les journaux partent sur la sortie d'erreur des conteneurs (`docker logs`, onglet Logs de Dokploy). Aucun fichier de journal ne grossit dans un conteneur.
 
@@ -36,6 +36,8 @@ docker compose -f docker-compose.yml -f docker-compose.smoke.yml --env-file dock
 P=golf-handicaps-smoke
 URL=http://127.0.0.1:8080
 ```
+
+`URL` sert aux commandes lancées depuis l'hôte (`curl`). `make perf-probe` tourne dans le conteneur de Sail, où `127.0.0.1` est le conteneur lui-même : contre cette stack, lui donner `URL=http://host.docker.internal:8080`, et poser `SESSION_SECURE_COOKIE=false` sur `web`, sans quoi la commande refuse le témoin `Secure` reçu en HTTP (`docs/performance.md`, « Mode worker sur la stack locale »).
 
 Le code d'accès de cette stack locale est `smoke-passcode`. Pour la retirer avec ses volumes : `docker compose -f docker-compose.yml -f docker-compose.smoke.yml --env-file docker/smoke.env down -v`.
 
@@ -219,6 +221,44 @@ Serveur seulement. Le comportement de Dokploy face à un tag qui bouge reste à 
 
 Changer une variable demande un redéploiement, pas un simple redémarrage. `docker restart` relance le conteneur avec l'environnement qu'il avait à sa création ; seul le redéploiement recrée les conteneurs avec les nouvelles valeurs.
 
+## Mesurer après un déploiement
+
+Après chaque version déployée en production, relancer la mesure en lecture seule depuis le même poste que la mesure précédente (`docs/performance.md`, « Lancer la mesure ») :
+
+```sh
+make perf-probe URL=https://golf.emmanuelpaul.com
+```
+
+La commande demande le code d'accès, ouvre une session par un seul `POST /login`, puis n'envoie que des `GET`. Le rapport s'écrit dans `reports/perf/<date>-golf.emmanuelpaul.com.md`. Recopier son tableau dans `docs/performance.md` quand la version change la vitesse (serveur, polices, préchargement), sans le code d'accès.
+
+Le mode worker se vérifie aussi par l'en-tête `Server-Timing` d'une page :
+
+```sh
+curl -sI "$URL/up" | grep -i server-timing
+```
+
+Sur la stack locale en mode worker, le 2026-10-29 : `Server-Timing: app;dur=4.11, db;dur=0, db-count;dur=0`. Une valeur d'`app` qui remonte au niveau de la mesure « avant » de `docs/performance.md` signale un web revenu au mode classique. Si Cloudflare retire l'en-tête, la commande affiche « — » dans les colonnes `app` et `db-count`. Lire alors l'en-tête depuis le serveur, par le port 8080 du conteneur :
+
+```sh
+docker exec "$P-web-1" curl -sI http://127.0.0.1:8080/up | grep -i server-timing
+```
+
+Lire aussi la mémoire de `web` (`docker stats --no-stream "$P-web-1"`) après le premier déploiement en mode worker : `--workers=auto` lance deux workers par cœur. Si la mémoire de l'hôte est juste, passer `--workers=auto` à `--workers=2` dans le `CMD` du `Dockerfile`, puis publier et déployer la nouvelle image. `docker-compose.yml` ne déclare pas de commande pour `web` : la remettre là casserait le retour arrière par `IMAGE_TAG` seul (« Retour arrière du mode worker »).
+
+## Script d'analyse de Cloudflare
+
+Cloudflare injecte par défaut son script Web Analytics (`static.cloudflareinsights.com/beacon.min.js`) dans les pages servies par un enregistrement proxifié, et envoie des balises vers `/cdn-cgi/rum`. Il contredit la règle « aucune requête vers un tiers » du thème. Ce réglage n'est pas dans le dépôt : il se coupe une fois, à la main, dans Cloudflare (design D7 d'`optimize-performance`).
+
+Dans le tableau de bord Cloudflare, zone `emmanuelpaul.com`, Web Analytics (ou Analytics & Logs, Web Analytics) : sur le site `golf.emmanuelpaul.com`, désactiver l'injection automatique (« Automatic setup », RUM). Faire de même pour `golf2.emmanuelpaul.com` s'il sert encore.
+
+Vérifier, sur le serveur, après le réglage :
+
+```sh
+curl -s "$URL/login" | grep -c cloudflareinsights
+```
+
+Attendu : `0`. Un nombre plus grand veut dire que l'injection tourne encore, ou que la page est restée en cache chez Cloudflare : attendre quelques minutes et relancer. Serveur seulement : la stack locale n'est pas derrière Cloudflare, et la commande y donne toujours `0`.
+
 ## Volume `storage` neuf
 
 Docker copie le contenu de l'image dans un volume nommé vide à la création du premier conteneur qui le monte. Compose crée `migrate` avant `web` et `worker`, qui en dépendent : c'est donc `migrate` qui remplit un volume `storage` neuf, une seule fois. Après une mise à jour majeure de Docker ou de Compose sur le serveur, refaire ce contrôle sur la stack locale, avec les mêmes versions de Docker et de Compose que le serveur. Il crée `migrate` seul, puis liste le volume depuis une autre image :
@@ -368,6 +408,20 @@ git diff --name-only <ancien-tag> <nouveau-tag> -- database/migrations
 Puis lire la méthode `up()` de chacune.
 
 Le retour à l'image précédente sera essayé à la première paire de versions publiées, `v0.1.0` puis `v0.1.1`, et noté ici.
+
+### Retour arrière du mode worker
+
+La commande de `web` vient de l'image : `docker-compose.yml` ne déclare pas de `command` pour ce service (ADR 0015). L'image en mode worker lance `php artisan octane:frankenphp …`, une image antérieure lance la sienne, `frankenphp run --config /etc/caddy/Caddyfile`. Revenir au mode classique se fait donc comme tout retour arrière : remettre l'ancien `IMAGE_TAG`, puis Deploy. Aucune migration ne change avec le mode worker, et les sessions restent valides dans les deux sens.
+
+Vérifier ensuite `/api/version`, qui doit répondre l'ancienne `version`, et l'en-tête `Server-Timing` de `/up` : une image d'avant ce changement n'en envoie pas.
+
+```sh
+curl -sI "$URL/up" | grep -ic server-timing
+```
+
+Attendu : `0` sur une image d'avant le mode worker, `1` sur une image qui l'a.
+
+Essayé sur la stack locale le 2026-10-29 : le `docker-compose.yml` sans `command` pour `web`, avec l'image `v0.2.0` à la place de l'image en mode worker. `web` est sain et lance `frankenphp run --config /etc/caddy/Caddyfile`, `/up` et `/login` répondent 200, `/api/version` répond `0.2.0`, et `/up` n'a pas de `Server-Timing`.
 
 ### Retour arrière de la recherche des ratings
 

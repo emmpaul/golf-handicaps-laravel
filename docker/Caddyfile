@@ -1,18 +1,32 @@
-# FrankenPHP en mode classique (design D1) : une exécution PHP par requête, sans worker.
+# FrankenPHP en mode worker par Laravel Octane (ADR 0015, design D4 d'optimize-performance) :
+# chaque worker garde Laravel chargé et sert une requête après l'autre.
+# Lancé par php artisan octane:frankenphp --caddyfile=/etc/caddy/Caddyfile, qui fournit les
+# variables {$…} : chemin de public/, nombre de workers (--workers), port (--port).
 # Dokploy (Traefik) termine le TLS et parle HTTP au port 8080.
 {
 	auto_https off
 	admin off
+
+	frankenphp {
+		worker {
+			file "{$APP_PUBLIC_PATH}/frankenphp-worker.php"
+			{$CADDY_SERVER_WORKER_DIRECTIVE}
+		}
+	}
 }
 
-:8080 {
-	root * /app/public
+{$CADDY_SERVER_SERVER_NAME} {
+	root * "{$APP_PUBLIC_PATH}"
 	encode zstd gzip
 
 	# Les noms des assets compilés portent une empreinte : ils ne changent jamais.
 	@build path /build/*
 	header @build Cache-Control "public, max-age=31536000, immutable"
 
-	# Fichiers de public/ servis par Caddy ; toute autre adresse va à index.php.
-	php_server
+	# Fichiers de public/ (favicon.ico, robots.txt, build/) servis par Caddy, sans PHP ;
+	# toute autre adresse va au worker.
+	php_server {
+		index frankenphp-worker.php
+		try_files {path} frankenphp-worker.php
+	}
 }
