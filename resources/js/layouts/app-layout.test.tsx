@@ -50,6 +50,8 @@ vi.mock('@inertiajs/react', async (importOriginal) => {
 
                 return subscription.unsubscribe;
             },
+            // The tabs prefetch their page on mount (NavLink): no request.
+            prefetch: () => {},
         },
     };
 });

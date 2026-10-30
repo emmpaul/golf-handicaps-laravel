@@ -1,3 +1,4 @@
+import { router } from '@inertiajs/react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import ImportCorrectionController from '@/actions/App/Http/Controllers/ImportCorrectionController';
 import { toRoundCard } from './form-state';
@@ -107,6 +108,9 @@ export function createCorrectionAutosave(options: AutosaveOptions) {
         }
 
         saved = body;
+        // La correction a changé côté serveur : les pages préchargées sont
+        // oubliées (spec « Correction enregistrée automatiquement », D5).
+        router.flushAll();
         options.onStatus({ message: 'Enregistré', error: false });
 
         if (queued) {

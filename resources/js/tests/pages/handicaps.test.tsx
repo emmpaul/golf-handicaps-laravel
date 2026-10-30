@@ -11,6 +11,7 @@ import { describe, expect, it, vi } from 'vite-plus/test';
 import HandicapsIndex from '@/pages/handicaps/index';
 import { GAB, MANU, SEAN } from '@/tests/reference-round';
 import { expectPlayerTabs } from '@/tests/player-tabs';
+import { expectPrefetchedOnTouchAndHover } from '@/tests/list-link-prefetch';
 
 // Spec handicap-index « Un joueur à la fois sur la page Handicaps », « Résumé
 // de l'index d'un joueur », « Liste des rounds d'un joueur », « Marque
@@ -636,5 +637,26 @@ describe('Handicaps page', () => {
         expect(
             screen.queryByRole('navigation', { name: 'Choisir un joueur' }),
         ).toBeNull();
+    });
+});
+
+// Spec app-shell « Liens de liste préchargés » (design D5): a round of the
+// history of a player prefetches its page like a round of the list.
+// Mutations: the `listLinkPrefetch` props dropped from the link → no call on
+// touch nor on hover, red; `onTouchStart` dropped → no call on touch, red.
+describe('Round history link prefetch', () => {
+    it('prefetches the round of the history on touch and on hover', async () => {
+        render(
+            <HandicapsIndex
+                players={players}
+                selectedPlayerId={MANU}
+                history={history(1, 1, 158)}
+            />,
+        );
+
+        await expectPrefetchedOnTouchAndHover(
+            within(rows()[0]).getByRole('link'),
+            '/rounds/0190a6b2-7c3e-7000-8000-000020261028',
+        );
     });
 });

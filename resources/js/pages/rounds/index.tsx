@@ -4,6 +4,7 @@ import { create, show } from '@/actions/App/Http/Controllers/RoundController';
 import { PageTopRow } from '@/components/page-top-row';
 import { PlayerSwatch } from '@/components/player-swatch';
 import { formatPlayedOn, NO_VALUE, playedOnParts } from '@/lib/format';
+import { listLinkPrefetch } from '@/lib/prefetch';
 import { TITLE_LINK } from '@/lib/utils';
 
 export type RoundListItem = {
@@ -58,6 +59,7 @@ export default function RoundsIndex({ rounds }: { rounds: RoundListItem[] }) {
                             >
                                 <Link
                                     href={show(round.id)}
+                                    {...listLinkPrefetch(show(round.id))}
                                     className="grid grid-cols-[44px_minmax(0,1fr)_auto] items-center gap-3.5 py-4 transition-opacity duration-(--dur-press) active:opacity-60"
                                 >
                                     {/* « 17 » sur « OCT » à l'œil ; la date complète pour les lecteurs d'écran. */}

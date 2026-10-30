@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from 'vite-plus/test';
 import RoundsIndex from '@/pages/rounds/index';
 import type { RoundListItem } from '@/pages/rounds/index';
 import { ROUND } from '@/tests/reference-round';
+import { expectPrefetchedOnTouchAndHover } from '@/tests/list-link-prefetch';
 
 // Spec rounds « Liste des rounds », « Mise en page de la page Rounds » and
 // app-shell « Rangée du haut des pages ». Head needs the head manager of
@@ -229,5 +230,21 @@ describe('Rounds page', () => {
                 .getAttribute('href'),
         ).toBe('/rounds/new');
         expect(screen.queryByRole('list', { name: 'Rounds' })).toBeNull();
+    });
+});
+
+// Spec app-shell « Liens de liste préchargés », scenario « Round ouvert depuis
+// la liste » (design D5): a round of /rounds prefetches its page on touch,
+// before the release, and on hover.
+// Mutations: the `listLinkPrefetch` props dropped from the link → no call on
+// touch nor on hover, red; `onTouchStart` dropped → no call on touch, red.
+describe('Rounds list link prefetch', () => {
+    it('prefetches the round on touch and on hover', async () => {
+        render(<RoundsIndex rounds={[reference]} />);
+
+        await expectPrefetchedOnTouchAndHover(
+            within(lines()[0]).getByRole('link'),
+            '/rounds/0190a6b2-7c3e-7000-8000-0000000000aa',
+        );
     });
 });

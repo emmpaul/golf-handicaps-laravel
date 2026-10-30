@@ -28,6 +28,7 @@ import {
 } from '@/tests/poll';
 import type { PollReload } from '@/tests/poll';
 import { ROUND } from '@/tests/reference-round';
+import { expectPrefetchedOnTouchAndHover } from '@/tests/list-link-prefetch';
 
 // Spec scorecard-import « Envoi d'une photo », « Prise de photo depuis
 // l'app » (with « Prise de vue annulée »), « Une action principale à l'import », « Lecture en tâche de fond »,
@@ -744,4 +745,42 @@ describe('List of imports', () => {
         expect(remove).not.toHaveBeenCalled();
         expect(line('17 oct. 2026 · 21:05')).toBeInTheDocument();
     });
+});
+
+// Spec app-shell « Liens de liste préchargés » (design D5): the links that open
+// an import (« Vérifier », « Ouvrir l'écran de correction vide ») and the round
+// of a saved import prefetch their page on touch, before the release, and on
+// hover.
+// Mutations: the `listLinkPrefetch` props dropped from `ActionLink` → no call
+// on touch nor on hover, red; `onTouchStart` dropped → no call on touch, red.
+describe('Import list links prefetch', () => {
+    it.each([
+        [
+            '17 oct. 2026 · 21:05',
+            'Vérifier',
+            '/imports/0190a6b2-7c3e-7000-8000-0000000000c1',
+        ],
+        [
+            '17 oct. 2026 · 21:04',
+            "Ouvrir l'écran de correction vide",
+            '/imports/0190a6b2-7c3e-7000-8000-0000000000c2',
+        ],
+        [
+            '17 oct. 2026 · 21:01',
+            'Voir le round',
+            '/rounds/0190a6b2-7c3e-7000-8000-0000000000aa',
+        ],
+    ])(
+        'prefetches the link of %s « %s » (%s) on touch and on hover',
+        async (heading, name, href) => {
+            render(
+                <ImportIndex imports={[ready, failed, saved]} readingEnabled />,
+            );
+
+            await expectPrefetchedOnTouchAndHover(
+                within(line(heading)).getByRole('link', { name }),
+                href,
+            );
+        },
+    );
 });
