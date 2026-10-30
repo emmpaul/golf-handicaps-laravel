@@ -4,6 +4,8 @@ All notable changes to this application, version by version. The format follows 
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-10-30
+
 ### Added
 
 - `Server-Timing` header on every response: `app`, `db` and `db-count` of the request, without any query text or data.
