@@ -4,6 +4,21 @@ All notable changes to this application, version by version. The format follows 
 
 ## [Unreleased]
 
+### Added
+
+- `Server-Timing` header on every response: `app`, `db` and `db-count` of the request, without any query text or data.
+- `make perf-probe URL=… RUNS=…` (`golf:perf-probe`): read-only measure of the pages and Inertia visits of a running instance, with the passcode read from `PERF_PASSCODE` or asked for, and a report in `reports/perf/`; method and reference measures in `docs/performance.md`.
+- Prefetched section tabs and Importer button, and list links (rounds and imports) prefetched on hover and on touch, cache flushed after every write (successful non-GET visit or autosave).
+
+### Changed
+
+- `web` served by FrankenPHP worker mode through Laravel Octane (`laravel/octane`, `octane:frankenphp --max-requests=500`), see ADR 0015.
+
+### Fixed
+
+- Fonts downloaded twice, WOFF overriding the preloaded WOFF2: one latin WOFF2 per weight, five preloads, and metric-matched `Geist fallback` faces.
+- `/favicon.ico` redirected to `/login` and opened a session: it is now a static file served by Caddy.
+
 ## [0.2.0] - 2026-10-29
 
 ### Added

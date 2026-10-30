@@ -92,6 +92,15 @@ Marges resserrées sur téléphone, suite de la vérification des zones sûres s
 
 Page « Calcul de l'index » (`/handicaps/calcul`), dessinée dans le design « Golf handicap app redesign » du mainteneur : le calcul déroulé en cinq étapes (score ajusté, différentiel, différentiels retenus, ajustement, index) avec les rounds du joueur choisi, puis les cas particuliers. Le bloc replié « Comment l’index est calculé » des pages Joueurs, Handicaps, Parcours et d'un round devient un lien vers cette page.
 
+## 14. `optimize-performance`
+
+**Dépend de** : 4 et 11. **Statut** : en cours. `Server-Timing`, `make perf-probe`, polices en WOFF2 latin seul, préchargement des onglets avec vidage après écriture, `/favicon.ico` statique et mode worker sont faits et mesurés sur la stack locale (médiane de `app` sur `/rounds` : 15,1 ms avant, 6,4 ms après). Restent :
+
+- le préchargement des liens de liste (tâche 4.2), en attente d'une décision du mainteneur : avec Inertia 3.9, `prefetch={['hover', 'click']}` ne part pas au toucher ;
+- au mainteneur, la mesure « avant » en production (tâche 2.5) avant tout déploiement, puis, après le déploiement par Dokploy : la mesure « après » et la passe navigateur en production dans `docs/performance.md`, la vérification à deux navigateurs et la mémoire de `web` dans `docker stats`, l'arrêt de Cloudflare Web Analytics avec sa vérification, le signalement à `laravel/vite-plugin` des règles WOFF qui l'emportent sur les WOFF2, puis l'archivage.
+
+Mesure reproductible des pages, en-tête `Server-Timing`, polices chargées une seule fois, pages préchargées, `/favicon.ico` hors du routeur, et FrankenPHP en mode worker par Laravel Octane (ADR 0015).
+
 ## Définition de terminé
 
 1. spec à jour, critères vérifiables, ambiguïtés résolues avant l'implémentation ;
