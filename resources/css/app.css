@@ -7,6 +7,29 @@
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
 @source not '../../docs';
 
+/* Polices de repli aux métriques de Geist (design D3, plan B) : Arial ajustée
+ * pour que le texte ne bouge pas à l'arrivée du WOFF2. Valeurs calculées par la
+ * formule de generateFallbackMetrics() de laravel-vite-plugin 3.2.0 sur
+ * geist-latin-400-normal.woff2 et geist-mono-latin-500-normal.woff2 (fontaine
+ * 0.8.0, hors du projet). Les @font-face n'acceptent pas var(). */
+@font-face {
+    font-family: 'Geist fallback';
+    src: local('Arial');
+    ascent-override: 94.99%;
+    descent-override: 27.88%;
+    line-gap-override: 0%;
+    size-adjust: 105.8%;
+}
+
+@font-face {
+    font-family: 'Geist Mono fallback';
+    src: local('Arial');
+    ascent-override: 73.94%;
+    descent-override: 21.7%;
+    line-gap-override: 0%;
+    size-adjust: 135.93%;
+}
+
 /* The two variants of shadcn/tailwind.css that the base-ui primitives use. */
 @custom-variant data-open {
     &:where([data-state='open']),
