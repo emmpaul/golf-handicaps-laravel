@@ -9,6 +9,7 @@ import { SectionLabel } from '@/components/section-label';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { ORB_FOR, Pending, PendingOrb } from '@/components/ui/pending';
 import { formatShortPlayedOn } from '@/lib/format';
+import { listLinkPrefetch } from '@/lib/prefetch';
 import { cn } from '@/lib/utils';
 import type { RouteDefinition } from '@/wayfinder';
 import { DeleteImport } from './delete-import';
@@ -90,6 +91,7 @@ function ActionLink({
     return (
         <Link
             href={href}
+            {...listLinkPrefetch(href)}
             aria-disabled={disabled || undefined}
             tabIndex={disabled ? -1 : undefined}
             onClick={(event) => {

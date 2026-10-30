@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 import Home from '@/pages/home';
 import type { LatestRound, PlayerStanding } from '@/pages/home';
 import { GAB, MANU, ROUND, SEAN } from '@/tests/reference-round';
+import { expectPrefetchedOnTouchAndHover } from '@/tests/list-link-prefetch';
 
 // Spec home-dashboard « Action d'import en tête », « Index des joueurs »,
 // « Dernier round », « Imports à vérifier » (MODIFIED by visual-redesign) and
@@ -352,5 +353,20 @@ describe('Home page', () => {
         page.props = {};
         render(<Home players={players} latestRound={latestRound} />);
         expect(screen.queryByText(/à vérifier/)).toBeNull();
+    });
+});
+
+// Spec app-shell « Liens de liste préchargés » (design D5): the latest round
+// of the home page prefetches its page like a round of the list.
+// Mutations: the `listLinkPrefetch` props dropped from the link → no call on
+// touch nor on hover, red; `onTouchStart` dropped → no call on touch, red.
+describe('Home latest round link prefetch', () => {
+    it('prefetches the latest round on touch and on hover', async () => {
+        render(<Home players={players} latestRound={latestRound} />);
+
+        await expectPrefetchedOnTouchAndHover(
+            within(latestBlock()).getByRole('link'),
+            '/rounds/0190a6b2-7c3e-7000-8000-0000000000aa',
+        );
     });
 });

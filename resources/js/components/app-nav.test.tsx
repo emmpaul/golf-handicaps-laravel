@@ -1,4 +1,6 @@
-import { render, screen, within } from '@testing-library/react';
+import { router } from '@inertiajs/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
+import { createContext, use } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 
 import { AppNav } from '@/components/app-nav';
@@ -14,10 +16,20 @@ import { AppNav } from '@/components/app-nav';
 let url = '/';
 let pendingImports: number | undefined;
 
+// The page as Inertia gives it through its page context: each page shown is a
+// new object, and a visit re-renders every reader of the context, even under
+// the React Compiler, which keeps the elements of an unchanged parent. Tests
+// that move between pages provide it; the others read `url`.
+type TestPage = { url: string; props: { pendingImports?: number } };
+const PageShown = createContext<TestPage | null>(null);
+
 vi.mock('@inertiajs/react', async (importOriginal) => ({
     ...(await importOriginal<typeof import('@inertiajs/react')>()),
-    usePage: () => ({ url, props: { pendingImports } }),
+    usePage: () => use(PageShown) ?? { url, props: { pendingImports } },
 }));
+
+// Every render prefetches the sections on mount: no request leaves the tests.
+const prefetch = vi.spyOn(router, 'prefetch').mockImplementation(() => {});
 
 function bar() {
     return screen.getByRole('navigation', { name: 'Sections' });
@@ -241,5 +253,177 @@ describe('AppNav width', () => {
         ]);
         expect(spacing(label(tabs[1])!, 'ml', false)).toBe(8);
         expect(barWidth(false)).toBe(340);
+    });
+});
+
+// Spec app-shell « Sections préchargées » (design D5): every tab and Importer
+// prefetch their page on mount, fresh 30 s then stale up to 5 min, except the
+// link of the page shown. NavLink runs; only `router.prefetch` is replaced,
+// so no request leaves.
+// Mutation: prefetch also on the link of the current page → the /players and
+// /import tests see their own URL and go red; `cacheFor` changed → every test
+// goes red.
+describe('AppNav prefetch', () => {
+    beforeEach(async () => {
+        // Let the mount prefetches queued by earlier tests run before counting.
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        prefetch.mockClear();
+        pendingImports = 0;
+    });
+
+    async function prefetched() {
+        await waitFor(() => expect(prefetch).toHaveBeenCalled());
+        // Every mount prefetch is queued in the same tick: let them all run.
+        await new Promise((resolve) => setTimeout(resolve, 0));
+
+        return prefetch.mock.calls.map(([href, params, options]) => [
+            href,
+            params,
+            options,
+        ]);
+    }
+
+    const GET = { method: 'get' };
+    const FRESH_THEN_STALE = { cacheFor: ['30s', '5m'] };
+
+    it('prefetches the four sections and Importer on a round sub-page', async () => {
+        url = '/rounds/0190a6b2-7c3e-7000-8000-000000000001';
+        render(<AppNav />);
+
+        expect(await prefetched()).toEqual([
+            ['/rounds', GET, FRESH_THEN_STALE],
+            ['/handicaps', GET, FRESH_THEN_STALE],
+            ['/strokes', GET, FRESH_THEN_STALE],
+            ['/players', GET, FRESH_THEN_STALE],
+            ['/import', GET, FRESH_THEN_STALE],
+        ]);
+    });
+
+    it('does not prefetch /players on /players', async () => {
+        url = '/players';
+        render(<AppNav />);
+
+        expect(await prefetched()).toEqual([
+            ['/rounds', GET, FRESH_THEN_STALE],
+            ['/handicaps', GET, FRESH_THEN_STALE],
+            ['/strokes', GET, FRESH_THEN_STALE],
+            ['/import', GET, FRESH_THEN_STALE],
+        ]);
+    });
+
+    it('does not prefetch /import on /import', async () => {
+        url = '/import';
+        render(<AppNav />);
+
+        expect(await prefetched()).toEqual([
+            ['/rounds', GET, FRESH_THEN_STALE],
+            ['/handicaps', GET, FRESH_THEN_STALE],
+            ['/strokes', GET, FRESH_THEN_STALE],
+            ['/players', GET, FRESH_THEN_STALE],
+        ]);
+    });
+});
+
+// Spec app-shell « Sections préchargées »: the tabs prefetch their page each
+// time a page is shown. The bar stays mounted from one page to the next, so a
+// tab that stops being the current page, and every tab after a write that
+// flushed the cache then redirected (to another page or the same one), must
+// prefetch again; the hooks of the real Link keep the same dependencies
+// between renders (React logs « The final argument passed to useEffect
+// changed size between renders » otherwise). A prefetch of a page still fresh
+// in the cache sends no request (Inertia core, `PrefetchedRequests.add`).
+// Mutations: `prefetch={onOwnPage ? false : 'mount'}` put back on the Link →
+// React logs the size warning and the console test goes red; the prefetch
+// effect of NavLink keyed on `href` and `onOwnPage` only (not on the page
+// shown) → the /rounds/<id> test sees only /rounds and the redirect test sees
+// nothing, both red.
+describe('AppNav from one page to the next', () => {
+    beforeEach(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        prefetch.mockClear();
+        pendingImports = 0;
+    });
+
+    async function settle() {
+        await new Promise((resolve) => setTimeout(resolve, 0));
+    }
+
+    /** A new page shown at `path`, as after a visit. */
+    function onPage(path: string) {
+        return (
+            <PageShown value={{ url: path, props: { pendingImports: 0 } }}>
+                <AppNav />
+            </PageShown>
+        );
+    }
+
+    async function prefetchedAfterMove(from: string, to: string) {
+        const { rerender } = render(onPage(from));
+        await settle();
+        prefetch.mockClear();
+
+        rerender(onPage(to));
+        await settle();
+
+        return prefetch.mock.calls.map(([href]) => href);
+    }
+
+    it('prefetches every other section, /players included, from /players to /rounds', async () => {
+        expect(await prefetchedAfterMove('/players', '/rounds')).toEqual([
+            '/handicaps',
+            '/strokes',
+            '/players',
+            '/import',
+        ]);
+    });
+
+    it('prefetches the five sections again from /rounds to a round', async () => {
+        expect(
+            await prefetchedAfterMove(
+                '/rounds',
+                '/rounds/0190a6b2-7c3e-7000-8000-000000000001',
+            ),
+        ).toEqual(['/rounds', '/handicaps', '/strokes', '/players', '/import']);
+    });
+
+    it('prefetches again when a write redirects back to the same page', async () => {
+        expect(await prefetchedAfterMove('/players', '/players')).toEqual([
+            '/rounds',
+            '/handicaps',
+            '/strokes',
+            '/import',
+        ]);
+    });
+
+    it('does not prefetch again on a render of the same page', async () => {
+        const page = { url: '/players', props: { pendingImports: 0 } };
+        const { rerender } = render(
+            <PageShown value={page}>
+                <AppNav />
+            </PageShown>,
+        );
+        await settle();
+        prefetch.mockClear();
+
+        rerender(
+            <PageShown value={page}>
+                <AppNav />
+            </PageShown>,
+        );
+        await settle();
+
+        expect(prefetch.mock.calls).toEqual([]);
+    });
+
+    it('logs no React error on the move', async () => {
+        const error = vi.spyOn(console, 'error');
+
+        try {
+            await prefetchedAfterMove('/players', '/rounds');
+
+            expect(error.mock.calls).toEqual([]);
+        } finally {
+            error.mockRestore();
+        }
     });
 });

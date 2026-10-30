@@ -1,7 +1,11 @@
 import { createInertiaApp } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
+import { flushPrefetchAfterWrites } from '@/lib/prefetch';
 
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
+
+// Toute écriture réussie oublie les pages préchargées (design D5).
+flushPrefetchAfterWrites();
 
 void createInertiaApp({
     title: (title) => (title ? `${title} - ${appName}` : appName),

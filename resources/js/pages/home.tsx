@@ -14,6 +14,7 @@ import {
     NO_INDEX,
     NO_VALUE,
 } from '@/lib/format';
+import { listLinkPrefetch } from '@/lib/prefetch';
 
 /** A player's current index and trend (PlayerStandings::ranked), in tenths. */
 export type PlayerStanding = {
@@ -187,6 +188,7 @@ function LatestRoundBlock({ round }: { round: LatestRound }) {
         <section aria-labelledby="latest-title" className="mt-7">
             <Link
                 href={showRound(round.id)}
+                {...listLinkPrefetch(showRound(round.id))}
                 className="block transition-opacity duration-(--dur-press) active:opacity-60"
             >
                 <span className="mb-2.5 flex justify-between font-mono text-section text-ink-2">

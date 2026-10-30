@@ -1,3 +1,4 @@
+import { router } from '@inertiajs/react';
 import {
     afterEach,
     beforeEach,
@@ -338,5 +339,60 @@ describe('autosave of the correction of an import', () => {
         await vi.advanceTimersByTimeAsync(0);
         expect(server.calls).toHaveLength(1);
         expect(manuHole1(server.calls[0])).toBe(5);
+    });
+});
+
+// Spec app-shell « Correction enregistrée automatiquement » (design D5): a
+// save the server accepts forgets every prefetched page, so the next visit to
+// Import asks the server; a failed save keeps them. Only `router.flushAll` is
+// replaced, to count its calls.
+// Mutation: the flush left out of `autosave.ts` → the 204 test goes red; the
+// flush moved before the status check → the failure tests go red.
+describe('autosave and the prefetch cache', () => {
+    let flushAll: ReturnType<typeof vi.spyOn>;
+
+    beforeEach(() => {
+        flushAll = vi.spyOn(router, 'flushAll').mockImplementation(() => {});
+    });
+
+    afterEach(() => {
+        flushAll.mockRestore();
+    });
+
+    it('flushes the prefetched pages once after a 204', async () => {
+        const { server, autosave } = setup();
+
+        autosave.change(withManuHole1(6));
+        await vi.advanceTimersByTimeAsync(1000);
+        expect(flushAll).toHaveBeenCalledTimes(0);
+
+        await server.reply(0, new Response(null, { status: 204 }));
+        expect(flushAll).toHaveBeenCalledTimes(1);
+    });
+
+    it.each([409, 422, 503])(
+        'keeps the prefetched pages after a %i',
+        async (status) => {
+            const { server, autosave } = setup();
+
+            autosave.change(withManuHole1(6));
+            await vi.advanceTimersByTimeAsync(1000);
+            await server.reply(
+                0,
+                Response.json({ error: 'Import introuvable' }, { status }),
+            );
+
+            expect(flushAll).toHaveBeenCalledTimes(0);
+        },
+    );
+
+    it('keeps the prefetched pages after a network error', async () => {
+        const { server, autosave } = setup();
+
+        autosave.change(withManuHole1(6));
+        await vi.advanceTimersByTimeAsync(1000);
+        await server.fail(0);
+
+        expect(flushAll).toHaveBeenCalledTimes(0);
     });
 });

@@ -2,6 +2,7 @@ import { Link } from '@inertiajs/react';
 import { show as showRound } from '@/actions/App/Http/Controllers/RoundController';
 import { PLAYER_BG } from '@/components/player-swatch';
 import { formatShortPlayedOn, formatTenths } from '@/lib/format';
+import { listLinkPrefetch } from '@/lib/prefetch';
 import { cn } from '@/lib/utils';
 
 /** One round of a player (PlayerHandicapHistory), values in tenths. */
@@ -56,6 +57,7 @@ export function RoundHistory({
                     >
                         <Link
                             href={showRound(round.roundId)}
+                            {...listLinkPrefetch(showRound(round.roundId))}
                             className={cn(
                                 HISTORY_COLUMNS,
                                 'min-h-13 py-2 font-mono text-link transition-opacity duration-(--dur-press) active:opacity-60',
