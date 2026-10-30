@@ -20,7 +20,7 @@ COMPOSER_BOOTSTRAP_IMAGE := laravelsail/php84-composer:latest
 
 .PHONY: help setup passcode-check up down dev dev-stop browser build migrate fresh demo openspec \
 	lint format analyse duplicates arch-test test-backend test-frontend test update-shards check \
-	commitlint changed-code wayfinder image image-smoke image-tags
+	commitlint changed-code wayfinder image image-smoke image-tags perf-probe
 
 help: ## Affiche cette aide
 	@echo "Usage : make <cible>"
@@ -212,6 +212,19 @@ image-tags: ## Affiche les tags d'image à publier pour REF et SHA (main, ou vX.
 			echo "$$tag latest $$SHA" ;; \
 		*) echo "La ref $$REF ne publie pas d'image : seuls refs/heads/main et refs/tags/vX.Y.Z publient." >&2; exit 1 ;; \
 	esac
+
+##@ Performance
+
+# Mesure en lecture seule (design D2 d'optimize-performance) : un POST /login, puis des GET.
+# Le code d'accès passe de l'hôte au conteneur par le nom de la variable seulement (exec -e
+# PERF_PASSCODE) : sa valeur n'apparaît ni dans la commande affichée ni dans un fichier.
+URL ?=
+RUNS ?= 20
+PERF_PROBE := $(if $(RUN),$(SAIL) exec $$([ -t 0 ] || echo -T) -u sail -e PERF_PASSCODE laravel.test php artisan,php artisan)
+
+perf-probe: ## Mesure une adresse en lecture seule (URL=https://…, RUNS=20) ; code lu dans PERF_PASSCODE ou demandé
+	@if [ -z "$(URL)" ]; then echo "URL manquante : make perf-probe URL=https://golf.emmanuelpaul.com" >&2; exit 2; fi
+	$(PERF_PROBE) golf:perf-probe '$(URL)' --runs=$(RUNS)
 
 ##@ Git et CI
 
