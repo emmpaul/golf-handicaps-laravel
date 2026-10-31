@@ -5,7 +5,9 @@ import {
     formatIndex,
     formatPlayedOn,
     formatShortPlayedOn,
+    formatClockTime,
     formatSignedTenths,
+    formatStoredAt,
     formatTenths,
     isoToLocalDate,
     localDateToIso,
@@ -130,5 +132,35 @@ describe('formatDayMonthShort', () => {
 
     it('reads 2026-05-04 as « 4 MAI », a month written whole', () => {
         expect(formatDayMonthShort('2026-05-04')).toBe('4 MAI');
+    });
+});
+
+// Spec offline-mode « Bandeau hors ligne », scenario « Copie affichée »: a copy
+// kept at 21:04 in Montréal on 30 October 2026, 01:04 UTC on the 31st, reads
+// « 30 oct. à 21:04 » under TZ=America/Montreal.
+// Mutations: hour formatted in UTC (`timeZone: 'UTC'`) → « 31 oct. à 01:04 »,
+// both tests go red; 12-hour clock → « 9:04 PM »-like, red.
+describe('formatStoredAt', () => {
+    it('reads 2026-10-31T01:04:00Z as « 30 oct. à 21:04 »', () => {
+        expect(formatStoredAt('2026-10-31T01:04:00Z')).toBe('30 oct. à 21:04');
+    });
+
+    it('reads 2026-05-04T12:07:00.000Z as « 4 mai à 08:07 »', () => {
+        expect(formatStoredAt('2026-05-04T12:07:00.000Z')).toBe(
+            '4 mai à 08:07',
+        );
+    });
+});
+
+// Spec scorecard-import « Liste des photos en attente d'envoi »: the time a
+// photo was taken, « 21:04 » for 01:04 UTC under TZ=America/Montreal.
+// Mutation: time formatted in UTC → « 01:04 », red.
+describe('formatClockTime', () => {
+    it('reads 2026-10-31T01:04:00.000Z as « 21:04 »', () => {
+        expect(formatClockTime('2026-10-31T01:04:00.000Z')).toBe('21:04');
+    });
+
+    it('reads 2026-05-04T12:07:00.000Z as « 08:07 »', () => {
+        expect(formatClockTime('2026-05-04T12:07:00.000Z')).toBe('08:07');
     });
 });

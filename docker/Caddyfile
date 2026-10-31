@@ -23,6 +23,11 @@
 	@build path /build/*
 	header @build Cache-Control "public, max-age=31536000, immutable"
 
+	# Le service worker est revérifié à chaque navigation : un déploiement le remplace à la
+	# visite suivante (offline-pwa, design D1).
+	@serviceWorker path /sw.js
+	header @serviceWorker Cache-Control "no-cache"
+
 	# Fichiers de public/ (favicon.ico, robots.txt, build/) servis par Caddy, sans PHP ;
 	# toute autre adresse va au worker.
 	php_server {

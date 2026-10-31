@@ -3,6 +3,7 @@ import { useEffect } from 'react';
 import type { ReactNode } from 'react';
 import { AppNav } from '@/components/app-nav';
 import { AppVersion } from '@/components/app-version';
+import { OfflineBanner } from '@/components/offline-banner';
 import { Toaster } from '@/components/ui/toaster';
 import { showFlashToast } from '@/lib/flash-toast';
 import { pageEnterStyle, useEntered, useReducedMotion } from '@/lib/motion';
@@ -18,7 +19,9 @@ import { pageEnterStyle, useEntered, useReducedMotion } from '@/lib/motion';
  * (éditeur de round) retire la barre d'onglets et le bouton Importer. Le
  * toast, monté une fois, affiche la donnée flash `toast` de chaque réponse.
  * `main` joue l'entrée de page (D8) à chaque changement d'adresse hors
- * requête : changer de joueur ne la rejoue pas.
+ * requête : changer de joueur ne la rejoue pas. Le bandeau « Hors ligne »
+ * (offline-pwa, D5) est le premier enfant de `main` ; la `PageTopRow` de la
+ * page passe avant lui (`-order-1`) : il s'affiche sous la rangée du haut.
  */
 export default function AppLayout({
     children,
@@ -49,8 +52,9 @@ export default function AppLayout({
             />
             <main
                 style={pageEnterStyle(entered, reduced)}
-                className="mx-auto flex w-full max-w-(--column) min-w-0 flex-1 flex-col px-(--gutter) pb-[calc(108px+var(--safe-bottom))]"
+                className="mx-auto flex w-full max-w-(--column) min-w-0 flex-1 flex-col px-(--gutter) pb-[calc(108px+var(--safe-bottom))] *:data-[slot=page-top-row]:-order-1"
             >
+                <OfflineBanner />
                 {children}
                 <AppVersion version={app.version} commit={app.commit} />
             </main>
