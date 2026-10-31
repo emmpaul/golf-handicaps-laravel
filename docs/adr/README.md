@@ -19,3 +19,4 @@ Une ADR par décision d'architecture, numérotée, écrite dans le même lot que
 | [0013](0013-refonte-visuelle.md)                              | Refonte visuelle                                       | Acceptée                     |
 | [0014](0014-import-unique-de-la-base-sqlite-de-next.md)       | Import unique de la base SQLite de Next                | Acceptée, modifiée           |
 | [0015](0015-mode-worker-octane-frankenphp.md)                 | Mode worker par Laravel Octane et FrankenPHP           | Acceptée                     |
+| [0016](0016-mode-hors-ligne-par-service-worker.md)            | Mode hors ligne par service worker écrit à la main     | Acceptée                     |

@@ -445,6 +445,47 @@ La version qui apporte la recherche SGT rend `rating_t` et `slope` facultatifs d
 
 Les recherches perdues repartent au redéploiement suivant de la nouvelle version : `golf:queue-rating-lookups` les remet en file.
 
+### Retour arrière du mode hors ligne
+
+Remettre l'ancien `IMAGE_TAG` ne retire pas le service worker (ADR 0016). Il reste installé dans chaque navigateur qui a ouvert l'application, et sert encore ses copies hors ligne. Une image d'avant ce changement n'a pas de `/sw.js` : Laravel répond par une redirection vers `/login` ou un 404, le navigateur rate la mise à jour et garde l'ancien service worker. Pour le retirer, il faut publier une version dont `public/sw.js` le désinscrit.
+
+La colonne `imports.upload_key` ne gêne pas le retour : nullable, l'ancien code l'ignore. L'ancien `ImportController::store` répond à l'envoi de la file par une redirection, que `fetch` suit jusqu'à un `200` : les photos en attente partent encore, sans protection contre les doublons.
+
+1. Avant tout, faire ouvrir l'application en ligne sur chaque téléphone du groupe, et attendre que la section « EN ATTENTE D'ENVOI » de l'écran Importer ait disparu. Une photo encore en attente reste dans IndexedDB après le retrait : seule une version qui connaît la file peut l'envoyer.
+2. Préparer la version de retrait : le code d'avant ce changement (sans l'enregistrement du service worker dans `app.tsx`), plus ce `public/sw.js` et la règle `Cache-Control: no-cache` de `/sw.js` dans `docker/Caddyfile`. L'application ne doit plus appeler `navigator.serviceWorker.register()`, sinon chaque page réinstalle ce script.
+
+    ```js
+    // Service worker de retrait : vide ses caches et se désinscrit.
+    self.addEventListener('install', () => self.skipWaiting());
+
+    self.addEventListener('activate', (event) => {
+        event.waitUntil(
+            (async () => {
+                const names = await caches.keys();
+                await Promise.all(names.map((name) => caches.delete(name)));
+                await self.registration.unregister();
+            })(),
+        );
+    });
+    ```
+
+    Ce script n'a pas d'écouteur `fetch` : dès son activation, toute requête part au réseau. Il ne recharge pas les pages ouvertes, qui passent au réseau à leur prochaine navigation.
+
+3. Publier cette version comme toute autre (« Déployer une version »), puis vérifier que `/sw.js` sert bien le script de retrait, sans cookie :
+
+    ```sh
+    curl -sI "$URL/sw.js" | grep -i 'cache-control\|set-cookie'
+    curl -s "$URL/sw.js" | grep -c unregister
+    ```
+
+    Attendu : `Cache-Control: no-cache`, aucune ligne `Set-Cookie`, et `1`.
+
+4. Chaque navigateur prend le script de retrait à sa prochaine visite en ligne. Sur un ordinateur, les outils de développement (Application, Service workers) n'affichent alors plus rien pour l'origine, et Cache Storage est vide.
+
+Garder ce `public/sw.js` dans les versions suivantes tant qu'un téléphone peut ne pas être revenu en ligne. Retiré trop tôt, `/sw.js` repasse par Laravel et un service worker resté en place n'est jamais remplacé.
+
+Cette procédure n'a pas été essayée : elle reste à lancer sur la stack locale avant d'en avoir besoin.
+
 ## Bascule depuis Next
 
 Le passage de l'application Next à cette stack se fait en deux temps, sans bascule franche :

@@ -4,6 +4,20 @@ All notable changes to this application, version by version. The format follows 
 
 ## [Unreleased]
 
+### Added
+
+- Service worker: visited pages readable offline. `public/sw.js`, written by hand, keeps the compiled assets and the latest copy of each page visited online with a session (network first), serves that copy without network, and keeps `/import` from the first online opening; see ADR 0016.
+- « Hors ligne » banner under the top row while the device is offline, with the time of the copy shown (« Hors ligne · page du 30 oct. à 21:04 »); « Page indisponible hors ligne. » for a page never opened, and the `/offline.html` screen with an « Importer une carte » link when the app opens cold on such a page.
+- Photos kept on the device offline and sent when the connection returns: every prepared photo goes through an IndexedDB queue, listed under « EN ATTENTE D'ENVOI » on the import screen with « Retirer », and sent one at a time, oldest first, on opening, on reconnection and after the passcode is typed again; « Photo non gardée sur le téléphone. Réessaie. » when the device cannot store the photo.
+- Idempotent photo upload keyed by a device-drawn upload key: `POST /imports` requires `upload_key` (UUID, unique in the new `imports.upload_key` column), returns the existing import for a key already received, and answers a JSON request with `201 { "id" }` or `200 { "id" }`.
+- `fake-indexeddb` development dependency, for the Vitest tests of the photo queue.
+
+### Changed
+
+- Writes attempted offline (round entry, players, ratings, import correction) fail with « Hors ligne : rien n'a été envoyé. » and keep the form as typed.
+- « Se déconnecter » also clears the pages kept on the device, as does any response that refuses the session; photos waiting to be sent stay on the device.
+- `/sw.js` is served by Caddy with `Cache-Control: no-cache`.
+
 ## [0.3.0] - 2026-10-30
 
 ### Added
