@@ -1,0 +1,46 @@
+# 0016. Mode hors ligne par service worker écrit à la main
+
+## Statut
+
+Acceptée, 2026-10-31 (changement OpenSpec `offline-pwa`).
+
+## Contexte
+
+Les cartes se photographient au simulateur, souvent avec un réseau faible ou absent. Le manifest existe depuis le changement 11, mais sans service worker : l'application installée sur l'écran d'accueil n'ouvre rien hors ligne. L'écran Importer ne s'affiche pas, et une photo prise par « Prendre une photo » se perd, parce qu'iOS ne la range pas dans la photothèque. Les pages consultées la veille (index, coups à rendre avant un match) ne se relisent pas non plus.
+
+Trois contraintes cadrent la décision :
+
+- Safari iOS, l'appareil principal du groupe, prend en charge les service workers, Cache Storage et IndexedDB avec des `Blob`, mais ni Background Sync ni Periodic Sync. Rien ne réveille le service worker quand l'application est fermée.
+- Inertia 3 sans rendu serveur donne deux réponses à une même adresse : le HTML d'une ouverture à froid, et le JSON d'une visite qui porte `X-Inertia: true`. Laravel ne pose pas `Vary` sur ces réponses.
+- Les pages contiennent les données du groupe (noms, scores, index). Elles ne doivent pas rester sur l'appareil après la fermeture de la session.
+
+## Alternatives
+
+- **`vite-plugin-pwa` ou Workbox.** Une dépendance de plus, et un précache de tout le build dont on n'a pas besoin. Le code généré ne connaît ni les deux formes de réponse d'Inertia ni l'effacement à la déconnexion, qu'il faudrait écrire de toute façon.
+- **`resources/js/sw.ts` compilé par Vite.** `laravel-vite-plugin` écrit sous `/build/` avec une empreinte : la portée serait `/build/`, ou il faudrait l'en-tête `Service-Worker-Allowed` et une route stable. Le typage ne vaut pas ce montage pour un fichier de quelques centaines de lignes.
+- **« Cache d'abord, puis mise à jour » pour les pages.** En ligne, l'index affiché doit être celui du serveur, et le préchargement du changement 14 rend déjà la navigation rapide.
+- **`Vary: X-Inertia` et appariement par `Vary` de Cache Storage.** Laravel ne pose pas l'en-tête, et l'appariement par `Vary` diffère selon les navigateurs. Une clé de cache explicite se teste.
+- **Envoi des photos par le service worker au retour du réseau.** Rien ne le réveille sur iOS, et il ne peut pas mener à `/login` quand la session a expiré.
+- **Envoi Inertia en ligne, file seulement hors ligne.** Deux chemins à tenir, et `navigator.onLine` ment : il vaut vrai sur un Wi-Fi sans Internet. Un envoi qui échoue en route serait perdu.
+- **Clé du client comme `id` de l'import.** Le client choisirait la clé primaire, dont dépend aussi le nom du fichier photo.
+
+## Décision
+
+- **Un fichier statique `public/sw.js`, sans étape de build.** Caddy le sert à la racine, portée `/`, sans PHP ni session, avec `Cache-Control: no-cache` : le navigateur revérifie le fichier à chaque navigation et prend le nouveau dès le déploiement suivant. Il est servi en `text/javascript`, le type par défaut de Caddy. Le service worker fait `skipWaiting()` et `clients.claim()`, puisqu'il ne garde que des copies, sans état à migrer. Sa logique de décision (quelle requête garder, sous quelle clé, quelle réponse servir, quand effacer) tient dans des fonctions pures du même fichier, que Vitest charge par un garde sur `self.registration`. L'application ne l'enregistre qu'avec les assets compilés (`import.meta.env.PROD`), jamais sous le serveur Vite.
+- **Trois caches.** `assets` garde `/build/*` « cache d'abord », rempli à la volée et borné à 300 entrées : les noms portent une empreinte, une copie n'est jamais périmée. `pages` garde les pages, bornées à 100 entrées. `offline` ne contient que `/offline.html`, gardé à l'installation. Il est à part pour que la borne de `assets` ne l'efface jamais et que la déconnexion n'y touche pas.
+- **Pages « réseau d'abord ».** Pour un `GET` de même origine hors `/build/`, `/login`, `/api/`, `/up`, des photos des rounds et des imports et des fichiers statiques de `public/`, le service worker demande au réseau. Il garde une réponse `200` non redirigée, sauf un rechargement partiel d'Inertia (`X-Inertia-Partial-Data` ou `X-Inertia-Partial-Except`), qui écraserait la page entière par une partie de ses props. La clé ajoute la forme de la réponse à l'adresse : `?__sw=inertia` pour une visite Inertia, l'adresse nue pour un document. La copie gardée reçoit `X-Offline-Stored-At`, l'instant ISO 8601 de la copie.
+- **Hors ligne, la copie, sinon un repli.** Une copie servie porte `X-Offline: hit`, et le service worker envoie à la page le message `{ type: 'served-from-cache', url, storedAt }`, que lit le bandeau « Hors ligne ». Le client Inertia ne donne pas accès aux en-têtes d'une réponse, et le document d'une ouverture à froid non plus. Sans copie : `/offline.html` pour un document, `503` avec `X-Offline: miss` pour une visite Inertia, que l'application traduit en « Page indisponible hors ligne. ». Une écriture hors ligne échoue en erreur réseau et affiche « Hors ligne : rien n'a été envoyé. », sans rien garder.
+- **`/import` gardé dès la première ouverture.** Au premier chargement en ligne avec une session, l'application demande au service worker de garder `/import` sous ses deux formes (message `cache-import` avec la version d'Inertia) et précharge le morceau JavaScript de la page par `import()`.
+- **Pages effacées à la fermeture de session.** Le service worker vide `pages` sur la réponse de `POST /logout`, sur toute réponse qui mène à `/login` (redirection, `409` avec `X-Inertia-Location` vers `/login`), sur un `401` `{ "error": "Session requise" }`, et sur un `200` de `GET /login`. Ce dernier cas couvre les documents : une redirection de document arrive au service worker en `opaqueredirect`, dont l'adresse cible ne se lit pas, et `/login` ne répond 200 que sans session. `assets` et `offline` restent, ils ne contiennent aucune donnée du groupe.
+- **Photos en file IndexedDB, envoyées par la page.** Toute photo préparée passe par la file, en ligne comme hors ligne : base `golf-offline`, magasin `photos`, entrées `{ key, blob, takenAt }`, `key` tirée par `crypto.randomUUID()`. `resources/js/lib/photo-queue.ts` envoie une photo à la fois, de la plus ancienne à la plus récente, en `fetch` avec `Accept: application/json` et `X-XSRF-TOKEN`, sans `X-Inertia`. Un verrou (`navigator.locks`, sinon une chaîne de promesses dans l'onglet) évite deux envois en parallèle, et un `BroadcastChannel` tient les onglets à jour. `201` ou `200` efface la photo. `422` ou `413` l'efface aussi et affiche le refus du serveur. `401` arrête l'envoi, garde la photo et mène à `/login`. `419` refait un seul essai après un `GET` qui renouvelle le jeton. Une erreur réseau, un `5xx`, 60 s sans réponse ou toute autre réponse arrêtent l'envoi et gardent la photo. L'envoi part à l'ouverture, à l'événement `online`, au retour au premier plan et après la saisie du code. La déconnexion n'efface pas la file.
+- **Envoi idempotent par `imports.upload_key`.** Colonne `uuid` nullable, index unique. `StoreImportRequest` exige la clé. `CreateImport::handle($photo, $uploadKey)` rend l'import existant d'une clé déjà reçue, sans décoder la photo ni écrire de fichier. Sur une violation de l'unique (deux envois simultanés), il efface la photo qu'il vient d'écrire et rend l'import gagnant. `ImportController::store` garde le retour arrière et le toast pour une visite Inertia, et répond `201 { "id" }`, ou `200 { "id" }` pour une clé déjà reçue, à une requête JSON.
+
+## Conséquences
+
+- Une page visitée en ligne se relit hors ligne. Une photo prise sans réseau reste sur le téléphone, fermeture de l'application et redémarrage compris, puis part seule. Un envoi rejoué après une réponse perdue ne crée pas de second import.
+- Les données du groupe restent sur l'appareil, dans le stockage du navigateur de l'origine : les pages jusqu'à la déconnexion, les photos jusqu'à leur envoi. Rien ne part vers un tiers, et les photos des rounds ne sont pas gardées.
+- Une copie reste lisible hors ligne après l'expiration de la session ou un changement de code, jusqu'à la première réponse réseau qui refuse la session. C'est accepté : même appareil, même groupe, et la déconnexion explicite efface tout de suite.
+- Après un déploiement, une page relue hors ligne peut mêler un HTML neuf et le JSON d'une ancienne version, ou demander un morceau JavaScript absent du cache. Inertia affiche alors son écran de repli, et la visite en ligne suivante répare.
+- Un import supprimé libère sa clé avec sa ligne : la même clé renvoyée plus tard recrée un import. Le client efface sa photo à la première réponse, donc seul un rejeu très tardif y mène.
+- Les fonctions pures de `public/sw.js` sont testées par Vitest (`resources/js/tests/service-worker.test.ts`) ; leur câblage ne se vérifie que dans un navigateur, à la passe navigateur. Mode avion, redémarrage du téléphone et application installée restent à vérifier sur un vrai iPhone.
+- Revenir à l'image précédente laisse le service worker installé chez les clients. Retirer le mode hors ligne demande de déployer un `public/sw.js` de retrait qui vide ses caches et se désinscrit (`docs/deployment.md`, « Retour arrière du mode hors ligne »). La colonne `upload_key`, nullable, est ignorée par l'ancien code.

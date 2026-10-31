@@ -101,6 +101,16 @@ Page « Calcul de l'index » (`/handicaps/calcul`), dessinée dans le design « 
 
 Mesure reproductible des pages, en-tête `Server-Timing`, polices chargées une seule fois, pages préchargées, `/favicon.ico` hors du routeur, et FrankenPHP en mode worker par Laravel Octane (ADR 0015).
 
+## 15. `offline-pwa`
+
+**Dépend de** : 8, 11 et 14. **Statut** : en cours. Tout le code est écrit et testé : envoi sans doublon côté serveur, file des photos, service worker, écran `/offline.html`, écran Importer, bandeau « Hors ligne », messages des pages sans copie et des écritures. `make image image-smoke` passe (tâche 4.4 cochée). Restent au mainteneur :
+
+- la passe navigateur (tâche 6.3), sautée à ce lot sur décision du mainteneur : les ports 80 et 5433 étaient pris par un autre projet local ;
+- après le déploiement par Dokploy, sur un vrai iPhone avec l'application installée : prendre une photo en mode avion, fermer l'application, redémarrer le téléphone, rouvrir avec du réseau et vérifier l'import ; vérifier le bandeau et l'écran « Hors ligne » ;
+- puis l'archivage.
+
+Application utilisable sans réseau, que `polish-mobile-ui` avait écarté côté Next : un service worker écrit à la main garde les pages visitées et les relit hors ligne avec un bandeau « Hors ligne », les photos de cartes restent sur le téléphone jusqu'au retour du réseau, un envoi rejoué ne crée pas de second import (`imports.upload_key`), et la déconnexion efface les pages gardées (ADR 0016).
+
 ## Définition de terminé
 
 1. spec à jour, critères vérifiables, ambiguïtés résolues avant l'implémentation ;
