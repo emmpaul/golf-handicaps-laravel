@@ -14,6 +14,8 @@ All notable changes to this application, version by version. The format follows 
 
 ### Changed
 
+- Navigation bar: the « Parcours » tab (`/courses`) replaces « Coups »; the strokes page stays at `/strokes`, opened from the « Coups à donner » link of the Handicaps page, with a « Handicaps » back link.
+- Rounds page: the « Parcours » link next to the title is removed, the tab replaces it.
 - Writes attempted offline (round entry, players, ratings, import correction) fail with « Hors ligne : rien n'a été envoyé. » and keep the form as typed.
 - « Se déconnecter » also clears the pages kept on the device, as does any response that refuses the session; photos waiting to be sent stay on the device.
 - `/sw.js` is served by Caddy with `Cache-Control: no-cache`.

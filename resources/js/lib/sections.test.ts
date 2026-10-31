@@ -8,7 +8,7 @@ const SECTION_HREFS = [
     '/import',
     '/rounds',
     '/handicaps',
-    '/strokes',
+    '/courses',
     '/players',
 ];
 
@@ -20,11 +20,25 @@ describe('inSection', () => {
     it.each([
         ['/rounds/0190a6b2-7c3e-7000-8000-000000000001', ['/rounds']],
         ['/imports/x', ['/import']],
-        ['/courses', ['/rounds']],
+        ['/courses', ['/courses']],
+        ['/strokes', ['/handicaps']],
         ['/', []],
         ['/roundsx', []],
+        ['/coursesx', []],
         ['/handicaps?x=1', ['/handicaps']],
     ])('places %s in %j', (url, expected) => {
         expect(sectionsOf(url)).toEqual(expected);
+    });
+
+    // Spec app-shell, scénarios « Coups » et « Parcours ».
+    // Mutation: keep `'/rounds': ['/courses']` or drop `'/handicaps': ['/strokes']`
+    // in SECTION_PREFIXES → the first two cases go red.
+    it.each([
+        ['/strokes', '/handicaps', true],
+        ['/courses', '/rounds', false],
+        ['/courses/rating', '/courses', true],
+        ['/coursesx', '/courses', false],
+    ])('inSection(%s, %s) is %s', (url, href, expected) => {
+        expect(inSection(url, href)).toBe(expected);
     });
 });

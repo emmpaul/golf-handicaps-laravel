@@ -3,17 +3,17 @@ import { Camera, Flag, ListOrdered, TrendingUp, Users } from 'lucide-react';
 import { useId } from 'react';
 import { NavLink } from '@/components/nav-link';
 import { cn } from '@/lib/utils';
+import { index as coursesIndex } from '@/routes/courses';
 import { index as handicapsIndex } from '@/routes/handicaps';
 import { index as importIndex } from '@/routes/import';
 import { index as playersIndex } from '@/routes/players';
 import { index as roundsIndex } from '@/routes/rounds';
-import { index as strokesIndex } from '@/routes/strokes';
 
 /** Les quatre onglets de la barre, dans l'ordre du design (D4). */
 export const TABS = [
     { href: roundsIndex.url(), label: 'Rounds', icon: ListOrdered },
     { href: handicapsIndex.url(), label: 'Handicaps', icon: TrendingUp },
-    { href: strokesIndex.url(), label: 'Coups', icon: Flag },
+    { href: coursesIndex.url(), label: 'Parcours', icon: Flag },
     { href: playersIndex.url(), label: 'Joueurs', icon: Users },
 ] as const;
 

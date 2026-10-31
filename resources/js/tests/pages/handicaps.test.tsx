@@ -638,6 +638,51 @@ describe('Handicaps page', () => {
             screen.queryByRole('navigation', { name: 'Choisir un joueur' }),
         ).toBeNull();
     });
+
+    // Spec handicap-index « Lien vers la page Coups », scenarios « Lien
+    // affiché » and « Sans joueur »: « Coups à donner » on the title line, to
+    // /strokes without the chosen player. Mutations: the link shown only with
+    // a player → red on the empty list; `?joueur=` added → red on Gab.
+    it('links « Coups à donner » to /strokes, without the chosen player, on the line of the title', () => {
+        render(
+            <HandicapsIndex
+                players={players.slice(0, 2)}
+                selectedPlayerId={GAB}
+                history={[]}
+            />,
+        );
+
+        const link = screen.getByRole('link', { name: 'Coups à donner' });
+
+        expect(link.getAttribute('href')).toBe('/strokes');
+        expect(link.parentElement?.className).toBe(
+            'flex items-end justify-between gap-3',
+        );
+        expect(
+            within(link.parentElement as HTMLElement).getByRole('heading', {
+                level: 1,
+            }).textContent,
+        ).toBe('Handicaps');
+    });
+
+    it('links « Coups à donner » to /strokes when there is no player', () => {
+        render(
+            <HandicapsIndex
+                players={[]}
+                selectedPlayerId={null}
+                history={[]}
+            />,
+        );
+
+        expect(screen.getByText('Aucun joueur.').textContent).toBe(
+            'Aucun joueur.',
+        );
+        expect(
+            screen
+                .getByRole('link', { name: 'Coups à donner' })
+                .getAttribute('href'),
+        ).toBe('/strokes');
+    });
 });
 
 // Spec app-shell « Liens de liste préchargés » (design D5): a round of the

@@ -63,7 +63,7 @@ describe('AppNav on a round sub-page', () => {
         ).toEqual([
             ['Rounds', '/rounds'],
             ['Handicaps', '/handicaps'],
-            ['Coups', '/strokes'],
+            ['Parcours', '/courses'],
             ['Joueurs', '/players'],
             ['Importer', '/import'],
         ]);
@@ -90,7 +90,7 @@ describe('AppNav on a round sub-page', () => {
         ).toEqual([
             ['Rounds', 'Rounds', true, false],
             ['Handicaps', 'Handicaps', false, true],
-            ['Coups', 'Coups', false, true],
+            ['Parcours', 'Parcours', false, true],
             ['Joueurs', 'Joueurs', false, true],
         ]);
     });
@@ -147,6 +147,46 @@ describe('AppNav pending badge', () => {
     });
 });
 
+// Spec app-shell « Section courante indiquée », scenarios « Parcours » and
+// « Coups »; « Plus d'onglet Coups ».
+// Mutations: `'/rounds': ['/courses']` kept in SECTION_PREFIXES → /courses
+// marks Rounds too, red; `'/handicaps': ['/strokes']` dropped → /strokes marks
+// nothing, red; the Coups tab kept in TABS → the /strokes link test goes red.
+describe('AppNav current section', () => {
+    it.each([
+        ['/courses', ['Parcours']],
+        ['/strokes', ['Handicaps']],
+        ['/coursesx', []],
+    ])('on %s marks %j', (path, expected) => {
+        url = path;
+        pendingImports = 0;
+        render(<AppNav />);
+
+        expect(
+            links()
+                .filter((link) => link.getAttribute('aria-current') === 'page')
+                .map((link) => link.getAttribute('aria-label')),
+        ).toEqual(expected);
+    });
+
+    it.each(['/rounds', '/handicaps', '/courses', '/players', '/strokes'])(
+        'has no link to /strokes nor named « Coups » on %s',
+        (path) => {
+            url = path;
+            pendingImports = 0;
+            render(<AppNav />);
+
+            expect(
+                links().filter(
+                    (link) =>
+                        link.getAttribute('href') === '/strokes' ||
+                        link.getAttribute('aria-label') === 'Coups',
+                ),
+            ).toEqual([]);
+        },
+    );
+});
+
 describe('AppNav on the home page', () => {
     it('marks no link as current', () => {
         url = '/';
@@ -165,7 +205,7 @@ describe('AppNav on the home page', () => {
 // nothing, so the width of the bar is summed from the spacing classes of the
 // rendered tabs (Tailwind's 4 px unit, arbitrary `[7px]` values) and the
 // widths of the labels measured in Chrome (Geist 600, 13 px): Rounds 47,
-// Handicaps 66, Coups 40, Joueurs 51 px. Below 375 px the `max-[375px]:`
+// Handicaps 66, Parcours 56, Joueurs 51 px. Below 375 px the `max-[375px]:`
 // classes apply. The bar must fit 320 − 2 × 16 = 288 px with any label open,
 // and 390 px keeps the measures of the design (gap 10, pill padding 7, tabs
 // 12 px and current 14 px padding, label 8 px from the icon).
@@ -176,7 +216,7 @@ describe('AppNav on the home page', () => {
 const LABEL_WIDTHS: Record<string, number> = {
     Rounds: 47,
     Handicaps: 66,
-    Coups: 40,
+    Parcours: 56,
     Joueurs: 51,
 };
 
@@ -228,7 +268,7 @@ function barWidth(narrow: boolean): number {
 }
 
 describe('AppNav width', () => {
-    it.each(['/rounds', '/handicaps', '/strokes', '/players'])(
+    it.each(['/rounds', '/handicaps', '/courses', '/players'])(
         'fits 288 px at 320 px wide on %s, its label open',
         (path) => {
             url = path;
@@ -293,7 +333,7 @@ describe('AppNav prefetch', () => {
         expect(await prefetched()).toEqual([
             ['/rounds', GET, FRESH_THEN_STALE],
             ['/handicaps', GET, FRESH_THEN_STALE],
-            ['/strokes', GET, FRESH_THEN_STALE],
+            ['/courses', GET, FRESH_THEN_STALE],
             ['/players', GET, FRESH_THEN_STALE],
             ['/import', GET, FRESH_THEN_STALE],
         ]);
@@ -306,7 +346,7 @@ describe('AppNav prefetch', () => {
         expect(await prefetched()).toEqual([
             ['/rounds', GET, FRESH_THEN_STALE],
             ['/handicaps', GET, FRESH_THEN_STALE],
-            ['/strokes', GET, FRESH_THEN_STALE],
+            ['/courses', GET, FRESH_THEN_STALE],
             ['/import', GET, FRESH_THEN_STALE],
         ]);
     });
@@ -318,7 +358,7 @@ describe('AppNav prefetch', () => {
         expect(await prefetched()).toEqual([
             ['/rounds', GET, FRESH_THEN_STALE],
             ['/handicaps', GET, FRESH_THEN_STALE],
-            ['/strokes', GET, FRESH_THEN_STALE],
+            ['/courses', GET, FRESH_THEN_STALE],
             ['/players', GET, FRESH_THEN_STALE],
         ]);
     });
@@ -371,7 +411,7 @@ describe('AppNav from one page to the next', () => {
     it('prefetches every other section, /players included, from /players to /rounds', async () => {
         expect(await prefetchedAfterMove('/players', '/rounds')).toEqual([
             '/handicaps',
-            '/strokes',
+            '/courses',
             '/players',
             '/import',
         ]);
@@ -383,14 +423,14 @@ describe('AppNav from one page to the next', () => {
                 '/rounds',
                 '/rounds/0190a6b2-7c3e-7000-8000-000000000001',
             ),
-        ).toEqual(['/rounds', '/handicaps', '/strokes', '/players', '/import']);
+        ).toEqual(['/rounds', '/handicaps', '/courses', '/players', '/import']);
     });
 
     it('prefetches again when a write redirects back to the same page', async () => {
         expect(await prefetchedAfterMove('/players', '/players')).toEqual([
             '/rounds',
             '/handicaps',
-            '/strokes',
+            '/courses',
             '/import',
         ]);
     });

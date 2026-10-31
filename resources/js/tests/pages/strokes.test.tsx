@@ -129,6 +129,24 @@ function result(name: string): HTMLElement {
 }
 
 describe('Strokes page', () => {
+    // Spec match-strokes « Mise en page de la page Coups », scenario « Lien de
+    // retour »: a sub-page of Handicaps. Mutation: `PageTopRow` without
+    // `back` (section top row « Golf ») → red.
+    it('opens on the back link « Handicaps » to /handicaps, without « Golf »', () => {
+        render(<StrokesIndex players={players} courses={courses} />);
+
+        const topRow = document.querySelector(
+            '[data-slot="page-top-row"]',
+        ) as HTMLElement;
+
+        expect(
+            within(topRow)
+                .getByRole('link', { name: 'Handicaps' })
+                .getAttribute('href'),
+        ).toBe('/handicaps');
+        expect(within(topRow).queryByText('Golf')).toBeNull();
+    });
+
     it('shows « Manu » and « Index 17,4 » on his row', () => {
         render(<StrokesIndex players={players} courses={courses} />);
 

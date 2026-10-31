@@ -1,10 +1,10 @@
 /**
  * Préfixes d'adresse rattachés à une section en plus du sien : un import ouvert
- * relève d'« Importer », la page Parcours, hors de la navigation, de « Rounds ».
+ * relève d'« Importer », la page Coups, hors de la navigation, de « Handicaps ».
  */
 export const SECTION_PREFIXES: Record<string, readonly string[]> = {
     '/import': ['/imports'],
-    '/rounds': ['/courses'],
+    '/handicaps': ['/strokes'],
 };
 
 /**

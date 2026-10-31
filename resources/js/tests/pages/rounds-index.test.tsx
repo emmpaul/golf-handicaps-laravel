@@ -206,15 +206,21 @@ describe('Rounds page', () => {
         ).toBe('/');
     });
 
-    it('titles the page « Rounds » and links « Parcours » to /courses', () => {
+    // Spec course-ratings « Page Parcours », scenario « Plus de lien depuis la
+    // liste des rounds »: the tab replaces the « Parcours » link, « Saisie
+    // manuelle » stays. Mutation: the « Parcours » link put back → red.
+    it('titles the page « Rounds » with « Saisie manuelle » and no « Parcours » link', () => {
         render(<RoundsIndex rounds={[reference]} />);
 
         expect(screen.getByRole('heading', { level: 1 }).textContent).toBe(
             'Rounds',
         );
+        expect(screen.queryByRole('link', { name: 'Parcours' })).toBeNull();
         expect(
-            screen.getByRole('link', { name: 'Parcours' }).getAttribute('href'),
-        ).toBe('/courses');
+            screen
+                .getByRole('link', { name: 'Saisie manuelle' })
+                .getAttribute('href'),
+        ).toBe('/rounds/new');
     });
 
     it('shows « Aucun round. Importez une carte pour commencer. » and « Saisie manuelle » without rounds', () => {

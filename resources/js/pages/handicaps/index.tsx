@@ -1,5 +1,6 @@
-import { Head } from '@inertiajs/react';
+import { Head, Link } from '@inertiajs/react';
 import { index as handicapsIndex } from '@/actions/App/Http/Controllers/HandicapController';
+import { index as strokesIndex } from '@/actions/App/Http/Controllers/StrokesController';
 import { ComputationLink } from '@/components/handicaps/computation-help';
 import { DifferentialBars } from '@/components/handicaps/differential-bars';
 import { PlayerTabs } from '@/components/handicaps/player-tabs';
@@ -16,7 +17,7 @@ import { PLAYER_TEXT } from '@/components/player-swatch';
 import { Badge } from '@/components/ui/badge';
 import { formatTenths, NO_VALUE } from '@/lib/format';
 import { useSwap } from '@/lib/motion';
-import { cn } from '@/lib/utils';
+import { cn, TITLE_LINK } from '@/lib/utils';
 import type { PlayerStanding } from '@/pages/home';
 
 /** The index averages the differentials of the 20 latest rounds at most (spec handicap-index). */
@@ -96,7 +97,13 @@ export default function HandicapsIndex({
         <>
             <Head title="Handicaps" />
             <PageTopRow />
-            <h1 className="text-title">Handicaps</h1>
+            {/* « Coups à donner » carries no player: the strokes page picks its own (design D4). */}
+            <div className="flex items-end justify-between gap-3">
+                <h1 className="text-title">Handicaps</h1>
+                <Link href={strokesIndex()} className={TITLE_LINK}>
+                    Coups à donner
+                </Link>
+            </div>
             {selected === undefined ? (
                 <p className="mt-5 text-body text-ink-2">Aucun joueur.</p>
             ) : (

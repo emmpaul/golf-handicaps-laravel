@@ -1,7 +1,6 @@
 import { Head, usePoll } from '@inertiajs/react';
 import { useEffect, useState } from 'react';
 import { relaunch } from '@/actions/App/Http/Controllers/CourseRatingLookupController';
-import { index as roundsIndex } from '@/actions/App/Http/Controllers/RoundController';
 import {
     CourseAction,
     CourseActionScope,
@@ -181,8 +180,9 @@ function CourseRow({ course }: { course: CourseWithLookup }) {
  * recherche sur Simulator Golf Tour et ses actions, saisie, correction et
  * retrait à la main, un bloc par parcours, puis l'explication du calcul (spec
  * « Mise en page de la page Parcours »). Tant qu'une recherche est
- * en cours, seules `courses` et `lookupPending` se relisent toutes les 2 s. Hors de la navigation
- * principale : « Rounds » reste la section courante (`lib/sections.ts`).
+ * en cours, seules `courses` et `lookupPending` se relisent toutes les 2 s.
+ * Page de section, l'onglet « Parcours » : rangée du haut « Golf », sans lien
+ * de retour (design D3).
  */
 export default function CoursesIndex({
     courses,
@@ -208,7 +208,7 @@ export default function CoursesIndex({
     return (
         <>
             <Head title="Parcours" />
-            <PageTopRow back={{ href: roundsIndex.url(), label: 'Rounds' }} />
+            <PageTopRow />
             <h1 className="text-title">Parcours</h1>
             <p className="mt-2.5 text-body-13 text-ink-2">
                 Course rating et slope par parcours et tees. Une valeur ne
