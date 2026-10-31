@@ -4,6 +4,8 @@ All notable changes to this application, version by version. The format follows 
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-10-31
+
 ### Added
 
 - Service worker: visited pages readable offline. `public/sw.js`, written by hand, keeps the compiled assets and the latest copy of each page visited online with a session (network first), serves that copy without network, and keeps `/import` from the first online opening; see ADR 0016.
