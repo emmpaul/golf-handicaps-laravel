@@ -25,7 +25,7 @@ Sans réseau, une page déjà gardée SHALL s'afficher depuis sa copie, par un o
 
 #### Scenario: Coups à rendre hors ligne
 - **GIVEN** l'utilisateur a visité `/strokes` en ligne
-- **WHEN** il ouvre l'application en mode avion et touche l'onglet des coups
+- **WHEN** il ouvre l'application en mode avion et ouvre `/strokes`
 - **THEN** `/strokes` s'affiche avec les index de la dernière visite et le calcul des coups d'une partie fonctionne
 
 #### Scenario: Ouverture à froid sur une page gardée

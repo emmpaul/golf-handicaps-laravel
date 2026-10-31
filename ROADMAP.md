@@ -111,6 +111,12 @@ Mesure reproductible des pages, en-tête `Server-Timing`, polices chargées une 
 
 Application utilisable sans réseau, que `polish-mobile-ui` avait écarté côté Next : un service worker écrit à la main garde les pages visitées et les relit hors ligne avec un bandeau « Hors ligne », les photos de cartes restent sur le téléphone jusqu'au retour du réseau, un envoi rejoué ne crée pas de second import (`imports.upload_key`), et la déconnexion efface les pages gardées (ADR 0016).
 
+## 16. `courses-tab-replaces-strokes`
+
+**Dépend de** : 7, 9 et 11. **Statut** : en cours.
+
+L'onglet « Parcours » (`/courses`) remplace « Coups » dans la barre flottante ; la page Coups reste à `/strokes`, devient une sous-page de Handicaps ouverte par le lien « Coups à donner », et la page Rounds perd son lien « Parcours ».
+
 ## Définition de terminé
 
 1. spec à jour, critères vérifiables, ambiguïtés résolues avant l'implémentation ;
