@@ -3,6 +3,7 @@ import { create } from '@/actions/App/Http/Controllers/RoundController';
 import { ImportList } from '@/components/import/import-list';
 import type { ImportListItem } from '@/components/import/import-list';
 import { ImportUpload } from '@/components/import/import-upload';
+import { PendingPhotos } from '@/components/import/pending-photos';
 import { ManualEntryLink } from '@/components/import/unreadable-photo';
 import { PageTopRow } from '@/components/page-top-row';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -11,7 +12,8 @@ import { TITLE_LINK } from '@/lib/utils';
 /**
  * Écran d'import (spec `scorecard-import`, « Mise en page de l'écran
  * Importer ») : titre et « Saisie manuelle », envoi d'une photo quand une clé
- * d'IA est configurée (`readingEnabled`), sinon la lecture désactivée ; puis
+ * d'IA est configurée (`readingEnabled`), sinon la lecture désactivée ; les
+ * photos gardées sur l'appareil, « EN ATTENTE D'ENVOI » (offline-pwa) ; puis
  * « IMPORTS », leur nombre et les derniers imports avec leur état et leurs
  * actions.
  */
@@ -50,6 +52,7 @@ export default function ImportIndex({
                     </AlertDescription>
                 </Alert>
             )}
+            <PendingPhotos />
             <ImportList imports={imports} />
         </>
     );

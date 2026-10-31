@@ -10,6 +10,7 @@ import {
     within,
 } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { toast } from 'sonner';
 import {
     afterEach,
     beforeEach,
@@ -19,7 +20,10 @@ import {
     vi,
 } from 'vite-plus/test';
 
+import { Toaster } from '@/components/ui/toaster';
+import { list, remove as forget } from '@/lib/photo-queue';
 import ImportIndex from '@/pages/import/index';
+import '@/tests/indexeddb';
 import type { ImportListItem } from '@/components/import/import-list';
 import {
     advancePoll,
@@ -41,7 +45,19 @@ import { expectPrefetchedOnTouchAndHover } from '@/tests/list-link-prefetch';
 // stubbed (jsdom cannot run a visit); the visit callbacks they receive are
 // played by hand. The poll of Inertia runs on fake timers; its reload goes
 // through the router's `doReload`, stubbed to record the request options
-// (`tests/poll.ts`).
+// (`tests/poll.ts`). The photo goes through the real queue of the device
+// (fake-indexeddb, emptied before each test) and leaves by `fetch`, held or
+// answered by each test (design D7, offline-pwa); `navigator.onLine` is
+// stubbed. jsdom has no object URL: thumbnails get `blob:photo`.
+// Mutations of offline-pwa:
+// - the offline message replaced by the toast of a send (« Lecture en file
+//   d'attente… ») → the offline tests go red;
+// - « Envoi de la photo… » shown before checking the network → the offline
+//   test goes red;
+// - the photo put in the queue before its decoding succeeded → the
+//   unreadable test goes red;
+// - the tiles left disabled after a failed send → the « fails on the way »
+//   test goes red.
 // Head renders nothing outside createInertiaApp; the orb paints on a canvas
 // jsdom cannot draw.
 // Mutations:
@@ -141,12 +157,32 @@ const saved: ImportListItem = {
     actions: ['viewRound'],
 };
 
+const UPLOAD_KEY = '7f3c1a52-0d4e-4b8a-9c61-2e5f8a9b0c11';
+const QUEUED_MESSAGE =
+    "Lecture en file d'attente. Tu peux envoyer la photo suivante.";
+const KEPT_MESSAGE =
+    'Photo gardée sur le téléphone. Elle partira au retour du réseau.';
+const UNSAVED_MESSAGE = 'Photo non gardée sur le téléphone. Réessaie.';
+
+const fetchMock = vi.fn<typeof fetch>();
+let online = true;
 let coarse = false;
 let post: MockInstance<typeof router.post>;
 let remove: MockInstance<typeof router.delete>;
 let reload: PollReload;
 
-beforeEach(() => {
+beforeEach(async () => {
+    for (const photo of await list()) {
+        await forget(photo.key);
+    }
+
+    online = true;
+    vi.spyOn(navigator, 'onLine', 'get').mockImplementation(() => online);
+    vi.spyOn(crypto, 'randomUUID').mockReturnValue(UPLOAD_KEY);
+    URL.createObjectURL = vi.fn(() => 'blob:photo');
+    URL.revokeObjectURL = vi.fn();
+    fetchMock.mockReset();
+    vi.stubGlobal('fetch', fetchMock);
     coarse = false;
     vi.stubGlobal('matchMedia', (query: string) => ({
         matches: coarse && query === '(pointer: coarse)',
@@ -160,6 +196,9 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+    act(() => {
+        toast.dismiss();
+    });
     vi.useRealTimers();
     vi.restoreAllMocks();
     vi.unstubAllGlobals();
@@ -167,6 +206,50 @@ afterEach(() => {
 
 const photoInput = () => screen.getByLabelText('Photo de la carte');
 const status = () => screen.getAllByRole('status')[0].textContent;
+
+/** Every text the waiting region of the upload shows from now on, in order. */
+function recordStatus(): string[] {
+    const region = screen.getAllByRole('status')[0];
+    const texts: string[] = [];
+
+    new MutationObserver(() => {
+        const text = region.textContent ?? '';
+
+        if (texts.at(-1) !== text) {
+            texts.push(text);
+        }
+    }).observe(region, { childList: true, subtree: true, characterData: true });
+
+    return texts;
+}
+
+/** Chooses a HEIC photo and lets its decoding succeed. */
+async function choosePhoto(): Promise<void> {
+    await userEvent.upload(
+        photoInput(),
+        new File(['photo'], 'IMG_3064.HEIC', { type: 'image/heic' }),
+    );
+    await act(async () => {
+        decoding.resolve(new Blob(['jpeg'], { type: 'image/jpeg' }));
+    });
+}
+
+/** The chosen photo waits on the device, « Photo gardée… » shown, the tiles enabled again. */
+async function expectPhotoKept(): Promise<void> {
+    expect(await screen.findByText(KEPT_MESSAGE)).toBeInTheDocument();
+    expect(screen.queryByText(QUEUED_MESSAGE)).toBeNull();
+    expect(status()).toBe('');
+    expect(photoInput()).not.toBeDisabled();
+    expect(screen.getByLabelText('Prendre une photo')).not.toBeDisabled();
+    expect((await list()).map((kept) => kept.key)).toEqual([UPLOAD_KEY]);
+}
+
+/** Lets the toasts asked for so far show. */
+async function settleToasts(): Promise<void> {
+    await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 50));
+    });
+}
 
 /** The line of the import shown with `heading`. */
 const line = (heading: string) =>
@@ -220,7 +303,7 @@ describe('Sending a photo', () => {
             target: { files: [] },
         });
 
-        expect(post).not.toHaveBeenCalled();
+        expect(fetchMock).not.toHaveBeenCalled();
         expect(status()).toBe('');
         expect(screen.queryByRole('alert')).toBeNull();
         expect(
@@ -267,9 +350,21 @@ describe('Sending a photo', () => {
         ).toBe('/');
     });
 
-    it('shows « Préparation de la photo… » then « Envoi de la photo… », the buttons disabled', async () => {
+    it('shows « Préparation de la photo… » then « Envoi de la photo… », the buttons disabled, then « Lecture en file d’attente… »', async () => {
         coarse = true;
-        render(<ImportIndex imports={[]} readingEnabled />);
+        render(
+            <>
+                <ImportIndex imports={[]} readingEnabled />
+                <Toaster />
+            </>,
+        );
+        let answer: (response: Response) => void = () => {};
+        fetchMock.mockImplementationOnce(
+            () =>
+                new Promise<Response>((resolve) => {
+                    answer = resolve;
+                }),
+        );
 
         await userEvent.upload(
             photoInput(),
@@ -279,26 +374,131 @@ describe('Sending a photo', () => {
         expect(status()).toBe('Préparation de la photo…');
         expect(photoInput()).toBeDisabled();
         expect(screen.getByLabelText('Prendre une photo')).toBeDisabled();
-        expect(post).not.toHaveBeenCalled();
+        expect(fetchMock).not.toHaveBeenCalled();
 
         await act(async () => {
             decoding.resolve(new Blob(['jpeg'], { type: 'image/jpeg' }));
         });
 
-        expect(post).toHaveBeenCalledTimes(1);
-        const [action, data, options] = post.mock.calls[0];
-        expect(action).toEqual({ url: '/imports', method: 'post' });
-        const photo = (data as { photo: File }).photo;
-        expect([photo.name, photo.type]).toEqual(['carte.jpg', 'image/jpeg']);
-        expect(options?.forceFormData).toBe(true);
-
-        act(() => options?.onStart?.({} as never));
+        await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
         expect(status()).toBe('Envoi de la photo…');
         expect(photoInput()).toBeDisabled();
+        const [url, init] = fetchMock.mock.calls[0];
+        const body = (init as RequestInit).body as FormData;
+        const photo = body.get('photo') as File;
+        expect(url).toBe('/imports');
+        expect([photo.name, photo.type]).toEqual(['carte.jpg', 'image/jpeg']);
+        expect(body.get('upload_key')).toBe(UPLOAD_KEY);
+        expect(post).not.toHaveBeenCalled();
+        expect(
+            screen.queryByRole('heading', { name: "En attente d'envoi" }),
+        ).toBeNull();
 
-        act(() => options?.onFinish?.({} as never));
-        expect(status()).toBe('');
+        await act(async () => {
+            answer(new Response('{"id":"a"}', { status: 201 }));
+        });
+
+        await waitFor(() => expect(status()).toBe(''));
         expect(photoInput()).not.toBeDisabled();
+        expect(await screen.findByText(QUEUED_MESSAGE)).toBeInTheDocument();
+        expect(await list()).toEqual([]);
+    });
+
+    // Spec scorecard-import « Photo gardée hors ligne », loading-feedback
+    // « Photo gardée hors ligne ».
+    it('offline, keeps the photo on the device with « Photo gardée sur le téléphone… », without « Envoi de la photo… »', async () => {
+        coarse = true;
+        online = false;
+        render(
+            <>
+                <ImportIndex imports={[]} readingEnabled />
+                <Toaster />
+            </>,
+        );
+
+        const shown = recordStatus();
+
+        await choosePhoto();
+
+        await expectPhotoKept();
+        expect(shown).toEqual(['Préparation de la photo…', '']);
+        expect(fetchMock).not.toHaveBeenCalled();
+        expect(
+            await screen.findByRole('heading', { name: "En attente d'envoi" }),
+        ).toBeVisible();
+    });
+
+    it('keeps the photo when its send fails on the way, the tiles enabled again', async () => {
+        coarse = true;
+        fetchMock.mockRejectedValueOnce(new TypeError('Failed to fetch'));
+        render(
+            <>
+                <ImportIndex imports={[]} readingEnabled />
+                <Toaster />
+            </>,
+        );
+
+        await choosePhoto();
+
+        await expectPhotoKept();
+    });
+
+    // Spec scorecard-import « Reprise de l'envoi après la saisie du code ».
+    // Mutation: the fate of a send stopped by a 401 left at « kept »
+    // (`'login'` not returned by `uploadPhoto`) → « Photo gardée sur le
+    // téléphone… » shows while /login opens: the test goes red.
+    it('on a 401, opens /login without « Photo gardée sur le téléphone… » and keeps the photo', async () => {
+        coarse = true;
+        const visit = vi.spyOn(router, 'visit').mockImplementation(() => {});
+        fetchMock.mockResolvedValueOnce(
+            new Response(JSON.stringify({ error: 'Session requise' }), {
+                status: 401,
+                headers: { 'Content-Type': 'application/json' },
+            }),
+        );
+        render(
+            <>
+                <ImportIndex imports={[]} readingEnabled />
+                <Toaster />
+            </>,
+        );
+
+        await choosePhoto();
+
+        await waitFor(() => expect(photoInput()).not.toBeDisabled());
+        await settleToasts();
+        expect(visit.mock.calls.map(([url]) => url)).toEqual(['/login']);
+        expect(screen.queryByText(KEPT_MESSAGE)).toBeNull();
+        expect(screen.queryByText(QUEUED_MESSAGE)).toBeNull();
+        expect(status()).toBe('');
+        expect((await list()).map((kept) => kept.key)).toEqual([UPLOAD_KEY]);
+    });
+
+    // Mutation: the failure of IndexedDB not caught in `uploadPhoto` → the
+    // rejection escapes `choose`, no message shows: the test goes red.
+    it('says « Photo non gardée sur le téléphone. Réessaie. » when the device cannot keep the photo, and sends nothing', async () => {
+        coarse = true;
+        vi.spyOn(IDBObjectStore.prototype, 'add').mockImplementation(() => {
+            throw new DOMException('Quota exceeded', 'QuotaExceededError');
+        });
+        render(
+            <>
+                <ImportIndex imports={[]} readingEnabled />
+                <Toaster />
+            </>,
+        );
+
+        await choosePhoto();
+
+        expect((await screen.findByRole('alert')).textContent).toBe(
+            UNSAVED_MESSAGE,
+        );
+        expect(screen.queryByText(KEPT_MESSAGE)).toBeNull();
+        expect(status()).toBe('');
+        expect(fetchMock).not.toHaveBeenCalled();
+        expect(photoInput()).not.toBeDisabled();
+        expect(screen.getByLabelText('Prendre une photo')).not.toBeDisabled();
+        expect(await list()).toEqual([]);
     });
 
     it('shows « Format de photo non lisible, exporte-la en JPEG » and « Saisie manuelle » for a file it cannot decode', async () => {
@@ -322,13 +522,23 @@ describe('Sending a photo', () => {
                 .getByRole('link', { name: 'Saisie manuelle' })
                 .getAttribute('href'),
         ).toBe('/rounds/new');
-        expect(post).not.toHaveBeenCalled();
+        expect(fetchMock).not.toHaveBeenCalled();
+        expect(await list()).toEqual([]);
         expect(photoInput()).not.toBeDisabled();
     });
 
-    // Mutation: the validation error of `photo` ignored (no `onError`) → no
-    // alert, the test goes red.
-    it('shows the refusal of the server under the buttons: « La photo dépasse 20 Mo »', async () => {
+    // Mutation: the refusal of the server not shown → no alert, the test goes
+    // red.
+    it('shows the refusal of the server under the buttons: « La photo dépasse 20 Mo », with « Saisie manuelle »', async () => {
+        fetchMock.mockResolvedValueOnce(
+            new Response(
+                JSON.stringify({
+                    message: 'La photo dépasse 20 Mo',
+                    errors: { photo: ['La photo dépasse 20 Mo'] },
+                }),
+                { status: 422 },
+            ),
+        );
         render(<ImportIndex imports={[]} readingEnabled />);
 
         await userEvent.upload(
@@ -338,16 +548,18 @@ describe('Sending a photo', () => {
         await act(async () => {
             decoding.resolve(new Blob(['jpeg'], { type: 'image/jpeg' }));
         });
-        const options = post.mock.calls[0][2];
-        act(() => {
-            options?.onError?.({ photo: 'La photo dépasse 20 Mo' });
-            options?.onFinish?.({} as never);
-        });
 
-        expect(screen.getByRole('alert').textContent).toBe(
-            'La photo dépasse 20 Mo',
-        );
-        expect(photoInput()).not.toBeDisabled();
+        const refusal = await screen.findByRole('alert');
+        expect(
+            within(refusal).getByText('La photo dépasse 20 Mo'),
+        ).toBeVisible();
+        expect(
+            within(refusal)
+                .getByRole('link', { name: 'Saisie manuelle' })
+                .getAttribute('href'),
+        ).toBe('/rounds/new');
+        await waitFor(() => expect(photoInput()).not.toBeDisabled());
+        expect(await list()).toEqual([]);
     });
 
     it('without key, shows the reading disabled and « Saisie manuelle », without any sending action', () => {

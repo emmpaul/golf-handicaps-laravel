@@ -1,10 +1,10 @@
-import { router } from '@inertiajs/react';
 import { CameraIcon, ImageIcon } from 'lucide-react';
 import { useState } from 'react';
 import type { ChangeEvent } from 'react';
-import { store } from '@/actions/App/Http/Controllers/ImportController';
 import { Pending } from '@/components/ui/pending';
 import { useMediaQuery } from '@/hooks/use-media-query';
+import { showFlashToast } from '@/lib/flash-toast';
+import { KEPT_MESSAGE, uploadPhoto } from '@/lib/photo-sync';
 import { decodePhoto } from './decode-photo';
 import { ImportTile } from './import-tile';
 import { UnreadablePhoto } from './unreadable-photo';
@@ -19,8 +19,15 @@ const PENDING_LABEL: Partial<Record<Step, string>> = {
 
 /**
  * Envoi d'une photo (design D8) : décodage et réencodage JPEG dans le
- * navigateur, puis `POST /imports`. Le serveur met la lecture en file et
- * revient avec « Lecture en file d'attente… » ; la photo suivante peut partir
+ * navigateur, puis la photo est gardée sur l'appareil et part par la file
+ * (offline-pwa, design D7). Avec du réseau, « Envoi de la photo… » jusqu'à la
+ * réponse, puis « Lecture en file d'attente… » ; sans réseau, ou si l'envoi
+ * échoue en route, « Photo gardée sur le téléphone… » et la photo attend dans
+ * « EN ATTENTE D'ENVOI ». Un `401` ouvre `/login` sans ce message (la photo
+ * reste gardée) ; une photo que l'appareil n'a pas pu garder donne le toast
+ * d'erreur « Photo non gardée sur le téléphone. Réessaie. » et ne part pas.
+ * Un refus du serveur s'affiche sous la section des
+ * photos en attente, avec « Saisie manuelle ». La photo suivante peut partir
  * aussitôt. Sur écran tactile, « Prendre une photo » (appareil photo arrière)
  * et « Choisir une photo » sont deux tuiles côte à côte, séparées d'un filet ;
  * sans écran tactile, « Choisir une photo » seule prend toute la largeur.
@@ -28,8 +35,6 @@ const PENDING_LABEL: Partial<Record<Step, string>> = {
 export function ImportUpload() {
     const touch = useMediaQuery('(pointer: coarse)');
     const [step, setStep] = useState<Step>('pick');
-    // Refus de validation du serveur (« La photo dépasse 20 Mo »).
-    const [refusal, setRefusal] = useState<string | null>(null);
     const busy = step === 'preparing' || step === 'sending';
 
     async function choose(file: File | undefined) {
@@ -38,7 +43,6 @@ export function ImportUpload() {
         }
 
         // Décodage et réduction à 3000 px : une à deux secondes sur téléphone.
-        setRefusal(null);
         setStep('preparing');
         let photo: Blob;
 
@@ -50,19 +54,17 @@ export function ImportUpload() {
             return;
         }
 
-        router.post(
-            store(),
-            {
-                photo: new File([photo], 'carte.jpg', { type: 'image/jpeg' }),
-            },
-            {
-                forceFormData: true,
-                preserveScroll: true,
-                onStart: () => setStep('sending'),
-                onError: (errors) => setRefusal(errors.photo ?? null),
-                onFinish: () => setStep('pick'),
-            },
-        );
+        try {
+            const fate = await uploadPhoto(photo, () => setStep('sending'));
+
+            if (fate === 'kept') {
+                showFlashToast({
+                    toast: { type: 'success', message: KEPT_MESSAGE },
+                });
+            }
+        } finally {
+            setStep('pick');
+        }
     }
 
     /** Passe le fichier reçu à `choose`, puis vide le champ pour pouvoir rechoisir le même. */
@@ -111,11 +113,6 @@ export function ImportUpload() {
                 label={PENDING_LABEL[step] ?? null}
                 orb={step === 'sending' ? 'send' : 'prepare'}
             />
-            {refusal ? (
-                <p role="alert" className="text-body-13 text-signal">
-                    {refusal}
-                </p>
-            ) : null}
             {step === 'unreadable' ? <UnreadablePhoto /> : null}
         </div>
     );

@@ -145,6 +145,26 @@ describe('AppLayout', () => {
         expect(screen.queryByRole('link', { name: 'Importer' })).toBeNull();
     });
 
+    // Spec offline-mode « Bandeau hors ligne », design D5: the banner sits in
+    // main, and the top row of the page is ordered before it, so it shows
+    // under the row on every page. Mutations: banner not mounted → red; the
+    // `-order-1` of the top row dropped (banner above the row) → red.
+    it('mounts the offline banner in main, shown under the top row of the page', () => {
+        render(
+            <AppLayout>
+                <PageTopRow />
+                <p>Contenu</p>
+            </AppLayout>,
+        );
+
+        const main = screen.getByRole('main');
+        const banner = main.querySelector('[data-slot="offline-banner"]');
+
+        expect(banner?.parentElement).toBe(main);
+        expect(banner?.getAttribute('role')).toBe('status');
+        expect(main).toHaveClass('*:data-[slot=page-top-row]:-order-1');
+    });
+
     it('keeps the version line as the last element of main', () => {
         render(
             <AppLayout>

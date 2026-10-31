@@ -21,6 +21,12 @@ const shortPlayedOnFormat = new Intl.DateTimeFormat('fr-FR', {
     year: 'numeric',
 });
 
+const clockFormat = new Intl.DateTimeFormat('fr-FR', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+});
+
 /** ISO date `2026-10-17` to the 17th of October at midnight, local time. */
 export function isoToLocalDate(iso: string): Date {
     const [year, month, day] = iso.split('-').map(Number);
@@ -85,6 +91,22 @@ export function formatShortPlayedOn(playedOn: string): string {
 /** Date of play `2026-10-17` to « 17 OCT. » (latest round of the home page, design). */
 export function formatDayMonthShort(playedOn: string): string {
     return dayMonthFormat.format(isoToLocalDate(playedOn)).toUpperCase();
+}
+
+/**
+ * Instant ISO 8601 kept on the device (copy of a page, photo waiting to be
+ * sent) to « 30 oct. à 21:04 », in the time zone of the device: the display
+ * time zone for the group (spec offline-mode « Bandeau hors ligne »).
+ */
+export function formatStoredAt(instant: string): string {
+    const date = new Date(instant);
+
+    return `${dayMonthFormat.format(date)} à ${clockFormat.format(date)}`;
+}
+
+/** Instant ISO 8601 to its time « 21:04 », in the time zone of the device (photo waiting to be sent). */
+export function formatClockTime(instant: string): string {
+    return clockFormat.format(new Date(instant));
 }
 
 /** An empty value in a table: a name or a figure that does not exist yet. */
