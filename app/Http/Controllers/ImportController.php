@@ -12,6 +12,7 @@ use App\Domain\Players\Queries\PlayerList;
 use App\Domain\Rounds\Queries\KnownCourses;
 use App\Http\Requests\StoreImportRequest;
 use App\Models\Import;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -33,12 +34,20 @@ class ImportController extends Controller
 
     /**
      * Keep the photo of a card and queue its reading; refused without an Anthropic key.
+     *
+     * An Inertia visit goes back with a toast; the photo queue of the device, a JSON request
+     * outside Inertia, gets 201 { id }, or 200 { id } for an upload key already received
+     * (offline-pwa, design D8).
      */
-    public function store(StoreImportRequest $request, CreateImport $createImport): RedirectResponse
+    public function store(StoreImportRequest $request, CreateImport $createImport): RedirectResponse|JsonResponse
     {
         AiReading::ensureEnabled();
 
-        $createImport->handle($request->photo());
+        $import = $createImport->handle($request->photo(), $request->uploadKey());
+
+        if ($request->expectsJson() && ! $request->header('X-Inertia')) {
+            return response()->json(['id' => $import->id], $import->wasRecentlyCreated ? 201 : 200);
+        }
 
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Lecture en file d\'attente. Tu peux envoyer la photo suivante.']);
 

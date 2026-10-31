@@ -46,7 +46,7 @@ function scorecardUpload(string $fixture): UploadedFile
 
 function postPhoto(UploadedFile $photo): TestResponse
 {
-    return test()->withHeader('X-Inertia', 'true')->post('/imports', ['photo' => $photo]);
+    return test()->withHeader('X-Inertia', 'true')->post('/imports', ['photo' => $photo, 'upload_key' => '0195f3a2-7c4e-7b1a-9d2f-3e8c1a5b6d72']);
 }
 
 /**
@@ -151,7 +151,7 @@ test('the reading job leaves only once the import is committed', function () {
 
     try {
         DB::transaction(function (): void {
-            app(CreateImport::class)->handle(scorecardUpload('gspro-img3064.jpg'));
+            app(CreateImport::class)->handle(scorecardUpload('gspro-img3064.jpg'), '0195f3a2-7c4e-7b1a-9d2f-3e8c1a5b6d72');
 
             throw new LogicException('rolled back');
         });

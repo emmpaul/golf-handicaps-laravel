@@ -68,6 +68,14 @@ class ImportFactory extends Factory
     }
 
     /**
+     * Sent by the photo queue of the device with this upload key, a new one when none is given.
+     */
+    public function withUploadKey(?string $uploadKey = null): static
+    {
+        return $this->state(fn (): array => ['upload_key' => $uploadKey ?? fake()->uuid()]);
+    }
+
+    /**
      * The reference photo IMG_3064 written on the photos disk at the import's path.
      */
     public function withPhoto(): static

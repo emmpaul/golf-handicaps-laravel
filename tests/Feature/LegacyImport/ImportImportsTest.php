@@ -155,8 +155,12 @@ test('the imported row has only the columns of the port', function () {
 
     importSqlite($base->path, ['--uploads' => $base->uploads]);
 
-    expect(array_keys((array) DB::table('imports')->sole()))
-        ->toBe(['id', 'status', 'photo_path', 'draft', 'correction', 'failure', 'round_id', 'created_at', 'updated_at']);
+    $row = (array) DB::table('imports')->sole();
+
+    // upload_key (offline-pwa, design D8) belongs to the photos sent by the device: none here.
+    expect(array_keys($row))
+        ->toBe(['id', 'status', 'photo_path', 'draft', 'correction', 'failure', 'round_id', 'created_at', 'updated_at', 'upload_key'])
+        ->and($row['upload_key'])->toBeNull();
 });
 
 // Spec « Vérification reprise ».

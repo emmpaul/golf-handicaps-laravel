@@ -21,9 +21,10 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property array<string, mixed>|null $correction the editor state saved by the autosave
  * @property string|null $failure why the reading failed
  * @property string|null $round_id the round saved from this import
+ * @property string|null $upload_key drawn on the device, unique: a replayed upload finds its import
  * @property CarbonImmutable|null $created_at
  */
-#[Fillable(['status', 'photo_path', 'draft', 'correction', 'failure', 'round_id'])]
+#[Fillable(['status', 'photo_path', 'draft', 'correction', 'failure', 'round_id', 'upload_key'])]
 class Import extends Model
 {
     /** @use HasFactory<ImportFactory> */
