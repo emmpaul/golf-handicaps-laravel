@@ -31,7 +31,8 @@ test('a page without a session redirects to the login page', function (string $u
 ]);
 
 // Spec app-shell, « Adresses des sections »: every section serves its own page, no address
-// serves the « Section à venir » page any more.
+// serves the « Section à venir » page any more. The strokes row keeps the Coups page served at
+// /strokes even though it left the tab bar.
 test('each section answers 200 with its own page', function (string $uri, string $component) {
     $this->withPasscodeSession()
         ->get($uri)
@@ -42,6 +43,7 @@ test('each section answers 200 with its own page', function (string $uri, string
     'import' => ['/import', 'import/index'],
     'rounds' => ['/rounds', 'rounds/index'],
     'handicaps' => ['/handicaps', 'handicaps/index'],
+    'courses' => ['/courses', 'courses/index'],
     'strokes' => ['/strokes', 'strokes/index'],
     'players' => ['/players', 'players/index'],
 ]);

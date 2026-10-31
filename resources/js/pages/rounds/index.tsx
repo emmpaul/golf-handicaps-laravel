@@ -1,5 +1,4 @@
 import { Head, Link } from '@inertiajs/react';
-import { index as coursesIndex } from '@/actions/App/Http/Controllers/CourseController';
 import { create, show } from '@/actions/App/Http/Controllers/RoundController';
 import { PageTopRow } from '@/components/page-top-row';
 import { PlayerSwatch } from '@/components/player-swatch';
@@ -33,14 +32,9 @@ export default function RoundsIndex({ rounds }: { rounds: RoundListItem[] }) {
             />
             <div className="flex items-end justify-between gap-3">
                 <h1 className="text-title">Rounds</h1>
-                <div className="flex gap-4">
-                    <Link href={coursesIndex()} className={TITLE_LINK}>
-                        Parcours
-                    </Link>
-                    <Link href={create()} className={TITLE_LINK}>
-                        Saisie manuelle
-                    </Link>
-                </div>
+                <Link href={create()} className={TITLE_LINK}>
+                    Saisie manuelle
+                </Link>
             </div>
             <div className="mt-3 border-t border-rule" />
             {rounds.length === 0 ? (

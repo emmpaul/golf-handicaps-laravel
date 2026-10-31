@@ -259,14 +259,22 @@ describe('Courses page', () => {
         ]);
     });
 
-    // Spec « Mise en page de la page Parcours ». Mutation: the back link
-    // pointed at the home page (section top row « Golf ») → red.
-    it('opens on the back link « Rounds », the title « Parcours » and the text of the design', () => {
+    // Spec « Mise en page de la page Parcours », scenario « Rangée du haut »:
+    // a section page, « Golf » to the home page, no back link « Rounds ».
+    // Mutation: `back` to /rounds put back on the top row → red.
+    it('opens on « Golf » without back link « Rounds », the title « Parcours » and the text of the design', () => {
         render(<CoursesIndex courses={courses} lookupPending={false} />);
 
+        const topRow = document.querySelector(
+            '[data-slot="page-top-row"]',
+        ) as HTMLElement;
+
         expect(
-            screen.getByRole('link', { name: 'Rounds' }).getAttribute('href'),
-        ).toBe('/rounds');
+            within(topRow)
+                .getByRole('link', { name: 'Golf' })
+                .getAttribute('href'),
+        ).toBe('/');
+        expect(screen.queryByRole('link', { name: 'Rounds' })).toBeNull();
         expect(screen.getByRole('heading', { level: 1 }).textContent).toBe(
             'Parcours',
         );
