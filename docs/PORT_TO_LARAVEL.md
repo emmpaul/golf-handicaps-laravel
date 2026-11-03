@@ -82,7 +82,7 @@ Envoi de la photo, conversion WebP, job de file, lecture IA de la photo entière
 
 ### 7. `home-and-match-strokes`
 
-Après 8 (`ROADMAP.md`). Tableau de bord d'accueil, dont le bloc « Imports à vérifier » sur la table `imports` de 8, page des handicaps (liste des différentiels ; le graphique arrive avec `visual-redesign`), coups rendus en match.
+Après 8 (`docs/archive/ROADMAP-port-laravel.md`). Tableau de bord d'accueil, dont le bloc « Imports à vérifier » sur la table `imports` de 8, page des handicaps (liste des différentiels ; le graphique arrive avec `visual-redesign`), coups rendus en match.
 
 - Capacités : `home-dashboard`, `match-strokes`.
 
