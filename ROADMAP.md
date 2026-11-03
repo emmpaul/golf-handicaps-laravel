@@ -21,11 +21,15 @@ Les vérifications au mainteneur des entrées archivées. `golf2` étant retiré
 
 ## Fiabilité
 
-### 17. `offsite-backups`
+### 17. `offsite-backups` (terminée le 2026-11-03)
 
-**Dépend de** : la restauration ci-dessus.
+Réglée dans Dokploy, sans changement OpenSpec ni code : la base et le volume `storage`, donc les photos, partent vers un bucket Cloudflare R2 privé par des sauvegardes planifiées. Une première exécution de chacune a déposé dans le bucket un fichier de la taille attendue.
 
-Les dumps quotidiens restent dans un volume du même serveur : une perte du serveur emporte la base et ses sauvegardes. Copier chaque dump hors du serveur, chiffré avant l'envoi puisqu'il contient les données du groupe, et rendre `backup` malade quand la copie échoue. Reste à choisir la destination.
+Écarts avec le périmètre prévu :
+
+- les copies ne sont pas chiffrées avant l'envoi : Dokploy les dépose en gzip et en tar ;
+- `backup` ne devient pas malade quand une copie échoue : ces sauvegardes tournent hors de ce service ;
+- aucune restauration n'a été essayée à partir de ces copies.
 
 ### 18. `error-alerts`
 
