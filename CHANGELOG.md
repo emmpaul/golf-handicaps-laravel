@@ -4,6 +4,16 @@ All notable changes to this application, version by version. The format follows 
 
 ## [Unreleased]
 
+### Added
+
+- Error alerts through Sentry: unexpected exceptions from `web` and `worker` and jobs that fail for good send an alert, and business refusals and job attempts that will be retried send none; see ADR 0017.
+- Alert for the three import failures that throw no exception: unusable AI answer, monthly budget reached, reading disabled. `App\Integrations\Sentry\ImportFailureAlert` sends the reason shown to the person, one fingerprint per reason.
+- `App\Integrations\Sentry\SentryEventFilter` as `before_send`: an alert carries the exception type, the stack frames without values, the request method and path, and no exception message, query string, body, header, cookie, local variable or breadcrumb. The container logs keep the full message.
+- Optional `SENTRY_LARAVEL_DSN` variable read by `migrate`, `web` and `worker`: without it nothing is sent, and a malformed value stops `migrate` with a message that names the variable.
+- `sentry/sentry-laravel` dependency (with `sentry/sentry`), with a `config/sentry.php` that only reads the DSN from the environment.
+- Architecture rule: `App\Domain` uses neither `Sentry` nor `App\Integrations\Sentry`.
+- `docs/deployment.md` section « Alertes d'erreur »: Sentry project, alert rules, `php artisan sentry:test`, reading the message in `docker logs`, limits.
+
 ## [0.4.0] - 2026-10-31
 
 ### Added

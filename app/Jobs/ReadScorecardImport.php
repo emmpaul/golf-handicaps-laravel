@@ -12,6 +12,7 @@ use App\Domain\Imports\ReadingFailure;
 use App\Domain\Imports\ScorecardDraft;
 use App\Domain\Imports\SimulatorDate;
 use App\Integrations\Ai\ScorecardPhotoReader;
+use App\Integrations\Sentry\ImportFailureAlert;
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -42,13 +43,13 @@ class ReadScorecardImport implements ShouldQueue
         }
 
         if (! AiReading::enabled()) {
-            $failImport->handle($this->importId, ImportReadingDisabled::MESSAGE);
+            $this->failWithAlert($failImport, ImportReadingDisabled::MESSAGE);
 
             return;
         }
 
         if (! $budget->canSpend(CarbonImmutable::now())) {
-            $failImport->handle($this->importId, ReadingFailure::BUDGET_REACHED);
+            $this->failWithAlert($failImport, ReadingFailure::BUDGET_REACHED);
 
             return;
         }
@@ -61,16 +62,26 @@ class ReadScorecardImport implements ShouldQueue
         $draft = ScorecardDraft::fromArray($this->withPlayedOn($result->card));
 
         $draft === null
-            ? $failImport->handle($this->importId, ReadingFailure::AI_UNAVAILABLE)
+            ? $this->failWithAlert($failImport, ReadingFailure::AI_UNAVAILABLE)
             : $markReady->handle($this->importId, $draft);
     }
 
     /**
-     * Both attempts ended on an error, or the job timed out.
+     * Both attempts ended on an error, or the job timed out. The exception has already sent its
+     * alert: this path sends none of its own.
      */
     public function failed(?Throwable $exception): void
     {
         app(FailImport::class)->handle($this->importId, ReadingFailure::AI_UNAVAILABLE);
+    }
+
+    /**
+     * Ends the reading on a failure that no exception reports.
+     */
+    private function failWithAlert(FailImport $failImport, string $reason): void
+    {
+        $failImport->handle($this->importId, $reason);
+        ImportFailureAlert::send($reason);
     }
 
     /**
