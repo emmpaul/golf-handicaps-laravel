@@ -40,6 +40,9 @@ x-app: &app
         # requête vers SGT et laisse chaque parcours à la saisie manuelle. Toute autre valeur que on
         # ou off arrête migrate, et web et worker ne démarrent pas.
         SGT_LOOKUP: ${SGT_LOOKUP:-on}
+        # Alertes d'erreur vers Sentry (ADR 0017). Sans valeur, rien n'est envoyé. Une valeur mal
+        # formée arrête migrate, et web et worker ne démarrent pas.
+        SENTRY_LARAVEL_DSN: ${SENTRY_LARAVEL_DSN:-}
 
 services:
     pgsql:

@@ -108,6 +108,7 @@ Onglet Environment. Dokploy écrit ces lignes dans un `.env` à côté de `docke
 | `AI_MONTHLY_BUDGET_USD` | `5`                            | Facultatif, c'est le défaut. Plafond de dépense de l'IA par mois, en dollars.                                                                                                                                                                                                                    |
 | `AI_BUDGET_TIME_ZONE`   | `America/Montreal`             | Facultatif, c'est le défaut. Fuseau dans lequel le mois du budget commence et finit.                                                                                                                                                                                                             |
 | `SGT_LOOKUP`            | `on`, `off`                    | Facultatif, `on` par défaut. Recherche des ratings sur Simulator Golf Tour par le worker. `off` coupe toute requête vers SGT : chaque recherche finit en « Saisie manuelle » avec « Recherche SGT désactivée ». Toute autre valeur fait échouer `migrate`, et `web` et `worker` restent arrêtés. |
+| `SENTRY_LARAVEL_DSN`    | le DSN du projet Sentry        | Facultatif. Active les alertes d'erreur (voir « Alertes d'erreur »). Sans valeur, rien n'est envoyé. Une valeur mal formée fait échouer `migrate`, et `web` et `worker` restent sur `Created`. Ne jamais l'inscrire ailleurs que dans Dokploy.                                                   |
 
 Les quatre variables de l'IA vont à `migrate`, `web` et `worker`, et l'image n'en contient aucune. Un `AI_MODEL` sans tarif dans `config/golf.php`, comme un `AI_BUDGET_TIME_ZONE` inconnu, fait échouer le démarrage de l'application avec un message qui nomme la variable : `migrate` sort en erreur, `web` et `worker` restent arrêtés sur `Created` (`docker logs "$P-migrate-1"` donne la raison). Passer à un modèle nouveau demande donc d'ajouter son tarif à `config/golf.php` dans une version de l'image, avant de changer `AI_MODEL`. La clé ajoutée ou changée prend effet au redéploiement suivant (voir « Déployer une version »). L'ADR 0011 décrit la lecture et le budget.
 
@@ -294,6 +295,83 @@ Docker ne redémarre pas un conteneur `unhealthy`. Un worker figé reste figé j
 docker logs --tail 50 "$P-worker-1"
 docker restart "$P-worker-1"
 ```
+
+## Alertes d'erreur
+
+Sentry reçoit les exceptions non prévues de `web` et de `worker`, les jobs en échec définitif et les trois échecs d'import sans exception : réponse de l'IA inexploitable, budget du mois atteint, lecture désactivée. Il envoie un courriel à la création d'une issue et à sa réouverture. Un refus métier ou une tentative de job qui sera réessayée n'alerte pas. L'ADR 0017 décrit la décision.
+
+Le DSN se pose seulement dans Dokploy, jamais dans l'image, le dépôt ou un `.env` local. Sans lui, rien ne part.
+
+### Créer le projet
+
+1. Sur sentry.io, créer un projet PHP/Laravel et choisir « Set up manually » (plan gratuit, sans carte).
+2. Ne lancer aucune commande de l'écran d'installation. Le paquet et `config/sentry.php` sont déjà dans l'image, et `sentry:publish` écrit dans `.env`.
+3. Copier le DSN seul. `SENTRY_TRACES_SAMPLE_RATE`, `SENTRY_ENABLE_LOGS` et `LOG_STACK`, que cet écran propose aussi, ne s'appliquent pas ici : `config/sentry.php` coupe traces et journaux en dur (ADR 0017), ces envois sont hors périmètre, et `docker-compose.yml` ne transmet aucune de ces variables.
+4. Dans les alertes du projet, activer le courriel sur une nouvelle issue et sur la réouverture d'une issue résolue.
+5. Poser `SENTRY_LARAVEL_DSN` dans Dokploy et redéployer. `docker restart` ne suffit pas.
+
+### Vérifier l'envoi
+
+Lancer depuis l'hôte :
+
+```sh
+docker exec "$P-worker-1" php artisan sentry:test
+docker exec "$P-web-1" php artisan sentry:test
+```
+
+Attendu : `Test event sent with ID: …` et le code de sortie 0, puis l'événement dans Sentry et le courriel. Si les deux événements tombent dans la même issue, seul le premier envoie un courriel : marquer l'issue « Resolved » entre les deux pour recevoir le second.
+
+Les autres sorties :
+
+- `Could not discover DSN!`, code 1 : la variable n'est pas arrivée au conteneur. Redéployer.
+- `There was an error sending the event.`, code 1, précédé de `SDK(error): Failed to send event` avec la raison (`cURL Error (6) Could not resolve host`, par exemple) : l'hôte n'atteint pas Sentry, ou le DSN vise un hôte faux.
+
+`sentry:test` ne passe pas par `SentryEventFilter` : la commande construit son propre client. Son événement garde donc le message `This is a test exception sent from the Sentry Laravel SDK.`, le code source autour des cadres, le nom d'hôte et la liste des paquets. Il prouve l'envoi et le courriel, pas le filtre.
+
+Pour voir ce qu'envoie le filtre, signaler une vraie exception :
+
+```sh
+docker exec -e XDG_CONFIG_HOME=/tmp "$P-worker-1" php artisan tinker --execute 'report(new RuntimeException("temoin-alerte"));'
+```
+
+`XDG_CONFIG_HOME` donne à Tinker un dossier où écrire : sans lui, la commande sort en erreur avant de signaler quoi que ce soit. Attendu : la ligne `production.ERROR: temoin-alerte` sur la sortie de la commande. Dans Sentry, le type `RuntimeException` et sa pile, sans `temoin-alerte`, sans code source, sans nom d'hôte. Marquer ensuite cette issue « Resolved ».
+
+### Traiter une alerte
+
+Marquer une issue « Resolved » une fois le problème corrigé. Sinon sa prochaine occurrence n'envoie pas de courriel : le budget atteint en octobre reste silencieux en novembre.
+
+Une alerte d'exception ne contient pas le message. Il reste dans le journal du conteneur, à la même heure. Sentry affiche l'heure dans le fuseau du compte, le journal et `docker logs` en UTC :
+
+```sh
+docker logs --since 2026-11-03T11:43:30Z --until 2026-11-03T11:43:32Z "$P-web-1" 2>&1 | grep -F 'production.ERROR'
+```
+
+Remplacer les deux heures par celles de l'alerte, et `web` par `worker` pour un job. Le journal du worker contient aussi les tentatives réessayées, qui n'alertent pas. Une alerte `Import en échec : <raison>` n'a pas de ligne dans le journal : elle porte déjà sa raison, et l'écran des imports dit quel import a échoué.
+
+### Valeur invalide
+
+`SENTRY_LARAVEL_DSN=pas-un-dsn` fait sortir `migrate` en erreur, et `web` et `worker` restent sur `Created` :
+
+```sh
+docker logs "$P-migrate-1"
+```
+
+Attendu dans le journal : `SENTRY_LARAVEL_DSN n’est pas un DSN Sentry valide`. Le message ne répète pas la valeur.
+
+### Limites
+
+- Hôte arrêté : l'application ne peut rien envoyer, cette panne n'alerte pas.
+- Navigateur : les erreurs JavaScript ne partent pas vers Sentry.
+- Copies vers R2 : elles tournent dans Dokploy, hors de l'application, et leur échec n'alerte pas.
+- Quota du plan gratuit épuisé : les événements en trop se perdent. L'application n'en souffre pas.
+- Envoi vers Sentry en échec : il ne laisse aucune trace dans les journaux, car le SDK n'a pas de logger. `sentry:test` reste le moyen de contrôler l'envoi.
+- Base arrêtée : `worker` redémarre en boucle et chaque démarrage envoie un événement (mesuré : huit en une vingtaine de secondes, puis l'écart augmente). Ces événements comptent dans le quota du plan gratuit.
+
+Sentry lent ou injoignable : 3 s au plus par envoi (`http_connect_timeout` et `http_timeout` dans `config/sentry.php`), et la réponse et le résultat du job ne changent pas.
+
+Pour tout couper : retirer `SENTRY_LARAVEL_DSN` dans Dokploy et redéployer.
+
+Ces commandes ont tourné sur la stack locale le 2026-11-03, avec un DSN factice et un récepteur local à la place de Sentry, pour lire les événements envoyés. La réception dans Sentry et le courriel restent à contrôler en production.
 
 ## Sauvegarde
 

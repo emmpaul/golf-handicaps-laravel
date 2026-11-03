@@ -30,6 +30,11 @@ arch('the domain layer does not call the ai sdk')
 arch('only the jobs use the ai integration')
     ->expect('App\Integrations\Ai')->toOnlyBeUsedIn(['App\Jobs', 'App\Integrations\Ai']);
 
+// Design D5 of error-alerts: the job alerts, the Action stays free of the integration.
+// Mutation that turns it red: `use Sentry\SentrySdk` in FailImport, called in a method.
+arch('the domain layer does not know Sentry')
+    ->expect('App\Domain')->not->toUse(['Sentry', 'App\Integrations\Sentry']);
+
 arch('integrations do not depend on controllers or the frontend')
     ->expect('App\Integrations')->not->toUse(['App\Http', 'Inertia']);
 
