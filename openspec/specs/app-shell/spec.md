@@ -6,11 +6,19 @@ Donner à toutes les pages de l'application un cadre commun utilisable au doigt 
 ## Requirements
 
 ### Requirement: Navigation entre sections sur téléphone
-Le système SHALL afficher quatre sections (Rounds, Handicaps, Coups, Joueurs) dans une barre flottante en bas de l'écran, suivie du bouton Importer. La barre fait 60 px de haut, à 16 px des bords et 28 px au-dessus du bas de la zone sûre, fond `oklch(0.2 0.006 260)`, filet `oklch(0.27 0.008 260)`, rayon 999 px. Chaque onglet a son icône et son nom accessible ; seul l'onglet courant montre son libellé. La barre MUST NOT masquer le contenu de la page.
+Le système SHALL afficher quatre sections (Rounds, Handicaps, Parcours, Joueurs) dans une barre flottante en bas de l'écran, suivie du bouton Importer. La barre fait 60 px de haut, à 16 px des bords et 28 px au-dessus du bas de la zone sûre, fond `oklch(0.2 0.006 260)`, filet `oklch(0.27 0.008 260)`, rayon 999 px. Chaque onglet a son icône et son nom accessible ; seul l'onglet courant montre son libellé. La barre MUST NOT masquer le contenu de la page.
 
 #### Scenario: Toutes les sections visibles à 320 px
 - **WHEN** l'utilisateur ouvre `/handicaps` sur un écran de 320 px de large
-- **THEN** les quatre onglets « Rounds », « Handicaps », « Coups », « Joueurs » et le bouton « Importer » sont entièrement visibles, chacun de 44 px de haut au moins, et le libellé « Handicaps » est affiché en entier
+- **THEN** les quatre onglets « Rounds », « Handicaps », « Parcours », « Joueurs » et le bouton « Importer » sont entièrement visibles, chacun de 44 px de haut au moins, et le libellé « Handicaps » est affiché en entier
+
+#### Scenario: Libellé « Parcours » à 320 px
+- **WHEN** l'utilisateur ouvre `/courses` sur un écran de 320 px de large
+- **THEN** le libellé « Parcours » est affiché en entier, et la barre et le bouton « Importer » tiennent entre les marges de 16 px
+
+#### Scenario: Plus d'onglet Coups
+- **WHEN** l'utilisateur ouvre n'importe quelle page de section
+- **THEN** la barre ne contient aucun lien nommé « Coups » ni aucun lien vers `/strokes`
 
 #### Scenario: Bas de page atteignable
 - **WHEN** l'utilisateur fait défiler une page jusqu'en bas sur téléphone
@@ -21,20 +29,24 @@ Le système SHALL afficher quatre sections (Rounds, Handicaps, Coups, Joueurs) d
 - **THEN** la même barre flottante est en bas de la colonne centrée, et aucune navigation n'est en haut
 
 ### Requirement: Adresses des sections
-Les onglets SHALL viser `/rounds` (Rounds), `/handicaps` (Handicaps), `/strokes` (Coups) et `/players` (Joueurs), dans cet ordre, puis le bouton Importer `/import`. Chaque section MUST servir sa propre page ; aucune adresse ne sert de page « Section à venir », et une sous-adresse qu'aucune page ne sert répond 404.
+Les onglets SHALL viser `/rounds` (Rounds), `/handicaps` (Handicaps), `/courses` (Parcours) et `/players` (Joueurs), dans cet ordre, puis le bouton Importer `/import`. Chaque section MUST servir sa propre page ; aucune adresse ne sert de page « Section à venir », et une sous-adresse qu'aucune page ne sert répond 404. La page Coups reste servie à `/strokes`, hors de la barre.
 
 #### Scenario: Section sans page
 - **GIVEN** les cinq sections ont leur page
-- **WHEN** l'utilisateur ouvre `/handicaps` puis `/strokes`
-- **THEN** le système répond 200 avec la page Handicaps puis la page Coups, et aucune des deux réponses ne contient « Section à venir »
+- **WHEN** l'utilisateur ouvre `/handicaps` puis `/courses`
+- **THEN** le système répond 200 avec la page Handicaps puis la page Parcours, et aucune des deux réponses ne contient « Section à venir »
 
 #### Scenario: Sous-adresse d'une section sans page
 - **WHEN** l'utilisateur ouvre `/handicaps/0190a6b2-7c3e-7000-8000-000000000001`, puis `/strokes/xyz`
 - **THEN** le système répond 404 les deux fois
 
 #### Scenario: Section qui a sa page
-- **WHEN** l'utilisateur ouvre `/rounds`, `/handicaps`, `/strokes`, `/players` puis `/import`
+- **WHEN** l'utilisateur ouvre `/rounds`, `/handicaps`, `/courses`, `/players` puis `/import`
 - **THEN** chacune répond 200 avec la page de sa section, et aucune réponse ne contient « Section à venir »
+
+#### Scenario: Page Coups toujours servie
+- **WHEN** l'utilisateur ouvre `/strokes` avec une session
+- **THEN** le système répond 200 avec la page Coups
 
 #### Scenario: Sous-adresse inconnue de l'import
 - **WHEN** l'utilisateur ouvre `/import/xyz`
@@ -42,10 +54,10 @@ Les onglets SHALL viser `/rounds` (Rounds), `/handicaps` (Handicaps), `/strokes`
 
 #### Scenario: Ordre de la barre
 - **WHEN** l'utilisateur parcourt la barre au clavier
-- **THEN** il passe par « Rounds », « Handicaps », « Coups », « Joueurs » puis « Importer »
+- **THEN** il passe par « Rounds », « Handicaps », « Parcours », « Joueurs » puis « Importer »
 
 ### Requirement: Section courante indiquée
-La navigation SHALL marquer la section de la page affichée, de façon visible et annoncée aux lecteurs d'écran (`aria-current="page"`). Une sous-page MUST marquer sa section parente : une adresse sous `/courses/` relève de Rounds. Le bouton Importer porte `aria-current="page"` sur `/import`.
+La navigation SHALL marquer la section de la page affichée, de façon visible et annoncée aux lecteurs d'écran (`aria-current="page"`). Une sous-page MUST marquer sa section parente : la page Coups, `/strokes`, relève de Handicaps. Le bouton Importer porte `aria-current="page"` sur `/import`.
 
 #### Scenario: Sous-page d'un round
 - **WHEN** l'utilisateur ouvre une adresse sous `/rounds/`
@@ -57,15 +69,19 @@ La navigation SHALL marquer la section de la page affichée, de façon visible e
 
 #### Scenario: Parcours
 - **WHEN** l'utilisateur ouvre `/courses`
-- **THEN** le lien « Rounds » porte `aria-current="page"`
+- **THEN** le lien « Parcours » porte `aria-current="page"` et le lien « Rounds » ne le porte pas
+
+#### Scenario: Coups
+- **WHEN** l'utilisateur ouvre `/strokes`
+- **THEN** le lien « Handicaps » porte `aria-current="page"` et aucun autre lien de section ne le porte
 
 #### Scenario: Accueil
 - **WHEN** l'utilisateur ouvre la page d'accueil
 - **THEN** aucun lien de section ne porte `aria-current`
 
 #### Scenario: Préfixe sans barre oblique
-- **WHEN** l'utilisateur ouvre `/roundsx`
-- **THEN** le lien « Rounds » ne porte pas `aria-current`
+- **WHEN** l'utilisateur ouvre `/roundsx`, puis `/coursesx`
+- **THEN** ni le lien « Rounds » ni le lien « Parcours » ne porte `aria-current`
 
 ### Requirement: Section courante visible sur la barre d'onglets
 Sur la barre, l'onglet courant SHALL se distinguer par une pilule de 44 px de haut en `oklch(0.97 0.003 260)`, son icône et son libellé (Geist 600, 13 px, 8 px après l'icône) en `oklch(0.13 0.005 260)` ; les autres onglets n'ont ni fond ni libellé visible, icône en `oklch(0.68 0.01 260)`. Le passage d'un onglet à l'autre anime le fond, la couleur et la largeur du libellé en 350 ms.
@@ -88,6 +104,10 @@ Le système SHALL fournir un manifest d'application (nom « Handicaps golf », n
 #### Scenario: Manifest et icônes sans session
 - **WHEN** un client sans cookie demande le manifest ou une icône
 - **THEN** il reçoit le fichier, sans redirection et sans en-tête `Set-Cookie`
+
+#### Scenario: Icône à l'adresse par défaut
+- **WHEN** un client sans cookie demande `/favicon.ico`
+- **THEN** il reçoit une icône avec le statut 200, sans redirection vers `/login`, sans en-tête `Set-Cookie` et sans session créée en base
 
 ### Requirement: Zones sûres en plein écran
 L'application SHALL occuper tout l'écran, encoche et barre d'accueil comprises. La rangée du haut, la barre flottante, le bouton Importer et toute barre collée en bas de page MUST tenir compte des marges de zone sûre de l'appareil, pour qu'aucun texte ni bouton ne passe sous l'encoche, l'îlot ou la barre d'accueil.
@@ -278,3 +298,51 @@ Sur les écrans de l'éditeur de round (nouveau round, modification d'un round, 
 #### Scenario: Page d'un round
 - **WHEN** l'utilisateur ouvre la page d'un round
 - **THEN** la barre d'onglets et le bouton « Importer » sont affichés
+
+### Requirement: Sections préchargées
+Dès qu'une page de l'application est affichée, le système SHALL précharger les pages des quatre onglets et du bouton Importer, sauf la page courante. Toucher un onglet dont la page est préchargée MUST afficher cette page sans attendre le serveur, puis la mettre à jour en arrière-plan si la copie a plus de 30 secondes. Une copie de plus de 5 minutes MUST NOT être affichée : la page est redemandée.
+
+#### Scenario: Onglet touché après le préchargement
+- **GIVEN** l'accueil est affiché depuis 2 secondes
+- **WHEN** l'utilisateur touche l'onglet « Rounds »
+- **THEN** la page Rounds s'affiche sans nouvelle requête vers `/rounds`
+
+#### Scenario: Copie ancienne mais utilisable
+- **GIVEN** la page Rounds a été préchargée il y a 2 minutes, et un round a été enregistré depuis sur un autre téléphone
+- **WHEN** l'utilisateur touche « Rounds »
+- **THEN** la liste préchargée s'affiche aussitôt, puis la liste se met à jour avec le nouveau round sans action de l'utilisateur
+
+#### Scenario: Copie expirée
+- **GIVEN** la page Rounds a été préchargée il y a 6 minutes
+- **WHEN** l'utilisateur touche « Rounds »
+- **THEN** le système redemande `/rounds` et affiche la réponse du serveur
+
+#### Scenario: Pas de préchargement de la page courante
+- **WHEN** l'utilisateur ouvre `/players`
+- **THEN** aucune requête de préchargement ne vise `/players`
+
+### Requirement: Liens de liste préchargés
+Les liens qui ouvrent un round depuis la liste des rounds, l'accueil ou l'historique d'un joueur, et ceux qui ouvrent un import depuis la liste des imports, SHALL précharger leur page quand le doigt se pose ou que le pointeur s'arrête dessus, avec la même règle de fraîcheur que les sections.
+
+#### Scenario: Round ouvert depuis la liste
+- **GIVEN** la page Rounds est affichée
+- **WHEN** l'utilisateur pose le doigt sur un round puis le relâche
+- **THEN** la requête de la page du round part au contact, avant le relâchement, et la page s'affiche avec ce round
+
+### Requirement: Données à jour après une écriture
+Après toute écriture réussie depuis l'application (round, joueur, alias, rating, import, correction, ouverture ou fermeture de session), le système SHALL oublier toutes les pages préchargées. La page suivante MUST refléter l'écriture.
+
+#### Scenario: Round supprimé
+- **GIVEN** les pages Rounds et Handicaps sont préchargées
+- **WHEN** l'utilisateur supprime un round puis touche « Handicaps »
+- **THEN** l'historique et l'index affichés ne comptent plus ce round
+
+#### Scenario: Correction enregistrée automatiquement
+- **GIVEN** la page Import est préchargée, et l'utilisateur corrige un score sur l'écran de correction
+- **WHEN** la sauvegarde automatique réussit puis l'utilisateur touche « Importer »
+- **THEN** la page Import est redemandée au serveur
+
+#### Scenario: Écriture refusée
+- **GIVEN** la page Joueurs est préchargée
+- **WHEN** l'ajout d'un joueur est refusé pour un nom déjà pris
+- **THEN** les pages préchargées restent utilisables

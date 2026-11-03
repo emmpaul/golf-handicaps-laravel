@@ -65,7 +65,6 @@ Sur la page Coups, un joueur sans index MUST être affiché grisé sans pouvoir 
 - **WHEN** l'utilisateur ouvre `/strokes`
 - **THEN** Sean peut être coché
 
-
 ### Requirement: Modes de calcul des coups
 Le système SHALL proposer deux modes. En mode « Écart », le mode par défaut, le joueur au plus petit handicap de jeu reçoit 0 coup et chaque autre joueur reçoit la différence entre son handicap de jeu et ce minimum. En mode « Complet », chaque joueur reçoit son handicap de jeu entier.
 
@@ -189,7 +188,11 @@ La page Coups SHALL afficher, sous la liste des parcours, la course rating et le
 - **THEN** Manu reçoit 21 coups
 
 ### Requirement: Mise en page de la page Coups
-À 390 px, la page Coups SHALL suivre le design : titre « Coups à donner », « JOUEURS · 2 À 4 » et une ligne par joueur, « PARCOURS » et sa liste, la ligne de rating, « MODE » et son sélecteur à deux positions avec son explication, puis un bloc de résultat par joueur choisi.
+À 390 px, la page Coups SHALL suivre le design d'une sous-page de Handicaps : lien de retour « Handicaps » vers `/handicaps` dans la rangée du haut, titre « Coups à donner », « JOUEURS · 2 À 4 » et une ligne par joueur, « PARCOURS » et sa liste, la ligne de rating, « MODE » et son sélecteur à deux positions avec son explication, puis un bloc de résultat par joueur choisi.
+
+#### Scenario: Lien de retour
+- **WHEN** l'utilisateur ouvre `/strokes` à 390 px
+- **THEN** la rangée du haut montre le lien de retour « Handicaps », sans « Golf », et le toucher ouvre `/handicaps`
 
 #### Scenario: Ligne de joueur
 - **GIVEN** Gab avec un index de 1,0, choisi, et Sean sans index
