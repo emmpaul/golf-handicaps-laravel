@@ -36,13 +36,14 @@ L'assistant de configuration de Sentry pour agents n'est pas utilisé : la confi
 
 ### D2. Un seul filtre, `before_send`, par liste d'autorisation
 
-`App\Integrations\Sentry\SentryEventFilter::beforeSend(Event, ?EventHint): ?Event` est le seul point de contrôle. Il décide d'abord s'il faut envoyer, puis réécrit l'événement :
+`App\Integrations\Sentry\SentryEventFilter::beforeSend(Event, ?EventHint): ?Event` est le seul point de contrôle. Il abandonne l'événement si l'exception est une `DomainException` ou une exception de tentative réessayée (D4). Sinon, il construit un événement neuf, qui reçoit seulement :
 
-- abandon si l'exception est une `DomainException`, ou une exception de tentative réessayée (D4) ;
-- message de chaque exception vidé, type et pile conservés ;
-- variables de chaque cadre de pile vidées ;
-- requête réduite à la méthode et au chemin, sans query string, corps, en-têtes ni témoins ;
-- fil d'Ariane, utilisateur, `extra` et contextes applicatifs vidés.
+- l'identifiant, l'horodatage, le niveau, l'environnement, le nom et la version du SDK ;
+- la méthode et le chemin de la requête, sans query string, corps, en-têtes ni témoins ;
+- pour un événement avec exception, le type de chaque exception, un message vide, le type de mécanisme et le drapeau `handled`, et les cadres de pile réduits à la fonction, au fichier, à la ligne et à `in_app` ;
+- pour un événement sans exception, le message sans `params` ni `formatted`, et l'empreinte.
+
+Tout le reste reste derrière : fil d'Ariane, utilisateur, `extra`, étiquettes, tous les contextes (`os` et `runtime` compris), nom d'hôte, version de l'application, liste des paquets.
 
 La liste autorise plutôt qu'elle n'interdit : une donnée ajoutée par une future version du SDK ne sort pas toute seule. Le message d'exception est retiré malgré le masquage SQL, à cause du texte de PostgreSQL et des messages de tiers. Le prix : pour lire le message, il faut ouvrir les journaux à l'heure de l'alerte. L'exception y reste, puisque le filtre ne touche que l'envoi à Sentry.
 
@@ -68,7 +69,7 @@ Le signalement de `TimeoutExceededException`, juste avant que Laravel tue le wor
 
 Écarté : l'appel dans `FailImport`. L'action reste libre d'intégration (architecture du domaine), et `failed()` passe aussi par elle : un échec par exception donnerait deux alertes.
 
-Toute erreur de l'envoi est absorbée par le SDK, qui journalise sans lever. Un test le confirme avec un transport qui échoue (spec « Service d'alerte injoignable »).
+Toute erreur de l'envoi est absorbée par le SDK, en silence : `config/sentry.php` ne pose aucune option `logger`, et rien n'arrive au journal. Un test le confirme avec un transport qui échoue (spec « Service d'alerte injoignable »).
 
 ### D6. Tous les jobs, pas seulement ceux des imports
 
@@ -76,7 +77,7 @@ L'entrée 18 parle des jobs d'import. Le filtre ne distingue pas les jobs, donc 
 
 ### D7. DSN mal formé : arrêt au démarrage
 
-`AppServiceProvider` valide le DSN à côté de `ensureAiConfiguration` et `ensureSgtConfiguration`, avec `Sentry\Dsn::createFromString`, et relance une `InvalidArgumentException` dont le message commence par `SENTRY_LARAVEL_DSN`. Valeur vide ou absente : aucune vérification. `migrate` reçoit la variable pour échouer avant `web` et `worker`.
+`AppServiceProvider` valide le DSN dans `boot`, à côté de `ensureAiConfiguration` et `ensureSgtConfiguration`, avec `Sentry\Dsn::createFromString`. Le SDK ne lève pas sur `pas-un-dsn` : il écarte la valeur et n'envoie rien. L'application lève donc une `InvalidArgumentException` neuve, dont le message commence par `SENTRY_LARAVEL_DSN` et ne répète pas la valeur. Valeur vide ou absente : aucune vérification. `migrate` reçoit la variable pour échouer avant `web` et `worker`.
 
 Écarté : couper l'envoi en silence sur une valeur invalide, ce qui laisserait croire à des alertes actives.
 
@@ -90,13 +91,14 @@ Le canal est le courriel du compte Sentry, seul inclus au plan gratuit. Le maint
 - [Quota gratuit épuisé par une rafale] → les événements en trop sont perdus, l'application n'en souffre pas, et le premier courriel est déjà parti.
 - [Plan gratuit modifié par Sentry] → retirer `SENTRY_LARAVEL_DSN` coupe tout. `SentryEventFilter` et `ImportFailureAlert` sont les seuls fichiers à remplacer pour changer d'outil.
 - [Serveur Sentry lent pendant une erreur] → 3 s au plus par envoi d'après D3, sur une requête déjà en échec.
-- [Champ ajouté par le SDK hors de la liste vidée] → le test du filtre cherche des valeurs témoins dans tout l'événement sérialisé, et une mise à jour du SDK le rejoue.
+- [Champ ajouté par le SDK] → l'événement neuf ne le copie pas, le test du filtre cherche des valeurs témoins dans tout l'événement sérialisé, et une mise à jour du SDK le rejoue.
 - [Message absent de l'alerte, diagnostic plus long] → heure de l'alerte et type de l'exception pour retrouver la ligne dans `docker logs`.
 
 ## Migration Plan
 
 1. Déployer l'image sans DSN : aucun changement visible.
 2. Créer le projet Sentry (« Set up manually », PHP/Laravel), poser `SENTRY_LARAVEL_DSN` dans Dokploy, redéployer.
-3. Lancer `php artisan sentry:test` dans `worker`, puis contrôler l'événement reçu et le courriel.
+3. Lancer `php artisan sentry:test` dans `worker`, puis contrôler la réception et le courriel. Cette commande prouve l'envoi et le courriel, pas le contenu : `TestCommand` construit son propre client, et son événement ne passe pas par le filtre.
+4. Contrôler le contenu avec la commande `tinker` de `docs/deployment.md`, qui signale une vraie exception.
 
 Retour arrière : retirer la variable et redéployer. Pas de migration de base.

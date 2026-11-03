@@ -28,13 +28,19 @@ Le système SHALL envoyer au service de suivi d'erreurs une alerte pour toute ex
 
 ### Requirement: Aucune alerte pour un refus métier
 
-Un refus métier affiché à la personne SHALL rester sans alerte. Le refus MUST garder son affichage actuel : toast d'erreur, ou réponse 422 pour une requête JSON hors Inertia.
+Un refus métier affiché à la personne SHALL rester sans alerte. Le refus MUST garder son affichage actuel : erreur de validation sous le champ pour un formulaire refusé ; pour une `DomainException`, toast d'erreur, ou réponse 422 pour une requête JSON hors Inertia.
 
 #### Scenario: Joueur en double
 
 - **GIVEN** le suivi d'erreurs est configuré et un joueur `Manu` existe
 - **WHEN** l'utilisateur ajoute un joueur `Manu`
-- **THEN** le toast d'erreur s'affiche et aucune alerte ne part
+- **THEN** l'erreur de validation s'affiche sous le champ et aucune alerte ne part
+
+#### Scenario: Refus du domaine avec toast
+
+- **GIVEN** le suivi d'erreurs est configuré et un import n'est pas en échec
+- **WHEN** l'utilisateur relance sa lecture par `POST /imports/{id}/reading`
+- **THEN** le toast d'erreur « Cet import n’est pas en échec » s'affiche et aucune alerte ne part
 
 ### Requirement: Alerte sur l'échec définitif d'un job
 
