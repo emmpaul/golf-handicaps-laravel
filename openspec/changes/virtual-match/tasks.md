@@ -55,7 +55,7 @@
   | Gab et Manu à 70 | « ÉGALITÉ », « Gab et Manu », « 70 net » |
   | moins de 2 classés | `null` |
 
-- [ ] 6.2 RED puis GREEN : `net-leaderboard.tsx` et `round-scorecard.tsx` gagnent la date facultative, et la carte défile dans son cadre au-delà de la largeur. Leurs tests existants passent sans changement, et un nouveau cas vérifie la date sous « 88 − 23 » et sous « MANU ».
+- [x] 6.2 RED puis GREEN : `net-leaderboard.tsx` et `round-scorecard.tsx` gagnent la date facultative, et la carte défile dans son cadre au-delà de la largeur. Leurs tests existants passent sans changement, et un nouveau cas vérifie la date sous « 88 − 23 » et sous « MANU ».
 - [ ] 6.3 RED puis GREEN : `resources/js/components/rounds/virtual-match-picks.test.tsx`. Une pastille porte le nom accessible « Retirer Gab, 18 nov. 2026 », et la toucher appelle `router.get` sans ce choix. « + Ajouter » ouvre la liste, une ligne « déjà choisi » est désactivée, toucher une ligne ajoute à la fin et ferme la liste, fermer n'ajoute rien.
 - [ ] 6.4 RED puis GREEN : `resources/js/components/rounds/virtual-match-suggestion.test.tsx` vérifie « Gab (18 nov.) a joué ce parcours. », « Gab (18 nov.) et Sean (20 nov.) ont joué ce parcours. », le lien « Voir la partie virtuelle » vers `/rounds/compare?…picks=…`, aucun bouton « Ignorer », et sans suggéré le lien « Comparer avec d'autres rounds ».
 

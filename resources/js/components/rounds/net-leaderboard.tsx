@@ -1,5 +1,5 @@
 import { PlayerSwatch } from '@/components/player-swatch';
-import { NO_INDEX, NO_VALUE } from '@/lib/format';
+import { formatShortPlayedOn, NO_INDEX, NO_VALUE } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
 /** Une ligne du classement, telle que RoundLeaderboard l'envoie (design D5). */
@@ -13,6 +13,8 @@ export type LeaderboardEntry = {
     playingHandicap: number | null;
     net: number | null;
     rank: number | null;
+    /** Date of the round, given by a virtual match only (spec `virtual-match`). */
+    playedOn?: string;
 };
 
 /**
@@ -32,7 +34,8 @@ export function ranked(entries: LeaderboardEntry[]): LeaderboardEntry[] {
  * « Mise en page de la page d'un round ») : sous « CLASSEMENT NET » et
  * « BRUT − HCP », une ligne par joueur, rang en Geist Mono 18 px gris, nom en
  * 22 px après sa pastille de 10 px, pastille ambre « 1ER » pour chaque
- * premier, « 72 − 1 » dessous, net en 44 px à droite. Un nom trop long est
+ * premier, « 72 − 1 » dessous, puis la date du round quand une partie
+ * virtuelle la donne, net en 44 px à droite. Un nom trop long est
  * coupé par « … » ; rang, brut et net ne sont jamais coupés (« Classement
  * lisible sur téléphone »).
  */
@@ -91,6 +94,14 @@ export function NetLeaderboard({ entries }: { entries: LeaderboardEntry[] }) {
                                     ? `${entry.gross} · ${NO_INDEX}`
                                     : `${entry.gross} − ${entry.playingHandicap}`}
                             </span>
+                            {entry.playedOn === undefined ? null : (
+                                <span
+                                    data-slot="leaderboard-played-on"
+                                    className="font-mono text-meta-12 whitespace-nowrap text-ink-2"
+                                >
+                                    {formatShortPlayedOn(entry.playedOn)}
+                                </span>
+                            )}
                         </span>
                         <span
                             data-slot="leaderboard-net"

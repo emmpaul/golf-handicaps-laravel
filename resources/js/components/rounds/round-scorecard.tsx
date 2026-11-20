@@ -1,5 +1,6 @@
 import { Fragment } from 'react';
 import { ScoreLegend, ScoreMark } from '@/components/scores/score-mark';
+import { formatDayMonth } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
 /** The card of a saved round, as RoundDetail sends it. */
@@ -10,6 +11,8 @@ export type SavedCard = {
         name: string;
         colorSlot: number;
         strokes: number[];
+        /** Date of the round, given by a virtual match only: « 18 nov. » under the name. */
+        playedOn?: string;
     }[];
 };
 
@@ -24,6 +27,9 @@ const nine = (values: number[], from: number) => values.slice(from, from + 9);
  * joueurs ») ; au-delà, la carte défile dans son cadre (DO47).
  */
 const SCORE_CELL = 'w-[52px] min-w-11 max-w-[52px] p-0 text-center';
+
+/** The first five letters of a name in capitals, « MANU ». */
+const shortName = (name: string) => name.slice(0, 5).toLocaleUpperCase('fr');
 
 /** Rangée de sous-total : 40 px, fond `surface-1`, coins de 8 px. */
 function SubtotalRow({ label, totals }: { label: string; totals: number[] }) {
@@ -58,7 +64,8 @@ function SubtotalRow({ label, totals }: { label: string; totals: number[] }) {
  * numéro, « P4 · 8 », puis le score de chaque joueur dans l'ordre de la carte
  * avec sa marque ; « ALLER » après le trou 9, « RETOUR » et « TOTAL » après le
  * 18. L'en-tête donne les cinq premières lettres de chaque nom, coupées par
- * « … » si la colonne est trop étroite. À 320 px avec quatre joueurs, les
+ * « … » si la colonne est trop étroite, puis la date courte du round quand une
+ * partie virtuelle la donne (« 18 nov. »). À 320 px avec quatre joueurs, les
  * colonnes de score gardent 44 px et la carte défile dans son cadre (DO47).
  * La légende suit la carte.
  */
@@ -99,9 +106,18 @@ export function RoundScorecard({ card }: { card: SavedCard }) {
                                         'truncate border-b border-rule pb-2.5 font-medium',
                                     )}
                                 >
-                                    {line.name
-                                        .slice(0, 5)
-                                        .toLocaleUpperCase('fr')}
+                                    {line.playedOn === undefined ? (
+                                        shortName(line.name)
+                                    ) : (
+                                        <>
+                                            <span className="block truncate">
+                                                {shortName(line.name)}
+                                            </span>
+                                            <span className="mt-1 block font-mono text-meta-12 whitespace-nowrap normal-case">
+                                                {formatDayMonth(line.playedOn)}
+                                            </span>
+                                        </>
+                                    )}
                                 </th>
                             ))}
                         </tr>

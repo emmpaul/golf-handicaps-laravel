@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vite-plus/test';
 
 import {
+    formatDayMonth,
     formatDayMonthShort,
     formatIndex,
     formatPlayedOn,
@@ -119,6 +120,16 @@ describe('formatShortPlayedOn', () => {
 
     it('reads 2026-10-01 as « 1 oct. 2026 »', () => {
         expect(formatShortPlayedOn('2026-10-01')).toBe('1 oct. 2026');
+    });
+});
+
+// Spec virtual-match « Pastilles des joueurs-rounds choisis » and « Carte
+// combinée »: « 18 nov. » under TZ=America/Montreal.
+// Mutations: date read through `new Date('2026-11-18')` (midnight UTC) →
+// « 17 nov. »; the uppercase of formatDayMonthShort kept → « 18 NOV. ».
+describe('formatDayMonth', () => {
+    it('reads 2026-11-18 as « 18 nov. »', () => {
+        expect(formatDayMonth('2026-11-18')).toBe('18 nov.');
     });
 });
 
