@@ -199,3 +199,74 @@ test('a player round without index comes after the ranked ones, without net nor 
         ['Sean', 95, null, null, null],
     ])->and($match['leaderboard'][2]['indexBeforeT'])->toBeNull();
 });
+
+test('a pick of a deleted round, of other tees or of a player absent from the round is ignored', function () {
+    [$gabRound, $manuRound] = threePlayersTwoDays();
+    $blue = virtualMatchRound('BETHPAGE BLACK', 'Blue', '2026-11-18', [[$this->gab, VIRTUAL_GAB_74, 10]]);
+    $deleted = virtualMatchRound('BETHPAGE BLACK', 'Red', '2026-11-10', [[$this->gab, VIRTUAL_GAB_74, 10]]);
+    $deletedId = $deleted->id;
+    $deleted->delete();
+
+    $match = app(VirtualMatch::class)->for('BETHPAGE BLACK', 'Red', [
+        new Pick($deletedId, $this->gab->id),
+        new Pick($blue->id, $this->gab->id),
+        new Pick($manuRound->id, $this->gab->id),
+        new Pick($manuRound->id, $this->manu->id),
+        new Pick($manuRound->id, $this->sean->id),
+    ]);
+
+    expect(virtualLeaderboard($match))->toBe([
+        ['Manu', 88, 23, 65, 1],
+        ['Sean', 84, 16, 68, 2],
+    ])->and(array_column($match['picks'], 'name'))->toBe(['Manu', 'Sean'])
+        ->and(array_column($match['candidates'], 'roundId'))->toBe([$manuRound->id, $manuRound->id, $gabRound->id]);
+});
+
+test('a second pick of the same player is ignored', function () {
+    [$gabRound, $manuRound] = threePlayersTwoDays();
+    $gabEarlier = virtualMatchRound('BETHPAGE BLACK', 'Red', '2026-11-02', [[$this->gab, strokesOverPar(10), 10]]);
+
+    $match = app(VirtualMatch::class)->for('BETHPAGE BLACK', 'Red', [
+        new Pick($gabRound->id, $this->gab->id),
+        new Pick($manuRound->id, $this->manu->id),
+        new Pick($gabEarlier->id, $this->gab->id),
+    ]);
+
+    expect(virtualLeaderboard($match))->toBe([
+        ['Manu', 88, 23, 65, 1],
+        ['Gab', 74, 2, 72, 2],
+    ])->and(array_column($match['picks'], 'playedOn'))->toBe(['2026-11-18', '2026-11-19']);
+});
+
+test('the course and tees are matched without case nor surrounding spaces', function () {
+    CourseRating::factory()->bethpageRed()->create();
+    $gabRound = virtualMatchRound('BETHPAGE BLACK', 'Red', '2026-11-18', [[$this->gab, VIRTUAL_GAB_74, 10]]);
+    $manuRound = virtualMatchRound(' Bethpage Black ', 'red ', '2026-11-19', [[$this->manu, VIRTUAL_MANU_88, 174]]);
+
+    $match = app(VirtualMatch::class)->for('BETHPAGE BLACK', 'Red', [
+        new Pick($gabRound->id, $this->gab->id),
+        new Pick($manuRound->id, $this->manu->id),
+    ]);
+
+    expect(virtualLeaderboard($match))->toBe([
+        ['Manu', 88, 23, 65, 1],
+        ['Gab', 74, 2, 72, 2],
+    ])->and(array_column($match['candidates'], 'name'))->toBe(['Manu', 'Gab']);
+});
+
+test('the holes of the card come from the latest round picked and say when they differ', function (int $manuPar1, array $expectedPars, bool $expectedDiffer) {
+    $gabRound = virtualMatchRound('BETHPAGE BLACK', 'Red', '2026-11-18', [[$this->gab, VIRTUAL_GAB_74, 10]]);
+    $manuRound = virtualMatchRound('BETHPAGE BLACK', 'Red', '2026-11-19', [[$this->manu, VIRTUAL_MANU_88, 174]], par1: $manuPar1);
+
+    $match = app(VirtualMatch::class)->for('BETHPAGE BLACK', 'Red', [
+        new Pick($gabRound->id, $this->gab->id),
+        new Pick($manuRound->id, $this->manu->id),
+    ]);
+
+    expect(array_column($match['holes'], 'par'))->toBe($expectedPars)
+        ->and(array_column($match['holes'], 'strokeIndex'))->toBe([8, 16, 18, 2, 4, 10, 6, 14, 12, 9, 11, 7, 3, 17, 1, 5, 13, 15])
+        ->and($match['holesDiffer'])->toBe($expectedDiffer);
+})->with([
+    'a par 5 on the hole 1 of the latest round' => [5, [5, 4, 3, 5, 4, 4, 5, 3, 4, 4, 4, 4, 5, 3, 4, 4, 3, 4], true],
+    'identical cards' => [4, [4, 4, 3, 5, 4, 4, 5, 3, 4, 4, 4, 4, 5, 3, 4, 4, 3, 4], false],
+]);
