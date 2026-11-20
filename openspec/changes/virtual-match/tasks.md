@@ -45,7 +45,7 @@
 
 ## 6. Front : textes et composants (design D7)
 
-- [ ] 6.1 RED puis GREEN : `resources/js/lib/virtual-match.test.ts` pour `winnerSummary()`, avec les cas suivants. Mutation nommée : le pluriel sans test d'égalité à 1 donne « 1 coups ».
+- [x] 6.1 RED puis GREEN : `resources/js/lib/virtual-match.test.ts` pour `winnerSummary()`, avec les cas suivants. Mutation nommée : le pluriel sans test d'égalité à 1 donne « 1 coups ».
 
   | Classement | Texte attendu |
   | --- | --- |
