@@ -18,7 +18,7 @@
 
 ## 4. Suggestion (`VirtualMatchSuggestion`, design D3)
 
-- [ ] 4.1 RED : `tests/Feature/Rounds/VirtualMatchSuggestionTest.php` couvre en littéraux les scénarios de la spec :
+- [x] 4.1 RED : `tests/Feature/Rounds/VirtualMatchSuggestionTest.php` couvre en littéraux les scénarios de la spec :
     - ami seul la veille ;
     - plusieurs joueurs, triés par date ;
     - round le plus proche (le 2026-11-21 plutôt que le 2026-11-14 pour un round du 2026-11-19), puis le plus récent à égalité d'écart (le 2026-11-21 plutôt que le 2026-11-17) ;
