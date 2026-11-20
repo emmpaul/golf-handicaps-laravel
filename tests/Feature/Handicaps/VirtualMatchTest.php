@@ -270,3 +270,34 @@ test('the holes of the card come from the latest round picked and say when they 
     'a par 5 on the hole 1 of the latest round' => [5, [5, 4, 3, 5, 4, 4, 5, 3, 4, 4, 4, 4, 5, 3, 4, 4, 3, 4], true],
     'identical cards' => [4, [4, 4, 3, 5, 4, 4, 5, 3, 4, 4, 4, 4, 5, 3, 4, 4, 3, 4], false],
 ]);
+
+test('five player rounds are all ranked in three queries, without one query per pick', function () {
+    CourseRating::factory()->bethpageRed()->create();
+    createPlayersOnTest('Alex', 'Max');
+    $gabRound = virtualMatchRound('BETHPAGE BLACK', 'Red', '2026-11-18', [[$this->gab, VIRTUAL_GAB_74, 10]]);
+    $manuRound = virtualMatchRound('BETHPAGE BLACK', 'Red', '2026-11-19', [[$this->manu, VIRTUAL_MANU_88, 174], [$this->sean, VIRTUAL_SEAN_84, 125]]);
+    $alexRound = virtualMatchRound('BETHPAGE BLACK', 'Red', '2026-11-12', [[$this->alex, strokesOverPar(10), 100]]);
+    $maxRound = virtualMatchRound('BETHPAGE BLACK', 'Red', '2026-11-05', [[$this->max, strokesOverPar(30), null]]);
+
+    DB::flushQueryLog();
+    DB::enableQueryLog();
+    $match = app(VirtualMatch::class)->for('BETHPAGE BLACK', 'Red', [
+        new Pick($gabRound->id, $this->gab->id),
+        new Pick($manuRound->id, $this->manu->id),
+        new Pick($manuRound->id, $this->sean->id),
+        new Pick($alexRound->id, $this->alex->id),
+        new Pick($maxRound->id, $this->max->id),
+    ]);
+    $queries = count(DB::getQueryLog());
+    DB::disableQueryLog();
+
+    // Alex at 10,0: 13 on 71,4 / 144, 81 − 13.
+    expect($queries)->toBe(3)
+        ->and(virtualLeaderboard($match))->toBe([
+            ['Manu', 88, 23, 65, 1],
+            ['Sean', 84, 16, 68, 2],
+            ['Alex', 81, 13, 68, 2],
+            ['Gab', 74, 2, 72, 4],
+            ['Max', 101, null, null, null],
+        ]);
+});
