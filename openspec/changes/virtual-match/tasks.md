@@ -31,7 +31,7 @@
 
 ## 5. Route et contrôleur (design D4, D6)
 
-- [ ] 5.1 RED : `tests/Feature/Rounds/RoundComparePageTest.php` couvre :
+- [x] 5.1 RED : `tests/Feature/Rounds/RoundComparePageTest.php` couvre :
     - sans session, `GET /rounds/compare` redirige vers `/login` sans nom dans la réponse ;
     - `/rounds/compare/xyz` répond 404 ;
     - sans paramètre, la page `rounds/compare` reçoit le premier parcours connu et aucun choix ;

@@ -310,6 +310,36 @@ describe('with a session', function () {
             ->where('round.par', 71));
     });
 
+    test('the page of a round suggests the players of its course and tees within 7 days', function () {
+        // Spec virtual-match, « Suggestion sur la page d'un round », « Ami seul la veille »;
+        // design D6. Mutation: the suggested players put before the players of the card in
+        // `picks`, or the card in the order of the names (Gab before Manu, Sean).
+        createPlayersOnTest('Sean');
+        $gabRound = storeRoundCard(referenceCardOn('2026-11-18', [[$this->gab->id, strokesOverPar(1)]]));
+        $round = storeRoundCard(referenceCardOn('2026-11-19', [
+            [$this->sean->id, strokesOverPar(13)],
+            [$this->manu->id, strokesOverPar(17)],
+        ]));
+
+        $this->get("/rounds/{$round->id}")->assertInertia(fn (Assert $page) => $page
+            ->where('virtualMatch', [
+                'suggested' => [['name' => 'Gab', 'colorSlot' => 0, 'playedOn' => '2026-11-18']],
+                'picks' => "{$round->id}.{$this->sean->id},{$round->id}.{$this->manu->id},{$gabRound->id}.{$this->gab->id}",
+            ]));
+    });
+
+    test('the page of a round without suggestion picks the players of its card', function () {
+        // Spec virtual-match, « Lien de comparaison sans suggestion »; design D6.
+        storeRoundCard(referenceCardOn('2026-10-09', [[$this->gab->id, strokesOverPar(1)]]));
+        $round = storeRoundCard(referenceCardData($this->gab->id, $this->manu->id));
+
+        $this->get("/rounds/{$round->id}")->assertInertia(fn (Assert $page) => $page
+            ->where('virtualMatch', [
+                'suggested' => [],
+                'picks' => "{$round->id}.{$this->gab->id},{$round->id}.{$this->manu->id}",
+            ]));
+    });
+
     test('the page of a round with a photo says so', function () {
         $round = storeRoundCard(referenceCardData($this->gab->id, $this->manu->id));
         $round->update(['photo_path' => 'rounds/img3064.webp']);
