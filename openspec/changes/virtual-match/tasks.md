@@ -41,7 +41,7 @@
     - une base sans round donne une liste de parcours vide.
 
   Dans `tests/Feature/Rounds/RoundPagesTest.php`, la prop `virtualMatch` porte les suggérés et `picks` (joueurs de la carte puis suggérés).
-- [ ] 5.2 GREEN : ajouter `CompareRoundsRequest`, `RoundController::compare`, la route nommée `rounds.compare` dans `routes/web.php` et la prop `virtualMatch` dans `RoundController::show`. Lancer `make wayfinder`. Les tests de 5.1 et `tests/Feature/ProtectedRoutesTest.php` passent, sans route ouverte de plus.
+- [x] 5.2 GREEN : ajouter `CompareRoundsRequest`, `RoundController::compare`, la route nommée `rounds.compare` dans `routes/web.php` et la prop `virtualMatch` dans `RoundController::show`. Lancer `make wayfinder`. Les tests de 5.1 et `tests/Feature/ProtectedRoutesTest.php` passent, sans route ouverte de plus.
 
 ## 6. Front : textes et composants (design D7)
 

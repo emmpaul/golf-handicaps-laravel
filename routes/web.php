@@ -58,11 +58,13 @@ Route::put('/imports/{import}/correction', ImportCorrectionController::class)
 Route::post('/imports/{import}/round', ImportRoundController::class)->whereUuid('import')->name('imports.round.store');
 Route::post('/imports/{import}/reading', ImportReadingController::class)->whereUuid('import')->name('imports.reading.store');
 
-// Rounds (design D8): /rounds/new before /rounds/{round}; a {round} that is not a UUID, such as
-// /rounds/12, falls to the 404 below without any query.
+// Rounds (design D8): /rounds/new and /rounds/compare (virtual-match, design D4) before
+// /rounds/{round}; a {round} that is not a UUID, such as /rounds/12 or /rounds/compare/xyz,
+// falls to the 404 below without any query.
 Route::controller(RoundController::class)->group(function () {
     Route::get('/rounds', 'index')->name('rounds.index');
     Route::get('/rounds/new', 'create')->name('rounds.create');
+    Route::get('/rounds/compare', 'compare')->name('rounds.compare');
     Route::post('/rounds', 'store')->name('rounds.store');
     Route::get('/rounds/{round}', 'show')->whereUuid('round')->name('rounds.show');
     Route::get('/rounds/{round}/edit', 'edit')->whereUuid('round')->name('rounds.edit');
