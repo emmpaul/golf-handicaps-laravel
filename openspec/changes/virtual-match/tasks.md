@@ -27,7 +27,7 @@
     - autres tees.
 
   Mutation nommée : `< 7` au lieu de `<= 7` rend rouge le cas du 2026-11-12.
-- [ ] 4.2 GREEN : écrire la Query (une requête, `distinct on (player_id)`). Les tests de 4.1 passent.
+- [x] 4.2 GREEN : écrire la Query (une requête, `distinct on (player_id)`). Les tests de 4.1 passent.
 
 ## 5. Route et contrôleur (design D4, D6)
 
