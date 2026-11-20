@@ -6,7 +6,7 @@
 
 ## 2. Rang de compétition (`NetRanking`, design D2)
 
-- [ ] 2.1 RED : dans `tests/Unit/Handicaps/NetRankingTest.php`, ajouter les cas de `NetRanking::competitionRanks()` : `[80, 70, 59, 70]` → `[4, 2, 1, 2]`, `[70, null, 70]` → `[1, null, 1]`, `[]` → `[]`. `make test-backend FILES=tests/Unit/Handicaps/NetRankingTest.php` échoue (la méthode n'existe pas). Mutation qui rend le premier cas rouge une fois en place : un rang dense (`[3, 2, 1, 2]`).
+- [x] 2.1 RED : dans `tests/Unit/Handicaps/NetRankingTest.php`, ajouter les cas de `NetRanking::competitionRanks()` : `[80, 70, 59, 70]` → `[4, 2, 1, 2]`, `[70, null, 70]` → `[1, null, 1]`, `[]` → `[]`. `make test-backend FILES=tests/Unit/Handicaps/NetRankingTest.php` échoue (la méthode n'existe pas). Mutation qui rend le premier cas rouge une fois en place : un rang dense (`[3, 2, 1, 2]`).
 - [ ] 2.2 GREEN puis REFACTOR : écrire `competitionRanks()` et faire calculer le rang de `rank()` par elle. Le test de 2.1 et les tests existants de `NetRanking` et de `RoundLeaderboard` passent sans modification.
 
 ## 3. Lecture de la partie virtuelle (`VirtualMatch`, design D3)
