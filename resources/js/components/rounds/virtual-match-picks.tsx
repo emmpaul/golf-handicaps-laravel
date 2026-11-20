@@ -72,7 +72,7 @@ export function VirtualMatchPicks({
                     >
                         <PlayerSwatch colorSlot={pick.colorSlot} size={8} />
                         <span className="text-link">{pick.name}</span>
-                        <span className="font-mono text-meta-12 text-ink-3">
+                        <span className="font-mono text-meta-12 text-ink-2">
                             {formatDayMonth(pick.playedOn)}
                         </span>
                     </button>
@@ -101,7 +101,7 @@ export function VirtualMatchPicks({
                                         <button
                                             type="button"
                                             disabled={taken}
-                                            className="flex h-13 w-full items-center gap-2.5 rounded-10 px-2.5 text-left outline-none hover:bg-surface-2 focus-visible:bg-surface-2 disabled:text-ink-4 disabled:hover:bg-transparent"
+                                            className="flex h-13 w-full items-center gap-2.5 rounded-10 px-2.5 text-left outline-none hover:bg-surface-2 focus-visible:bg-surface-2 disabled:text-ink-3 disabled:hover:bg-transparent"
                                             onClick={() => {
                                                 setOpen(false);
                                                 visit([...picks, candidate]);
