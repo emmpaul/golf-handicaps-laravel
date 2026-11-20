@@ -2,7 +2,7 @@
 
 ## 1. Préalables
 
-- [ ] 1.1 Relire proposal, design et les trois deltas. Dans `ROADMAP.md`, ajouter sous « Usage quotidien » l'entrée 25 `virtual-match` (dépend du classement net d'un round et des ratings, archivés ; statut « en cours » ; une phrase de résumé), et sous l'entrée 21 la ligne « Un tournoi pourrait accepter des rounds de jours différents, en partant de la partie virtuelle (25). ». Vérifier que l'entrée 25 s'affiche après la 24.
+- [x] 1.1 Relire proposal, design et les trois deltas. Dans `ROADMAP.md`, ajouter sous « Usage quotidien » l'entrée 25 `virtual-match` (dépend du classement net d'un round et des ratings, archivés ; statut « en cours » ; une phrase de résumé), et sous l'entrée 21 la ligne « Un tournoi pourrait accepter des rounds de jours différents, en partant de la partie virtuelle (25). ». Vérifier que l'entrée 25 s'affiche après la 24.
 
 ## 2. Rang de compétition (`NetRanking`, design D2)
 

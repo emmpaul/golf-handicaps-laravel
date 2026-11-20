@@ -59,6 +59,8 @@ Le groupe joue un tournoi par mois : tout le monde joue le même parcours le mê
 - le sort des ex æquo, que le classement net laisse aujourd'hui tous deux « 1ER » ;
 - le mois d'un tournoi joué en retard.
 
+Un tournoi pourrait accepter des rounds de jours différents, en partant de la partie virtuelle (25).
+
 ### 22. `course-page`
 
 **Dépend de** : 9 (archivée).
@@ -76,6 +78,12 @@ Une image de résumé d'un round ou d'un tournoi (parcours, classement net, gagn
 **Dépend de** : 20.
 
 Sur la page Handicaps, ce que le joueur peut travailler : aller contre retour, coups perdus selon l'index de trou, écarts de score d'un parcours à l'autre. Ne garder que ce qui reste lisible avec peu de rounds.
+
+### 25. `virtual-match`
+
+**Dépend de** : le classement net d'un round et les ratings (archivés). **Statut** : en cours.
+
+Une partie virtuelle réunit des rounds joués sur le même parcours et les mêmes tees à des jours différents, et dit qui aurait gagné en net, sans rien enregistrer ; la page d'un round suggère les joueurs qui ont joué ce parcours à 7 jours ou moins d'écart.
 
 ## Plus tard
 
