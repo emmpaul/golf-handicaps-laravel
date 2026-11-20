@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Http\Session\AnonymousDatabaseSessionHandler;
+use App\Integrations\Sentry\RetriedJobExceptions;
 use App\Support\QueryClock;
 use App\Support\WorkerHeartbeat;
 use Carbon\CarbonImmutable;
@@ -11,6 +12,7 @@ use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Queue\Events\JobFailed;
 use Illuminate\Queue\Events\JobProcessed;
+use Illuminate\Queue\Events\JobReleasedAfterException;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
@@ -19,6 +21,7 @@ use Illuminate\Support\Facades\Session;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
 use InvalidArgumentException;
+use Sentry\Dsn;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -28,6 +31,7 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->scoped(QueryClock::class);
+        $this->app->singleton(RetriedJobExceptions::class);
     }
 
     /**
@@ -38,8 +42,10 @@ class AppServiceProvider extends ServiceProvider
         $this->configureDefaults();
         $this->ensureAiConfiguration();
         $this->ensureSgtConfiguration();
+        $this->ensureSentryConfiguration();
         $this->configureSessionStorage();
         $this->configureWorkerHeartbeat();
+        $this->configureRetriedJobExceptions();
         $this->configureQueryClock();
     }
 
@@ -90,6 +96,28 @@ class AppServiceProvider extends ServiceProvider
     }
 
     /**
+     * Stop every process, web, worker and migrate alike, when SENTRY_LARAVEL_DSN is set and
+     * malformed (design D7 of error-alerts): left alone, the SDK drops the value and sends nothing
+     * without a word. An empty or absent value means no alerts. The message leaves the value out,
+     * as it can hold a key and goes to the container logs.
+     *
+     * @throws InvalidArgumentException naming the variable to fix
+     */
+    protected function ensureSentryConfiguration(): void
+    {
+        $dsn = config('sentry.dsn');
+        if ($dsn === null || $dsn === '') {
+            return;
+        }
+
+        try {
+            Dsn::createFromString((string) $dsn);
+        } catch (InvalidArgumentException) {
+            throw new InvalidArgumentException('SENTRY_LARAVEL_DSN n’est pas un DSN Sentry valide (attendu : https://<clé>@<hôte>/<projet>)');
+        }
+    }
+
+    /**
      * Write the worker heartbeat on each loop of queue:work and at the end of each job.
      */
     protected function configureWorkerHeartbeat(): void
@@ -110,6 +138,19 @@ class AppServiceProvider extends ServiceProvider
             config('session.lifetime'),
             $app,
         ));
+    }
+
+    /**
+     * Hold the exception of a job released for a retry: the worker reports it just after this
+     * event, and SentryEventFilter drops it (design D4 of error-alerts). The log keeps it.
+     */
+    protected function configureRetriedJobExceptions(): void
+    {
+        Event::listen(JobReleasedAfterException::class, function (JobReleasedAfterException $event): void {
+            if ($event->exception !== null) {
+                app(RetriedJobExceptions::class)->remember($event->exception);
+            }
+        });
     }
 
     /**

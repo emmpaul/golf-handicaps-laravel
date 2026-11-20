@@ -15,6 +15,7 @@ use Illuminate\Http\Request;
 use Illuminate\Session\Middleware\StartSession;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
 use Inertia\Inertia;
+use Sentry\Laravel\Integration;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -48,6 +49,9 @@ return Application::configure(basePath: dirname(__DIR__))
         );
     })
     ->withExceptions(function (Exceptions $exceptions): void {
+        // Every reported exception reaches Sentry; SentryEventFilter decides what leaves (design D1).
+        Integration::handles($exceptions);
+
         // A wrong passcode never comes back in the flashed old input.
         $exceptions->dontFlash('passcode');
 

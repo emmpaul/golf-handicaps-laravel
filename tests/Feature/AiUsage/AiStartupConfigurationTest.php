@@ -17,8 +17,18 @@
  * (skipped when running in console): `artisan about` boots with SGT_LOOKUP=yes. Spec
  * « Variable absente »: without SGT_LOOKUP the lookup is on. Mutation that turns that test red:
  * the default of golf.sgt.lookup at off.
+ *
+ * Error-alerts, design D7: a malformed SENTRY_LARAVEL_DSN stops every process the same way. The
+ * SDK does not: its OptionsResolver drops the value and goes on without a DSN, so these tests
+ * cover the whole boot. Mutations that turn these tests red:
+ * - remove the validation from AppServiceProvider: both processes boot with pas-un-dsn;
+ * - a message that starts with something else than the variable: the literal prefix is missing;
+ * - validate an empty value too: the empty DSN of the stack stops the boot;
+ * - skip the validation of a DSN read as a boolean (SENTRY_LARAVEL_DSN=false): artisan boots;
+ * - throw a plain RuntimeException: the test of the exception type fails.
  */
 
+use App\Providers\AppServiceProvider;
 use Illuminate\Container\Container;
 use Illuminate\Contracts\Console\Kernel as ConsoleKernel;
 use Illuminate\Contracts\Http\Kernel as HttpKernel;
@@ -188,3 +198,46 @@ test('without SGT_LOOKUP a fresh boot reads the lookup on', function () {
 
     expect($lookup)->toBe('on');
 });
+
+dataset('malformed Sentry DSN', [
+    'not a DSN' => ['pas-un-dsn'],
+    'scheme other than http or https' => ['ftp://public@sentry.invalid/1'],
+    'without public key' => ['https://sentry.invalid/1'],
+    'read as a boolean by env()' => ['false'],
+]);
+
+dataset('accepted Sentry DSN', [
+    'absent' => [null],
+    'empty' => [''],
+    'valid' => ['https://public@sentry.invalid/1'],
+]);
+
+test('a request does not boot with a malformed SENTRY_LARAVEL_DSN', function (string $dsn) {
+    expect(bootForRequest(['SENTRY_LARAVEL_DSN' => $dsn]))
+        ->toBeString()
+        ->toStartWith('SENTRY_LARAVEL_DSN n’est pas un DSN Sentry valide');
+})->with('malformed Sentry DSN');
+
+test('a malformed SENTRY_LARAVEL_DSN throws an InvalidArgumentException', function () {
+    config(['sentry.dsn' => 'pas-un-dsn']);
+
+    expect(fn () => app()->getProvider(AppServiceProvider::class)?->boot())
+        ->toThrow(InvalidArgumentException::class, 'SENTRY_LARAVEL_DSN n’est pas un DSN Sentry valide');
+});
+
+test('a request boots with an absent, empty or valid SENTRY_LARAVEL_DSN', function (?string $dsn) {
+    expect(bootForRequest(['SENTRY_LARAVEL_DSN' => $dsn]))->toBe(200);
+})->with('accepted Sentry DSN');
+
+test('artisan does not boot with a malformed SENTRY_LARAVEL_DSN', function (string $dsn) {
+    [$exitCode, $output] = artisanAbout(['SENTRY_LARAVEL_DSN' => $dsn]);
+
+    expect($exitCode)->not->toBe(0)
+        ->and($output)->toContain('SENTRY_LARAVEL_DSN n’est pas un DSN Sentry valide');
+})->with('malformed Sentry DSN');
+
+test('artisan boots with an absent, empty or valid SENTRY_LARAVEL_DSN', function (?string $dsn) {
+    [$exitCode] = artisanAbout(['SENTRY_LARAVEL_DSN' => $dsn ?? false]);
+
+    expect($exitCode)->toBe(0);
+})->with('accepted Sentry DSN');

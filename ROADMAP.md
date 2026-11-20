@@ -33,7 +33,7 @@ Réglée dans Dokploy, sans changement OpenSpec ni code : la base et le volume `
 
 ### 18. `error-alerts`
 
-Aucun outil de suivi d'erreurs n'est installé : une exception en production ou un job d'import en échec ne prévient personne. Envoyer une alerte au mainteneur pour ces deux cas. L'alerte ne contient ni nom de joueur ni score. Reste à choisir l'outil et le canal.
+Aucun outil de suivi d'erreurs n'est installé : une exception en production ou un job d'import en échec ne prévient personne. Envoyer une alerte au mainteneur pour ces deux cas. L'alerte ne contient ni nom de joueur ni score. L'outil est le plan gratuit de Sentry, le canal son alerte par courriel (ADR 0017).
 
 ### 19. `ai-reading-accuracy`
 

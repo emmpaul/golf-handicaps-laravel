@@ -31,6 +31,9 @@
         <!-- Course-rating-sgt, design D11: with the sync queue, each round of a test runs the lookup
              at once; off ends it without request. The lookup tests turn it on with Http::fake. -->
         <env name="SGT_LOOKUP" value="off" force="true"/>
+        <!-- Error-alerts: no test sends to Sentry, whatever the development .env says. The tests of the
+             alerts install their own client, with a dummy DSN and a transport that keeps the events. -->
+        <env name="SENTRY_LARAVEL_DSN" value="" force="true"/>
         <env name="APP_PASSCODE" value="birdie-2026"/>
         <env name="APP_MAINTENANCE_DRIVER" value="file"/>
         <env name="BCRYPT_ROUNDS" value="4"/>
