@@ -102,6 +102,26 @@ function threePlayersTwoDays(): array
 }
 
 /**
+ * Gab alone on 2026-11-18 with 74 from 1,0 on the par 71 of the reference card, then a round of
+ * these lines on 2026-11-19, its first hole a par $par1, on BETHPAGE BLACK / Red at 71,4 / 144
+ * when $rated, without a rating otherwise.
+ *
+ * @param  list<array{Player, list<int>, int|null}>  $lines  [player, strokes, index before]
+ * @return array{Round, Round} the round of Gab, then the other one
+ */
+function gabThenRound(bool $rated, array $lines, int $par1): array
+{
+    if ($rated) {
+        CourseRating::factory()->bethpageRed()->create();
+    }
+
+    return [
+        virtualMatchRound('BETHPAGE BLACK', 'Red', '2026-11-18', [[test()->gab, VIRTUAL_GAB_74, 10]]),
+        virtualMatchRound('BETHPAGE BLACK', 'Red', '2026-11-19', $lines, par1: $par1),
+    ];
+}
+
+/**
  * Each line of the leaderboard reduced to [name, gross, playing handicap, net, rank].
  *
  * @param  array<string, mixed>  $match
@@ -191,11 +211,7 @@ test('a new round of Gab since leaves his net of the virtual match unchanged', f
 });
 
 test('Manu has the same playing handicap and net as on the page of his round', function (bool $rated, int $par1, array $expected) {
-    if ($rated) {
-        CourseRating::factory()->bethpageRed()->create();
-    }
-    $gabRound = virtualMatchRound('BETHPAGE BLACK', 'Red', '2026-11-18', [[$this->gab, VIRTUAL_GAB_74, 10]]);
-    $manuRound = virtualMatchRound('BETHPAGE BLACK', 'Red', '2026-11-19', [[$this->manu, VIRTUAL_MANU_88, 174], [$this->sean, VIRTUAL_SEAN_84, 125]], par1: $par1);
+    [$gabRound, $manuRound] = gabThenRound($rated, [[$this->manu, VIRTUAL_MANU_88, 174], [$this->sean, VIRTUAL_SEAN_84, 125]], $par1);
 
     $virtual = array_find(bethpageRedMatch([
         [$gabRound, $this->gab],
@@ -213,12 +229,8 @@ test('Manu has the same playing handicap and net as on the page of his round', f
 ]);
 
 test('each line plays on the par of its own round, and without a rating on par × 10 and 113', function (bool $rated, array $expected) {
-    if ($rated) {
-        CourseRating::factory()->bethpageRed()->create();
-    }
     // Gab on the par 71 of the reference card, Manu on a par 72 with a par 5 on the hole 1.
-    $gabRound = virtualMatchRound('BETHPAGE BLACK', 'Red', '2026-11-18', [[$this->gab, VIRTUAL_GAB_74, 10]]);
-    $manuRound = virtualMatchRound('BETHPAGE BLACK', 'Red', '2026-11-19', [[$this->manu, VIRTUAL_MANU_88, 174]], par1: 5);
+    [$gabRound, $manuRound] = gabThenRound($rated, [[$this->manu, VIRTUAL_MANU_88, 174]], 5);
 
     $match = bethpageRedMatch([
         [$gabRound, $this->gab],
