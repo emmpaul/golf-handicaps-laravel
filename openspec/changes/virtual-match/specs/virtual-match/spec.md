@@ -275,7 +275,7 @@ Sans suggestion, la page d'un round SHALL afficher sous le classement net le lie
 
 #### Scenario: Pastilles
 - **WHEN** Gab, Manu et Sean sont choisis
-- **THEN** chaque pastille fait 44 px de haut, coins de 999 px, fond `oklch(0.2 0.006 260)`, nom en Geist 500, 14 px, date en Geist Mono 500, 12 px, `oklch(0.5 0.01 260)` ; « + Ajouter » a un contour en pointillés `oklch(0.27 0.008 260)` sans fond
+- **THEN** chaque pastille fait 44 px de haut, coins de 999 px, fond `oklch(0.2 0.006 260)`, nom en Geist 500, 14 px, date en Geist Mono 500, 12 px, `oklch(0.68 0.01 260)` ; « + Ajouter » a un contour en pointillés `oklch(0.27 0.008 260)` sans fond
 
 #### Scenario: Page à 320 px
 - **WHEN** l'utilisateur ouvre une partie virtuelle de quatre joueurs à 320 px
