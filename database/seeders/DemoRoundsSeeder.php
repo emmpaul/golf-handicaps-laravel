@@ -11,7 +11,8 @@ use Illuminate\Support\Facades\Storage;
 /**
  * The rounds of the demonstration base, written through CreateRound so that each one passes the
  * coherence checks: the reference round IMG_3064 with its photo, then 24 rounds generated on
- * three courses from 2026-04-01 to 2026-10-15. Faker is seeded: two runs write the same rounds.
+ * three courses from 2026-04-01 to 2026-10-15, then the two rounds of a virtual match. Faker is
+ * seeded: two runs write the same rounds.
  */
 class DemoRoundsSeeder extends DemoSeeder
 {
@@ -77,6 +78,31 @@ class DemoRoundsSeeder extends DemoSeeder
         'Manu' => [7, 5, 3, 7, 6, 5, 5, 3, 5, 3, 6, 5, 7, 4, 5, 4, 3, 5],
     ];
 
+    /**
+     * The virtual match of the demonstration (spec development-seed-data, « Partie virtuelle de
+     * démonstration »; design D8): Gab alone on PAYNES VALLEY / Blue, then Manu and Sean the next
+     * day, with fixed scores, after the reference round and more than 7 days after the latest
+     * generated round of these tees (2026-10-06). No hole above par + 2, so that Manu's capped
+     * hole stays the one of 2026-09-10.
+     *
+     * @var list<array{playedOn: string, lines: array<string, list<int>>}>
+     */
+    private const array VIRTUAL_MATCH_ROUNDS = [
+        [
+            'playedOn' => '2026-10-24',
+            'lines' => [
+                'Gab' => [4, 3, 5, 5, 3, 4, 5, 5, 4, 3, 4, 5, 5, 4, 4, 3, 5, 5],
+            ],
+        ],
+        [
+            'playedOn' => '2026-10-25',
+            'lines' => [
+                'Manu' => [5, 4, 5, 6, 4, 5, 5, 6, 5, 4, 5, 5, 6, 5, 5, 4, 5, 6],
+                'Sean' => [5, 3, 5, 6, 3, 5, 4, 6, 5, 3, 5, 4, 6, 5, 5, 4, 4, 6],
+            ],
+        ],
+    ];
+
     public function run(CreateRound $createRound): void
     {
         fake()->seed(2026);
@@ -115,6 +141,14 @@ class DemoRoundsSeeder extends DemoSeeder
         $path = "rounds/{$reference->id}.webp";
         $photos->put($path, (string) file_get_contents(database_path('data/img3064.webp')));
         $reference->update(['photo_path' => $path]);
+
+        foreach (self::VIRTUAL_MATCH_ROUNDS as $round) {
+            $createRound->handle($this->card(self::COURSES[1], $round['playedOn'], array_map(
+                fn (string $player, array $strokes): array => ['playerId' => $playerIds[$player], 'strokes' => $strokes],
+                array_keys($round['lines']),
+                array_values($round['lines']),
+            )));
+        }
     }
 
     /**

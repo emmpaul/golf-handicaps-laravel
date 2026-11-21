@@ -78,7 +78,7 @@
 ## 8. Démonstration (design D8)
 
 - [x] 8.1 RED : dans `tests/Feature/Seeders/DemoDatabaseSeederTest.php`, attendre les deux rounds « PAYNES VALLEY / Blue » du 2026-10-24 (Gab seul) et du 2026-10-25 (Manu et Sean) avec leurs bruts littéraux, la suggestion de Gab sur le second, et une partie virtuelle de trois joueurs classés. Réécrire à la main les littéraux que ces rounds changent : 27 rounds, dernier round, deux premières lignes de l'historique de Manu, `PlayerStandings`. Ne rien recalculer par le code testé. Le test échoue.
-- [ ] 8.2 GREEN : ajouter ces deux rounds à scores fixes dans `DemoRoundsSeeder`, après le round de référence. Le test de 8.1 passe, ainsi que le scénario « Jeu déterministe », qui lance le seeder deux fois.
+- [x] 8.2 GREEN : ajouter ces deux rounds à scores fixes dans `DemoRoundsSeeder`, après le round de référence. Le test de 8.1 passe, ainsi que le scénario « Jeu déterministe », qui lance le seeder deux fois.
 
 ## 9. Documentation
 
