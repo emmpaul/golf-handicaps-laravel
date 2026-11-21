@@ -61,7 +61,7 @@
 
 ## 7. Front : pages
 
-- [ ] 7.1 RED puis GREEN : `resources/js/tests/pages/rounds-compare.test.tsx` vérifie, avec des props littérales :
+- [x] 7.1 RED puis GREEN : `resources/js/tests/pages/rounds-compare.test.tsx` vérifie, avec des props littérales :
     - le lien de retour « Rounds » ;
     - la liste des parcours et la ligne de rating vers `/courses` ;
     - « Choisissez au moins 2 joueurs. » sans encadré ni bouton de carte quand moins de deux joueurs sont choisis ;
