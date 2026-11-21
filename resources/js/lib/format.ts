@@ -88,6 +88,11 @@ export function formatShortPlayedOn(playedOn: string): string {
     return shortPlayedOnFormat.format(isoToLocalDate(playedOn));
 }
 
+/** Date of play `2026-11-18` to « 18 nov. » (picks and combined card of a virtual match). */
+export function formatDayMonth(playedOn: string): string {
+    return dayMonthFormat.format(isoToLocalDate(playedOn));
+}
+
 /** Date of play `2026-10-17` to « 17 OCT. » (latest round of the home page, design). */
 export function formatDayMonthShort(playedOn: string): string {
     return dayMonthFormat.format(isoToLocalDate(playedOn)).toUpperCase();

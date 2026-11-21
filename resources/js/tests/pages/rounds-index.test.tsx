@@ -223,6 +223,23 @@ describe('Rounds page', () => {
         ).toBe('/rounds/new');
     });
 
+    // Spec rounds « Liens et état vide de la page Rounds » (MODIFIED by
+    // virtual-match): « Comparer » opens the virtual match, before « Saisie
+    // manuelle ». Mutations: the link dropped, or put after « Saisie
+    // manuelle » → red.
+    it('links « Comparer » to /rounds/compare before « Saisie manuelle »', () => {
+        render(<RoundsIndex rounds={[reference]} />);
+
+        const compare = screen.getByRole('link', { name: 'Comparer' });
+
+        expect(compare.getAttribute('href')).toBe('/rounds/compare');
+        expect(
+            compare.compareDocumentPosition(
+                screen.getByRole('link', { name: 'Saisie manuelle' }),
+            ) & Node.DOCUMENT_POSITION_FOLLOWING,
+        ).toBeTruthy();
+    });
+
     it('shows « Aucun round. Importez une carte pour commencer. » and « Saisie manuelle » without rounds', () => {
         render(<RoundsIndex rounds={[]} />);
 

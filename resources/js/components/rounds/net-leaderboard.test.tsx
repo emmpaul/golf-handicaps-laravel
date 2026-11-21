@@ -19,7 +19,9 @@ import { GAB, MANU, SEAN } from '@/tests/reference-round';
 // - the « 1ER » pill given to rank 2 → the rating test goes red;
 // - the gross line written with an ASCII « - » → the rating test goes red;
 // - the swatch of a player at the slot + 1 → the swatch test reads
-//   `bg-player-2` for Gab.
+//   `bg-player-2` for Gab;
+// - the date of the round dropped, or written « 19/11/2026 » → the date test
+//   goes red (spec virtual-match « Classement de la partie virtuelle »).
 
 const entry = (
     playerId: string,
@@ -181,5 +183,30 @@ describe('NetLeaderboard', () => {
             .querySelector('[aria-hidden="true"]');
 
         expect(swatch).toHaveClass('bg-player-1', 'size-2.5');
+    });
+
+    it('shows the date of the round under « 88 − 23 » when given', () => {
+        render(
+            <NetLeaderboard
+                entries={[
+                    {
+                        ...entry(MANU, 'Manu', 1, {
+                            gross: 88,
+                            playingHandicap: 23,
+                            net: 65,
+                            rank: 1,
+                        }),
+                        playedOn: '2026-11-19',
+                    },
+                ]}
+            />,
+        );
+
+        const gross = screen
+            .getByRole('listitem')
+            .querySelector('[data-slot="leaderboard-gross"]');
+
+        expect(gross).toHaveTextContent(/^88 − 23$/);
+        expect(gross?.nextElementSibling).toHaveTextContent(/^19 nov\. 2026$/);
     });
 });

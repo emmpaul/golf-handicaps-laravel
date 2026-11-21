@@ -21,22 +21,41 @@ final class NetRanking
             $entries,
         );
 
-        $nets = [];
-        foreach ($entries as $i => $entry) {
-            $nets[$i] = $handicaps[$i] === null ? null : $entry->gross - $handicaps[$i];
-        }
-        $ranked = array_values(array_filter($nets, fn (?int $net): bool => $net !== null));
+        $nets = array_map(
+            fn (NetEntry $entry, ?int $handicap): ?int => $handicap === null ? null : $entry->gross - $handicap,
+            $entries,
+            $handicaps,
+        );
+        $ranks = self::competitionRanks($nets);
 
         return array_map(
-            fn (NetEntry $entry, ?int $handicap, ?int $net): RankedNet => new RankedNet(
+            fn (NetEntry $entry, ?int $handicap, ?int $net, ?int $rank): RankedNet => new RankedNet(
                 gross: $entry->gross,
                 indexBeforeT: $entry->indexBeforeT,
                 playingHandicap: $handicap,
                 net: $net,
-                rank: $net === null ? null : 1 + count(array_filter($ranked, fn (int $other): bool => $other < $net)),
+                rank: $rank,
             ),
             $entries,
             $handicaps,
+            $nets,
+            $ranks,
+        );
+    }
+
+    /**
+     * The competition rank of each net: a null net is not ranked, equal nets share the rank and
+     * the next rank skips the shared places (80, 70, 59, 70 → 4, 2, 1, 2).
+     *
+     * @param  list<?int>  $nets
+     * @return list<?int> in the order of the nets
+     */
+    public static function competitionRanks(array $nets): array
+    {
+        $ranked = array_values(array_filter($nets, fn (?int $net): bool => $net !== null));
+
+        return array_map(
+            fn (?int $net): ?int => $net === null ? null : 1 + count(array_filter($ranked, fn (int $other): bool => $other < $net)),
             $nets,
         );
     }

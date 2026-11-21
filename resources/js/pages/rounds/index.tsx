@@ -1,5 +1,9 @@
 import { Head, Link } from '@inertiajs/react';
-import { create, show } from '@/actions/App/Http/Controllers/RoundController';
+import {
+    compare,
+    create,
+    show,
+} from '@/actions/App/Http/Controllers/RoundController';
 import { PageTopRow } from '@/components/page-top-row';
 import { PlayerSwatch } from '@/components/player-swatch';
 import { formatPlayedOn, NO_VALUE, playedOnParts } from '@/lib/format';
@@ -22,6 +26,8 @@ export type RoundListItem = {
  * avec les bruts dans l'ordre de la carte et le ou les gagnants nets (spec
  * `rounds`, « Liste des rounds », « Mise en page de la page Rounds ») : une
  * ligne par round en trois colonnes, date, parcours et bruts, « 1ER NET ».
+ * À droite du titre, « Comparer » ouvre la partie virtuelle (spec
+ * `virtual-match`) et « Saisie manuelle » l'éditeur.
  */
 export default function RoundsIndex({ rounds }: { rounds: RoundListItem[] }) {
     return (
@@ -32,9 +38,14 @@ export default function RoundsIndex({ rounds }: { rounds: RoundListItem[] }) {
             />
             <div className="flex items-end justify-between gap-3">
                 <h1 className="text-title">Rounds</h1>
-                <Link href={create()} className={TITLE_LINK}>
-                    Saisie manuelle
-                </Link>
+                <div className="flex gap-4">
+                    <Link href={compare()} className={TITLE_LINK}>
+                        Comparer
+                    </Link>
+                    <Link href={create()} className={TITLE_LINK}>
+                        Saisie manuelle
+                    </Link>
+                </div>
             </div>
             <div className="mt-3 border-t border-rule" />
             {rounds.length === 0 ? (

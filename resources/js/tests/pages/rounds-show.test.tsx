@@ -2,7 +2,7 @@ import { render, screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vite-plus/test';
 
 import RoundsShow from '@/pages/rounds/show';
-import type { RoundDetail } from '@/pages/rounds/show';
+import type { RoundDetail, RoundVirtualMatch } from '@/pages/rounds/show';
 import {
     GAB,
     GAB_STROKES,
@@ -10,7 +10,11 @@ import {
     MANU,
     MANU_STROKES,
     ROUND,
+    SEAN,
 } from '@/tests/reference-round';
+import { cardRow } from '@/tests/scorecard-rows';
+
+const SEAN_ROUND = '0190a6b2-7c3e-7000-8000-0000000000b1';
 
 // Spec rounds « En-tête d'un round », « Rating affichée sur le round »,
 // « Carte de score d'un round », « Mise en page de la page d'un round »,
@@ -31,7 +35,9 @@ import {
 // - ALLER summed over holes 1 to 8 → the card test reads 33 and goes red;
 // - the photo put above the legend → the photo test goes red;
 // - ComputationLink removed → the link test goes red;
-// - « Modifier » left at the foot of the page → the top row test goes red.
+// - « Modifier » left at the foot of the page → the top row test goes red;
+// - the suggestion put under the card, or the props of virtualMatch not
+//   passed to it → the suggestion tests go red.
 
 vi.mock('@inertiajs/react', async (importOriginal) => ({
     ...(await importOriginal<typeof import('@inertiajs/react')>()),
@@ -87,27 +93,28 @@ const round: RoundDetail = {
     },
 };
 
+/** The virtual match of the page without suggestion (design D6): the players of the card. */
+const noSuggestion: RoundVirtualMatch = {
+    suggested: [],
+    picks: `${ROUND}.${GAB},${ROUND}.${MANU}`,
+};
+
+const withSean: RoundVirtualMatch = {
+    suggested: [{ name: 'Sean', colorSlot: 2, playedOn: '2026-10-18' }],
+    picks: `${ROUND}.${GAB},${ROUND}.${MANU},${SEAN_ROUND}.${SEAN}`,
+};
+
 const unrated: RoundDetail = {
     ...round,
     rating: { rated: false, ratingT: 710, slope: 113 },
 };
-
-/** The texts of the row headed `header` of the card, header first. */
-function cardRow(header: string): string[] {
-    const table = screen.getByRole('table', { name: 'Carte de score' });
-    const row = within(table)
-        .getByRole('rowheader', { name: header })
-        .closest('tr') as HTMLElement;
-
-    return [...row.children].map((cell) => cell.textContent ?? '');
-}
 
 const topRow = () =>
     document.querySelector('[data-slot="page-top-row"]') as HTMLElement;
 
 describe('Round page', () => {
     it('titles the page with the course and joins the meta by « · »', () => {
-        render(<RoundsShow round={unrated} />);
+        render(<RoundsShow round={unrated} virtualMatch={noSuggestion} />);
 
         expect(screen.getByRole('heading', { level: 1 }).textContent).toBe(
             'BETHPAGE BLACK',
@@ -118,7 +125,7 @@ describe('Round page', () => {
     });
 
     it('links « SANS RATING » to /courses without rating', () => {
-        render(<RoundsShow round={unrated} />);
+        render(<RoundsShow round={unrated} virtualMatch={noSuggestion} />);
 
         const rating = within(screen.getByTestId('round-meta')).getByRole(
             'link',
@@ -129,7 +136,7 @@ describe('Round page', () => {
     });
 
     it('ends the meta with « 71,4 / 144 », a link to /courses', () => {
-        render(<RoundsShow round={round} />);
+        render(<RoundsShow round={round} virtualMatch={noSuggestion} />);
 
         const rating = within(screen.getByTestId('round-meta')).getByRole(
             'link',
@@ -143,7 +150,7 @@ describe('Round page', () => {
     });
 
     it('ranks the leaderboard by net under « Classement net » and « Brut − hcp »', () => {
-        render(<RoundsShow round={round} />);
+        render(<RoundsShow round={round} virtualMatch={noSuggestion} />);
 
         const leaderboard = screen.getByRole('list', {
             name: 'Classement net',
@@ -162,7 +169,7 @@ describe('Round page', () => {
     });
 
     it('shows a row per hole, then ALLER, RETOUR and TOTAL with the sums of each player', () => {
-        render(<RoundsShow round={round} />);
+        render(<RoundsShow round={round} virtualMatch={noSuggestion} />);
 
         const table = screen.getByRole('table', { name: 'Carte de score' });
 
@@ -229,7 +236,7 @@ describe('Round page', () => {
     // Mutations: `min-w-8` back on the score cells → red; the frame without
     // `overflow-x-auto` → red; the header without `truncate` → red.
     it('keeps the score columns at 44 px at least, the card scrolling in its own frame', () => {
-        render(<RoundsShow round={round} />);
+        render(<RoundsShow round={round} virtualMatch={noSuggestion} />);
 
         const table = screen.getByRole('table', { name: 'Carte de score' });
         const frame = table.parentElement as HTMLElement;
@@ -245,7 +252,7 @@ describe('Round page', () => {
     });
 
     it('marks Gab’s 4 at hole 7 (par 5) birdie and his 5 at hole 1 bogey', () => {
-        render(<RoundsShow round={round} />);
+        render(<RoundsShow round={round} virtualMatch={noSuggestion} />);
 
         const mark = (hole: string) =>
             within(
@@ -264,7 +271,7 @@ describe('Round page', () => {
     });
 
     it('shows the legend under the card', () => {
-        render(<RoundsShow round={round} />);
+        render(<RoundsShow round={round} virtualMatch={noSuggestion} />);
 
         const legend = screen.getByRole('list', { name: 'Légende' });
 
@@ -282,7 +289,7 @@ describe('Round page', () => {
     });
 
     it('shows no « Carte du round » image without a photo', () => {
-        render(<RoundsShow round={round} />);
+        render(<RoundsShow round={round} virtualMatch={noSuggestion} />);
 
         expect(
             screen.queryByRole('img', { name: 'Carte du round' }),
@@ -290,7 +297,12 @@ describe('Round page', () => {
     });
 
     it('shows the photo « Carte du round » under the legend, linked to itself', () => {
-        render(<RoundsShow round={{ ...round, hasPhoto: true }} />);
+        render(
+            <RoundsShow
+                round={{ ...round, hasPhoto: true }}
+                virtualMatch={noSuggestion}
+            />,
+        );
 
         const photo = screen.getByRole('img', { name: 'Carte du round' });
 
@@ -311,7 +323,7 @@ describe('Round page', () => {
     // computation page, none of the rule lines on the page. Mutations: the
     // former folded block kept, or the link sent to /handicaps → red.
     it('links « Comment l’index est calculé » to /handicaps/calcul, without the rule lines', () => {
-        render(<RoundsShow round={round} />);
+        render(<RoundsShow round={round} virtualMatch={noSuggestion} />);
 
         expect(
             screen
@@ -331,7 +343,7 @@ describe('Round page', () => {
     });
 
     it('puts the back link « Rounds », « Modifier » and « Supprimer » in the top row', () => {
-        render(<RoundsShow round={round} />);
+        render(<RoundsShow round={round} virtualMatch={noSuggestion} />);
 
         expect(
             within(topRow())
@@ -346,5 +358,59 @@ describe('Round page', () => {
         expect(
             within(topRow()).getByRole('button', { name: 'Supprimer' }),
         ).toBeInTheDocument();
+    });
+
+    // Spec virtual-match « Suggestion sur la page d'un round », « Lien de
+    // comparaison sans suggestion » and rounds « Mise en page de la page d'un
+    // round » (MODIFIED): the box or the link comes between the leaderboard
+    // and the card. Its texts: virtual-match-suggestion.test.tsx.
+    it('puts the suggestion of Sean between the leaderboard and the card, linked to the virtual match', () => {
+        render(<RoundsShow round={round} virtualMatch={withSean} />);
+
+        const box = screen.getByRole('complementary', {
+            name: 'Partie virtuelle',
+        });
+        const follows = (a: Node, b: Node) =>
+            (a.compareDocumentPosition(b) &
+                Node.DOCUMENT_POSITION_FOLLOWING) !==
+            0;
+
+        expect(box).toHaveTextContent('Sean (18 oct.) a joué ce parcours.');
+        expect(
+            within(box)
+                .getByRole('link', { name: 'Voir la partie virtuelle' })
+                .getAttribute('href'),
+        ).toBe(
+            `/rounds/compare?course=BETHPAGE+BLACK&tees=Red&picks=${ROUND}.${GAB}%2C${ROUND}.${MANU}%2C${SEAN_ROUND}.${SEAN}`,
+        );
+        expect(
+            follows(screen.getByRole('list', { name: 'Classement net' }), box),
+        ).toBe(true);
+        expect(
+            follows(box, screen.getByRole('table', { name: 'Carte de score' })),
+        ).toBe(true);
+    });
+
+    it('puts « Comparer avec d’autres rounds » between the leaderboard and the card without suggestion', () => {
+        render(<RoundsShow round={round} virtualMatch={noSuggestion} />);
+
+        const link = screen.getByRole('link', {
+            name: "Comparer avec d'autres rounds",
+        });
+
+        expect(link.getAttribute('href')).toBe(
+            `/rounds/compare?course=BETHPAGE+BLACK&tees=Red&picks=${ROUND}.${GAB}%2C${ROUND}.${MANU}`,
+        );
+        expect(
+            screen
+                .getByRole('list', { name: 'Classement net' })
+                .compareDocumentPosition(link) &
+                Node.DOCUMENT_POSITION_FOLLOWING,
+        ).toBeTruthy();
+        expect(
+            link.compareDocumentPosition(
+                screen.getByRole('table', { name: 'Carte de score' }),
+            ) & Node.DOCUMENT_POSITION_FOLLOWING,
+        ).toBeTruthy();
     });
 });

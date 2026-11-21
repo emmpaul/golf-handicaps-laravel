@@ -7,7 +7,6 @@ use App\Domain\Handicaps\NetRanking;
 use App\Domain\Handicaps\RankedNet;
 use App\Domain\Handicaps\RatedCourse;
 use App\Models\CourseRating;
-use App\Models\Player;
 use App\Models\Round;
 use App\Models\RoundPlayer;
 
@@ -30,11 +29,7 @@ final class RoundLeaderboard
         $rating ??= $this->rating($round);
 
         $lines = RoundPlayer::query()
-            ->join('players', 'players.id', '=', 'round_players.player_id')
-            ->joinSub(Player::colorSlots(), 'player_slots', 'player_slots.id', '=', 'round_players.player_id')
-            ->join('player_round_stats', fn ($join) => $join
-                ->on('player_round_stats.round_id', '=', 'round_players.round_id')
-                ->on('player_round_stats.player_id', '=', 'round_players.player_id'))
+            ->withPlayerStats()
             ->where('round_players.round_id', $round->id)
             ->orderBy('round_players.position')
             ->toBase()

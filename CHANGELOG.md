@@ -4,6 +4,16 @@ All notable changes to this application, version by version. The format follows 
 
 ## [Unreleased]
 
+### Added
+
+- Virtual match page (`/rounds/compare`): pick player rounds of one course and tees played on different days and see who would have won on net, without saving anything.
+- Round page: suggests players who played the same course and tees within 7 days, with a link to the virtual match.
+- Demo data: a solo round and a two-player round the next day on PAYNES VALLEY / Blue.
+
+### Changed
+
+- Rounds page: a « Comparer » link next to « Saisie manuelle ».
+
 ## [0.4.0] - 2026-10-31
 
 ### Added

@@ -55,3 +55,19 @@ test('after two tied at the 2nd rank, the next player is 4th', function () {
     expect(array_map(fn (RankedNet $entry): array => [$entry->net, $entry->rank], $ranked))
         ->toBe([[80, 4], [70, 2], [59, 1], [70, 2]]);
 });
+
+/*
+ * competitionRanks() (design D2 of virtual-match). Mutation that turns the first case red: a
+ * dense rank ([3, 2, 1, 2]).
+ */
+test('competition ranks of the nets 80, 70, 59, 70 are 4, 2, 1, 2', function () {
+    expect(NetRanking::competitionRanks([80, 70, 59, 70]))->toBe([4, 2, 1, 2]);
+});
+
+test('a null net is not ranked and equal nets share the rank', function () {
+    expect(NetRanking::competitionRanks([70, null, 70]))->toBe([1, null, 1]);
+});
+
+test('no net gives no rank', function () {
+    expect(NetRanking::competitionRanks([]))->toBe([]);
+});

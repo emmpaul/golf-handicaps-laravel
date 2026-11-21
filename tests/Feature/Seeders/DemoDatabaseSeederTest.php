@@ -22,14 +22,20 @@
  * - the capped hole of DemoRoundsSeeder left out, or written on another round or hole: Manu has
  *   no capped hole, or not hole 2 of PAYNES VALLEY on 2026-09-10 at 8 for a par 3;
  * - the capped hole written by changing the strokes drawn for Manu (another value of OVER_PAR)
- *   instead of overriding one hole after the draw: the signatures of the first five rounds move.
+ *   instead of overriding one hole after the draw: the signatures of the first five rounds move;
+ * - the round of Gab on PAYNES VALLEY / Blue written on 2026-10-17 instead of 2026-10-24: it is
+ *   more than 7 days before the round of Manu and Sean, and the suggestion is empty;
+ * - one hole of a virtual match round changed: its gross differs from the literal signatures.
  */
 
 use App\Domain\Courses\Queries\CourseOverview;
+use App\Domain\Handicaps\Pick;
 use App\Domain\Handicaps\Queries\PlayerIndexComputation;
 use App\Domain\Handicaps\Queries\PlayerStandings;
+use App\Domain\Handicaps\Queries\VirtualMatch;
 use App\Domain\Imports\Queries\PendingImports;
 use App\Domain\Rounds\Queries\RoundList;
+use App\Domain\Rounds\Queries\VirtualMatchSuggestion;
 use App\Domain\Rounds\RoundCard;
 use App\Domain\Rounds\RoundCardChecks;
 use App\Models\CourseRating;
@@ -90,11 +96,11 @@ function demoRoundCards(): array
 }
 
 const DEMO_FIRST_FIVE = [
+    '2026-10-25 PAYNES VALLEY / Blue : Manu 90, Sean 84',
+    '2026-10-24 PAYNES VALLEY / Blue : Gab 76',
     '2026-10-17 BETHPAGE BLACK / Red : Gab 72, Manu 88',
     '2026-10-15 CALA NOVA / White : Manu 95, Gab 75, Sean 89',
     '2026-10-06 PAYNES VALLEY / Blue : Manu 99, Gab 71',
-    '2026-09-27 BETHPAGE BLACK / Red : Gab 70, Sean 88, Manu 94',
-    '2026-09-19 CALA NOVA / White : Gab 76, Manu 96',
 ];
 
 beforeEach(function () {
@@ -107,11 +113,12 @@ test('the demonstration base has the development players, the reference round wi
     $this->seed(DemoDatabaseSeeder::class);
 
     expect(playersWithAliases())->toBe(['Gab' => ['GAB'], 'Manu' => ['MANU'], 'Sean' => ['SEAN']])
-        ->and(Round::query()->count())->toBe(25)
+        ->and(Round::query()->count())->toBe(27)
         ->and(Round::query()->selectRaw("course_name || ' / ' || tees as course")->distinct()->orderBy('course')->pluck('course')->all())
         ->toBe(['BETHPAGE BLACK / Red', 'CALA NOVA / White', 'PAYNES VALLEY / Blue'])
         ->and(Round::query()->min('played_on'))->toBe('2026-04-01')
-        ->and(Round::query()->where('played_on', '<', '2026-10-17')->max('played_on'))->toBe('2026-10-15');
+        ->and(Round::query()->where('played_on', '<', '2026-10-17')->max('played_on'))->toBe('2026-10-15')
+        ->and(Round::query()->max('played_on'))->toBe('2026-10-25');
 
     $reference = Round::query()->whereDate('played_on', '2026-10-17')->sole();
     expect($reference->photo_path)->toBe("rounds/{$reference->id}.webp")
@@ -123,6 +130,36 @@ test('the demonstration base has the development players, the reference round wi
     foreach (Round::query()->get() as $round) {
         expect(RoundCardChecks::problems(RoundCard::fromRound($round)))->toBe([], "round of {$round->played_on->toDateString()}");
     }
+});
+
+// development-seed-data, « Partie virtuelle de démonstration »: Gab alone on PAYNES VALLEY / Blue
+// on 2026-10-24, Manu and Sean the next day, no other round of these tees within 7 days.
+test('the demonstration has a virtual match on PAYNES VALLEY / Blue suggested on the round of Manu and Sean', function () {
+    $this->seed(DemoDatabaseSeeder::class);
+
+    $paynesValley = fn (string $playedOn): Round => Round::query()
+        ->where('course_name', 'PAYNES VALLEY')->where('tees', 'Blue')->whereDate('played_on', $playedOn)->sole();
+    $solo = $paynesValley('2026-10-24');
+    $pair = $paynesValley('2026-10-25');
+
+    expect(Round::query()->where('course_name', 'PAYNES VALLEY')->where('tees', 'Blue')
+        ->whereBetween('played_on', ['2026-10-17', '2026-11-01'])->count())->toBe(2)
+        ->and($solo->scores()->where('player_id', Player::query()->where('name', 'Gab')->sole()->id)->orderBy('hole')->pluck('strokes')->all())
+        ->toBe([4, 3, 5, 5, 3, 4, 5, 5, 4, 3, 4, 5, 5, 4, 4, 3, 5, 5]);
+
+    $suggestions = app(VirtualMatchSuggestion::class)->for($pair);
+    expect(array_map(fn (array $suggestion): array => [$suggestion['name'], $suggestion['roundId'], $suggestion['playedOn']], $suggestions))
+        ->toBe([['Gab', $solo->id, '2026-10-24']]);
+
+    $picks = [
+        ...$pair->lines()->orderBy('position')->get()->map(fn (RoundPlayer $line): Pick => new Pick($pair->id, $line->player_id))->all(),
+        new Pick($solo->id, $suggestions[0]['playerId']),
+    ];
+    $leaderboard = app(VirtualMatch::class)->for('PAYNES VALLEY', 'Blue', $picks)['leaderboard'];
+
+    expect(collect($leaderboard)->pluck('name')->sort()->values()->all())->toBe(['Gab', 'Manu', 'Sean'])
+        ->and(collect($leaderboard)->pluck('gross', 'name')->sortKeys()->all())->toBe(['Gab' => 76, 'Manu' => 90, 'Sean' => 84])
+        ->and(collect($leaderboard)->pluck('rank')->filter(fn (?int $rank): bool => $rank !== null)->count())->toBe(3);
 });
 
 test('two runs on an emptied base write the same rounds', function () {
@@ -207,7 +244,7 @@ test('the demonstration fills the home, the strokes page and the imports to chec
     $latest = app(RoundList::class)->get(1);
     expect($latest)->toHaveCount(1)
         ->and([$latest[0]['playedOn'], $latest[0]['courseName'], $latest[0]['tees']])
-        ->toBe(['2026-10-17', 'BETHPAGE BLACK', 'Red']);
+        ->toBe(['2026-10-25', 'PAYNES VALLEY', 'Blue']);
 
     $courses = collect(app(CourseOverview::class)->get())
         ->map(fn (array $course): array => [$course['courseName'], $course['tees'], $course['ratingT'], $course['slope']])
@@ -220,9 +257,9 @@ test('the demonstration fills the home, the strokes page and the imports to chec
 });
 
 // The page « Calcul de l'index » (index-computation-page, task 7.1) has a full example in the
-// demonstration: Manu's latest round is on the confirmed rating of BETHPAGE BLACK / Red, the one
-// before on CALA NOVA without rating, and his 2026-09-10 round on PAYNES VALLEY has 8 on the par 3
-// of hole 2, capped at 7.
+// demonstration: Manu's latest round is on PAYNES VALLEY without confirmed rating (the virtual
+// match round), the one before on the confirmed rating of BETHPAGE BLACK / Red, and his
+// 2026-09-10 round on PAYNES VALLEY has 8 on the par 3 of hole 2, capped at 7.
 test('the demonstration gives Manu a capped hole, a round without rating and a round on a confirmed rating among his 20 latest rounds', function () {
     $this->seed(DemoDatabaseSeeder::class);
 
@@ -235,8 +272,8 @@ test('the demonstration gives Manu a capped hole, a round without rating and a r
             fn (array $round): array => [$round['playedOn'], $round['courseName'], $round['ratingT'], $round['slope']],
             $computation['rounds'],
         ), 0, 2))->toBe([
+            ['2026-10-25', 'PAYNES VALLEY', null, null],
             ['2026-10-17', 'BETHPAGE BLACK', 714, 144],
-            ['2026-10-15', 'CALA NOVA', null, null],
         ])
         ->and([$round('2026-09-10')['courseName'], $round('2026-09-10')['gross'], $round('2026-09-10')['adjusted']])
         ->toBe(['PAYNES VALLEY', 93, 92]);
