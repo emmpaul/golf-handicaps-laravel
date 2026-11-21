@@ -271,7 +271,7 @@ Sans suggestion, la page d'un round SHALL afficher sous le classement net le lie
 
 #### Scenario: Encadré du gagnant
 - **WHEN** Manu aurait gagné
-- **THEN** l'encadré a le fond `oklch(0.17 0.006 260)` et des coins de 16 px, « AURAIT GAGNÉ » en Geist Mono 500, 12 px, gris, la pastille de 10 px à la couleur de Manu et « Manu » en Geist 600, 48 px, puis l'écart en Geist Mono 500, 15 px, gris
+- **THEN** l'encadré a le fond `oklch(0.17 0.006 260)` et des coins de 14 px, « AURAIT GAGNÉ » en Geist Mono 500, 12 px, gris, la pastille de 10 px à la couleur de Manu et « Manu » en Geist Mono 500, 48 px, puis l'écart en Geist Mono 500, 15 px, gris
 
 #### Scenario: Pastilles
 - **WHEN** Gab, Manu et Sean sont choisis
