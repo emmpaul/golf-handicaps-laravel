@@ -14,6 +14,7 @@ import {
 import RoundsCompare from '@/pages/rounds/compare';
 import type { VirtualMatchPage } from '@/pages/rounds/compare';
 import { GAB, HOLES, MANU, MANU_STROKES, SEAN } from '@/tests/reference-round';
+import { cardRow } from '@/tests/scorecard-rows';
 
 // Spec virtual-match « Choix du parcours de la partie virtuelle », « Au moins
 // deux joueurs », « Classement de la partie virtuelle », « Encadré du
@@ -142,16 +143,6 @@ afterEach(() => {
 
 const topRow = () =>
     document.querySelector('[data-slot="page-top-row"]') as HTMLElement;
-
-/** The texts of the row headed `header` of the combined card, header first. */
-function cardRow(header: string): string[] {
-    const table = screen.getByRole('table', { name: 'Carte de score' });
-    const row = within(table)
-        .getByRole('rowheader', { name: header })
-        .closest('tr') as HTMLElement;
-
-    return [...row.children].map((cell) => cell.textContent ?? '');
-}
 
 describe('Virtual match page', () => {
     it('puts the back link « Rounds » to /rounds in the top row, then « Partie virtuelle »', () => {

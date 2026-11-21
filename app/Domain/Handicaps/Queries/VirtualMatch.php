@@ -7,7 +7,6 @@ use App\Domain\Handicaps\Pick;
 use App\Domain\Handicaps\RatedCourse;
 use App\Domain\Handicaps\Whs;
 use App\Models\CourseRating;
-use App\Models\Player;
 use App\Models\RoundHole;
 use App\Models\RoundPlayer;
 use Illuminate\Database\Query\Builder;
@@ -91,11 +90,7 @@ final class VirtualMatch
     {
         return array_values(RoundPlayer::query()
             ->join('rounds', 'rounds.id', '=', 'round_players.round_id')
-            ->join('players', 'players.id', '=', 'round_players.player_id')
-            ->joinSub(Player::colorSlots(), 'player_slots', 'player_slots.id', '=', 'round_players.player_id')
-            ->join('player_round_stats', fn ($join) => $join
-                ->on('player_round_stats.round_id', '=', 'round_players.round_id')
-                ->on('player_round_stats.player_id', '=', 'round_players.player_id'))
+            ->withPlayerStats()
             ->whereRaw('lower(trim(rounds.course_name)) = lower(trim(?))', [$courseName])
             ->whereRaw('lower(trim(rounds.tees)) = lower(trim(?))', [$tees])
             ->orderByDesc('rounds.played_on')

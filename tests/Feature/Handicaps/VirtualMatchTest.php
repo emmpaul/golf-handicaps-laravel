@@ -39,6 +39,9 @@ const VIRTUAL_MANU_88 = [5, 5, 4, 6, 5, 5, 6, 4, 5, 5, 5, 5, 6, 4, 5, 5, 4, 4];
 /** Sean's 84: 13 over par on the first thirteen holes. */
 const VIRTUAL_SEAN_84 = [5, 5, 4, 6, 5, 5, 6, 4, 5, 5, 5, 5, 6, 3, 4, 4, 3, 4];
 
+/** Manu « 88 − 23 », 65 net, before Gab « 74 − 2 », 72 net (scenario « Trois joueurs, deux jours »). */
+const MANU_65_GAB_72 = [['Manu', 88, 23, 65, 1], ['Gab', 74, 2, 72, 2]];
+
 /**
  * A round built by the factories on the holes of the reference card, its first hole a par
  * $par1, saved at $savedAt: one line per player in this order, with its strokes and its index
@@ -105,6 +108,20 @@ function virtualLeaderboard(array $match): array
     );
 }
 
+/**
+ * The virtual match of BETHPAGE BLACK / Red for these picks, in this order.
+ *
+ * @param  list<array{Round, Player}>  $picks  [round, player]
+ * @return array<string, mixed>
+ */
+function bethpageRedMatch(array $picks): array
+{
+    return app(VirtualMatch::class)->for('BETHPAGE BLACK', 'Red', array_map(
+        fn (array $pick): Pick => new Pick($pick[0]->id, $pick[1]->id),
+        $picks,
+    ));
+}
+
 beforeEach(function () {
     createPlayersOnTest('Gab', 'Manu', 'Sean');
 });
@@ -112,10 +129,10 @@ beforeEach(function () {
 test('three players of two days are ranked on the index just before their own round', function () {
     [$gabRound, $manuRound] = threePlayersTwoDays();
 
-    $match = app(VirtualMatch::class)->for('BETHPAGE BLACK', 'Red', [
-        new Pick($gabRound->id, $this->gab->id),
-        new Pick($manuRound->id, $this->manu->id),
-        new Pick($manuRound->id, $this->sean->id),
+    $match = bethpageRedMatch([
+        [$gabRound, $this->gab],
+        [$manuRound, $this->manu],
+        [$manuRound, $this->sean],
     ]);
 
     expect($match['courseName'])->toBe('BETHPAGE BLACK')
@@ -158,15 +175,12 @@ test('a new round of Gab since leaves his net of the virtual match unchanged', f
     $since = virtualMatchRound('PAYNES VALLEY', 'Blue', '2026-11-25', [[$this->gab, strokesOverPar(10), 10]]);
     PlayerRoundStat::query()->where('round_id', $since->id)->update(['index_after_t' => 50]);
 
-    $match = app(VirtualMatch::class)->for('BETHPAGE BLACK', 'Red', [
-        new Pick($gabRound->id, $this->gab->id),
-        new Pick($manuRound->id, $this->manu->id),
+    $match = bethpageRedMatch([
+        [$gabRound, $this->gab],
+        [$manuRound, $this->manu],
     ]);
 
-    expect(virtualLeaderboard($match))->toBe([
-        ['Manu', 88, 23, 65, 1],
-        ['Gab', 74, 2, 72, 2],
-    ]);
+    expect(virtualLeaderboard($match))->toBe(MANU_65_GAB_72);
 });
 
 test('tied nets of different days share the rank in the order of the picks', function (string $first, array $expected) {
@@ -187,10 +201,10 @@ test('a player round without index comes after the ranked ones, without net nor 
     [$gabRound, $manuRound] = threePlayersTwoDays();
     $seanFirst = virtualMatchRound('BETHPAGE BLACK', 'Red', '2026-11-17', [[$this->sean, strokesOverPar(24), null]]);
 
-    $match = app(VirtualMatch::class)->for('BETHPAGE BLACK', 'Red', [
-        new Pick($seanFirst->id, $this->sean->id),
-        new Pick($gabRound->id, $this->gab->id),
-        new Pick($manuRound->id, $this->manu->id),
+    $match = bethpageRedMatch([
+        [$seanFirst, $this->sean],
+        [$gabRound, $this->gab],
+        [$manuRound, $this->manu],
     ]);
 
     expect(virtualLeaderboard($match))->toBe([
@@ -226,16 +240,13 @@ test('a second pick of the same player is ignored', function () {
     [$gabRound, $manuRound] = threePlayersTwoDays();
     $gabEarlier = virtualMatchRound('BETHPAGE BLACK', 'Red', '2026-11-02', [[$this->gab, strokesOverPar(10), 10]]);
 
-    $match = app(VirtualMatch::class)->for('BETHPAGE BLACK', 'Red', [
-        new Pick($gabRound->id, $this->gab->id),
-        new Pick($manuRound->id, $this->manu->id),
-        new Pick($gabEarlier->id, $this->gab->id),
+    $match = bethpageRedMatch([
+        [$gabRound, $this->gab],
+        [$manuRound, $this->manu],
+        [$gabEarlier, $this->gab],
     ]);
 
-    expect(virtualLeaderboard($match))->toBe([
-        ['Manu', 88, 23, 65, 1],
-        ['Gab', 74, 2, 72, 2],
-    ])->and(array_column($match['picks'], 'playedOn'))->toBe(['2026-11-18', '2026-11-19']);
+    expect(virtualLeaderboard($match))->toBe(MANU_65_GAB_72)->and(array_column($match['picks'], 'playedOn'))->toBe(['2026-11-18', '2026-11-19']);
 });
 
 test('the course and tees are matched without case nor surrounding spaces', function () {
@@ -243,24 +254,21 @@ test('the course and tees are matched without case nor surrounding spaces', func
     $gabRound = virtualMatchRound('BETHPAGE BLACK', 'Red', '2026-11-18', [[$this->gab, VIRTUAL_GAB_74, 10]]);
     $manuRound = virtualMatchRound(' Bethpage Black ', 'red ', '2026-11-19', [[$this->manu, VIRTUAL_MANU_88, 174]]);
 
-    $match = app(VirtualMatch::class)->for('BETHPAGE BLACK', 'Red', [
-        new Pick($gabRound->id, $this->gab->id),
-        new Pick($manuRound->id, $this->manu->id),
+    $match = bethpageRedMatch([
+        [$gabRound, $this->gab],
+        [$manuRound, $this->manu],
     ]);
 
-    expect(virtualLeaderboard($match))->toBe([
-        ['Manu', 88, 23, 65, 1],
-        ['Gab', 74, 2, 72, 2],
-    ])->and(array_column($match['candidates'], 'name'))->toBe(['Manu', 'Gab']);
+    expect(virtualLeaderboard($match))->toBe(MANU_65_GAB_72)->and(array_column($match['candidates'], 'name'))->toBe(['Manu', 'Gab']);
 });
 
 test('the holes of the card come from the latest round picked and say when they differ', function (int $manuPar1, array $expectedPars, bool $expectedDiffer) {
     $gabRound = virtualMatchRound('BETHPAGE BLACK', 'Red', '2026-11-18', [[$this->gab, VIRTUAL_GAB_74, 10]]);
     $manuRound = virtualMatchRound('BETHPAGE BLACK', 'Red', '2026-11-19', [[$this->manu, VIRTUAL_MANU_88, 174]], par1: $manuPar1);
 
-    $match = app(VirtualMatch::class)->for('BETHPAGE BLACK', 'Red', [
-        new Pick($gabRound->id, $this->gab->id),
-        new Pick($manuRound->id, $this->manu->id),
+    $match = bethpageRedMatch([
+        [$gabRound, $this->gab],
+        [$manuRound, $this->manu],
     ]);
 
     expect(array_column($match['holes'], 'par'))->toBe($expectedPars)
@@ -281,12 +289,12 @@ test('five player rounds are all ranked in three queries, without one query per 
 
     DB::flushQueryLog();
     DB::enableQueryLog();
-    $match = app(VirtualMatch::class)->for('BETHPAGE BLACK', 'Red', [
-        new Pick($gabRound->id, $this->gab->id),
-        new Pick($manuRound->id, $this->manu->id),
-        new Pick($manuRound->id, $this->sean->id),
-        new Pick($alexRound->id, $this->alex->id),
-        new Pick($maxRound->id, $this->max->id),
+    $match = bethpageRedMatch([
+        [$gabRound, $this->gab],
+        [$manuRound, $this->manu],
+        [$manuRound, $this->sean],
+        [$alexRound, $this->alex],
+        [$maxRound, $this->max],
     ]);
     $queries = count(DB::getQueryLog());
     DB::disableQueryLog();

@@ -95,7 +95,7 @@
 
 ## 10. Vérification
 
-- [ ] 10.1 `make format`, `make lint`, `make test-backend`, `make test-frontend`, puis `make check` passent. Après un échec, lire `reports/check/<étape>.log` et corriger sans affaiblir de règle.
+- [x] 10.1 `make format`, `make lint`, `make test-backend`, `make test-frontend`, puis `make check` passent. Après un échec, lire `reports/check/<étape>.log` et corriger sans affaiblir de règle.
 - [ ] 10.2 Passe navigateur : `make up`, `make demo`, `make dev`, `make browser`, puis le skill `browser-use` sur `http://localhost`, à 390 et 320 px. Vérifier :
     - le round PAYNES VALLEY du 2026-10-25 et son encadré de suggestion de Gab ;
     - le lien vers la partie virtuelle à trois et l'encadré du gagnant ;

@@ -1,15 +1,9 @@
-import { Link } from '@inertiajs/react';
 import { useState } from 'react';
-import { index as coursesIndex } from '@/actions/App/Http/Controllers/CourseController';
+import { CoursePicker } from '@/components/course-picker';
 import { PlayerSwatch } from '@/components/player-swatch';
-import { courseLabel } from '@/components/round-editor/form-state';
 import { SegmentedControl } from '@/components/strokes/segmented-control';
 import { StrokeHoleGrid } from '@/components/strokes/stroke-hole-grid';
 import { Checkbox } from '@/components/ui/checkbox';
-import {
-    NativeSelect,
-    NativeSelectOption,
-} from '@/components/ui/native-select';
 import { formatTenths, NO_INDEX } from '@/lib/format';
 import { allocateStrokes, matchStrokes, type StrokeMode } from '@/lib/strokes';
 import { cn } from '@/lib/utils';
@@ -146,48 +140,12 @@ export function StrokesPlanner({
                     );
                 })}
             </fieldset>
-            {course === undefined ? (
-                <>
-                    <p className={cn(SECTION, 'mt-6')}>Parcours</p>
-                    <p className="text-body text-ink-2">
-                        Aucun parcours : enregistrez d'abord un round.
-                    </p>
-                </>
-            ) : (
-                <>
-                    <label
-                        htmlFor="course"
-                        className={cn(SECTION, 'mt-6 block')}
-                    >
-                        Parcours
-                    </label>
-                    <NativeSelect
-                        id="course"
-                        className="w-full"
-                        value={courseIndex}
-                        onChange={(event) =>
-                            setCourseIndex(Number(event.currentTarget.value))
-                        }
-                    >
-                        {courses.map((known, i) => (
-                            <NativeSelectOption
-                                key={courseLabel(known)}
-                                value={i}
-                            >
-                                {courseLabel(known)}
-                            </NativeSelectOption>
-                        ))}
-                    </NativeSelect>
-                    {/* Rating of the chosen course, a link to the Courses page. */}
-                    <Link
-                        href={coursesIndex()}
-                        data-testid="course-rating"
-                        className="mt-2 flex min-h-8 w-fit items-center font-mono text-meta-12 text-ink-2 underline underline-offset-3"
-                    >
-                        {ratingText(course)}
-                    </Link>
-                </>
-            )}
+            <CoursePicker
+                courses={courses}
+                value={courseIndex}
+                onChange={setCourseIndex}
+                rating={course === undefined ? '' : ratingText(course)}
+            />
             <p className={cn(SECTION, 'mt-4')}>Mode</p>
             <SegmentedControl
                 name="mode"

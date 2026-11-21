@@ -12,6 +12,7 @@ import {
     ROUND,
     SEAN,
 } from '@/tests/reference-round';
+import { cardRow } from '@/tests/scorecard-rows';
 
 const SEAN_ROUND = '0190a6b2-7c3e-7000-8000-0000000000b1';
 
@@ -107,16 +108,6 @@ const unrated: RoundDetail = {
     ...round,
     rating: { rated: false, ratingT: 710, slope: 113 },
 };
-
-/** The texts of the row headed `header` of the card, header first. */
-function cardRow(header: string): string[] {
-    const table = screen.getByRole('table', { name: 'Carte de score' });
-    const row = within(table)
-        .getByRole('rowheader', { name: header })
-        .closest('tr') as HTMLElement;
-
-    return [...row.children].map((cell) => cell.textContent ?? '');
-}
 
 const topRow = () =>
     document.querySelector('[data-slot="page-top-row"]') as HTMLElement;
