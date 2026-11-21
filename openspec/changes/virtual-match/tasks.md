@@ -87,7 +87,7 @@
     - dans « Lectures », une ligne sur `VirtualMatch` (net par joueur-round sur le par de son round, `competitionRanks()`, choix dans l'adresse, aucune écriture).
 
   `grep -n "VirtualMatch" ARCHITECTURE.md` montre les deux lignes.
-- [ ] 9.2 `CHANGELOG.md`, sous `## [Unreleased]` :
+- [x] 9.2 `CHANGELOG.md`, sous `## [Unreleased]` :
     - `### Added` : « Virtual match page (`/rounds/compare`): pick player rounds of one course and tees played on different days and see who would have won on net, without saving anything. »
     - `### Added` : « Round page: suggests players who played the same course and tees within 7 days, with a link to the virtual match. »
     - `### Added` : « Demo data: a solo round and a two-player round the next day on PAYNES VALLEY / Blue. »
