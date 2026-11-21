@@ -73,7 +73,7 @@
     - « Aucun parcours : enregistrez d'abord un round. ».
 
   Écrire `resources/js/pages/rounds/compare.tsx` avec les tokens seulement.
-- [ ] 7.2 RED puis GREEN : dans `resources/js/tests/pages/rounds-index.test.tsx`, le lien « Comparer » vers `/rounds/compare` précède « Saisie manuelle », et aucun lien « Parcours » n'apparaît. Dans `rounds-show.test.tsx`, l'encadré de suggestion ou le lien de comparaison se place entre le classement et la carte. Modifier `rounds/index.tsx` et `rounds/show.tsx`.
+- [x] 7.2 RED puis GREEN : dans `resources/js/tests/pages/rounds-index.test.tsx`, le lien « Comparer » vers `/rounds/compare` précède « Saisie manuelle », et aucun lien « Parcours » n'apparaît. Dans `rounds-show.test.tsx`, l'encadré de suggestion ou le lien de comparaison se place entre le classement et la carte. Modifier `rounds/index.tsx` et `rounds/show.tsx`.
 
 ## 8. Démonstration (design D8)
 

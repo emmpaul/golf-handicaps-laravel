@@ -12,6 +12,8 @@ import { NetLeaderboard } from '@/components/rounds/net-leaderboard';
 import type { LeaderboardEntry } from '@/components/rounds/net-leaderboard';
 import { RoundScorecard } from '@/components/rounds/round-scorecard';
 import type { SavedCard } from '@/components/rounds/round-scorecard';
+import { VirtualMatchSuggestion } from '@/components/rounds/virtual-match-suggestion';
+import type { SuggestedPlayer } from '@/components/rounds/virtual-match-suggestion';
 import { formatDottedPlayedOn, formatTenths } from '@/lib/format';
 
 export type RoundDetail = {
@@ -27,14 +29,29 @@ export type RoundDetail = {
     card: SavedCard;
 };
 
+/** The suggestion of a virtual match, as RoundController::show sends it (design D6). */
+export type RoundVirtualMatch = {
+    suggested: SuggestedPlayer[];
+    /** The players of the card in order, then the suggested ones: « roundUuid.playerUuid,… ». */
+    picks: string;
+};
+
 /**
  * Page d'un round (spec `rounds`, « Mise en page de la page d'un round ») :
  * rangée du haut (retour « Rounds », « Modifier », « Supprimer »), nom du
  * parcours, méta « RED · 17.10.2026 · PAR 71 · 71,4 / 144 » dont la rating
- * mène à la page Parcours, classement net, carte de score et légende, puis la
+ * mène à la page Parcours, classement net, l'encadré de suggestion de partie
+ * virtuelle ou le lien « Comparer avec d'autres rounds » (spec
+ * `virtual-match`), carte de score et légende, puis la
  * photo et « Comment l’index est calculé », que le design ne dessine pas.
  */
-export default function RoundsShow({ round }: { round: RoundDetail }) {
+export default function RoundsShow({
+    round,
+    virtualMatch,
+}: {
+    round: RoundDetail;
+    virtualMatch: RoundVirtualMatch;
+}) {
     const photo = RoundPhotoController.url(round.id);
 
     return (
@@ -76,6 +93,14 @@ export default function RoundsShow({ round }: { round: RoundDetail }) {
             </p>
             <div className="mt-[30px]">
                 <NetLeaderboard entries={round.leaderboard} />
+            </div>
+            <div className="mt-6">
+                <VirtualMatchSuggestion
+                    courseName={round.courseName}
+                    tees={round.tees}
+                    suggested={virtualMatch.suggested}
+                    picks={virtualMatch.picks}
+                />
             </div>
             <div className="mt-11">
                 <RoundScorecard card={round.card} />
