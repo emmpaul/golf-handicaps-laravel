@@ -7,6 +7,8 @@
  * - `< 7` instead of `<= 7` days: Gab's round of 2026-11-12 is not suggested;
  * - the latest round kept instead of the closest: Gab reads 2026-11-26 instead of 2026-11-21;
  * - the earliest round kept at an equal gap: Gab reads 2026-11-17 instead of 2026-11-21;
+ * - the date of saving left out of the tie-break: of two rounds of Gab on 2026-11-18, the one
+ *   saved first, of the greater id, is kept;
  * - the players of the card not left out: Sean of 2026-11-18 is suggested;
  * - the tees compared without lower(trim()), or left out: Gab on « Blue » is suggested, or Gab
  *   on « red » is not;
@@ -89,6 +91,27 @@ test('at an equal gap the latest round is kept', function () {
     suggestionRound('2026-11-21', [$this->gab]);
 
     expect(suggested($round))->toBe([['Gab', '2026-11-21']]);
+});
+
+test('at an equal gap and on the same date the round saved last is kept', function () {
+    $round = suggestionRound('2026-11-19', [$this->manu]);
+    // The round saved last holds the smaller id, so that the id alone would keep the other one.
+    $savedLast = Round::factory()->withPlayers($this->gab)->create([
+        'id' => '00000000-0000-4000-8000-000000000001',
+        'course_name' => 'BETHPAGE BLACK',
+        'tees' => 'Red',
+        'played_on' => '2026-11-18',
+        'created_at' => '2026-11-18 21:00:00',
+    ]);
+    Round::factory()->withPlayers($this->gab)->create([
+        'id' => 'ffffffff-ffff-4fff-bfff-ffffffffffff',
+        'course_name' => 'BETHPAGE BLACK',
+        'tees' => 'Red',
+        'played_on' => '2026-11-18',
+        'created_at' => '2026-11-18 09:00:00',
+    ]);
+
+    expect(array_column(app(VirtualMatchSuggestion::class)->for($round), 'roundId'))->toBe([$savedLast->id]);
 });
 
 test('a round 8 days away is out of the window', function () {
