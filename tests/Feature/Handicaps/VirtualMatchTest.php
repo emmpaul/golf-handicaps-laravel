@@ -14,6 +14,10 @@
  *   comes after him;
  * - the lines without index ranked in the order of the picks: Sean, picked first, comes first;
  * - the holes of the oldest round picked instead of the latest: the hole 1 reads par 4;
+ * - the par of the latest round picked for every line: Gab on the par 71 reads « 74 − 1 »
+ *   instead of « 74 − 2 »;
+ * - no rating read as 0 instead of par × 10: Manu without a rating reads a negative handicap
+ *   instead of 17;
  * - the tees compared without lower(trim()): the round on « Bethpage Black / red » is left out;
  * - the scores read per pick (one query per player-round): 7 queries instead of 3.
  */
@@ -182,6 +186,27 @@ test('a new round of Gab since leaves his net of the virtual match unchanged', f
 
     expect(virtualLeaderboard($match))->toBe(MANU_65_GAB_72);
 });
+
+test('each line plays on the par of its own round, and without a rating on par × 10 and 113', function (bool $rated, array $expected) {
+    if ($rated) {
+        CourseRating::factory()->bethpageRed()->create();
+    }
+    // Gab on the par 71 of the reference card, Manu on a par 72 with a par 5 on the hole 1.
+    $gabRound = virtualMatchRound('BETHPAGE BLACK', 'Red', '2026-11-18', [[$this->gab, VIRTUAL_GAB_74, 10]]);
+    $manuRound = virtualMatchRound('BETHPAGE BLACK', 'Red', '2026-11-19', [[$this->manu, VIRTUAL_MANU_88, 174]], par1: 5);
+
+    $match = bethpageRedMatch([
+        [$gabRound, $this->gab],
+        [$manuRound, $this->manu],
+    ]);
+
+    expect(virtualLeaderboard($match))->toBe($expected);
+})->with([
+    // Manu 17,4 × 144 / 113 + 71,4 − 72 = 21,57: 22; Gab 1,0 × 144 / 113 + 71,4 − 71 = 1,67: 2.
+    'rated 71,4 / 144' => [true, [['Manu', 88, 22, 66, 1], ['Gab', 74, 2, 72, 2]]],
+    // Manu 17,4 + 72 − 72: 17; Gab 1,0 + 71 − 71: 1.
+    'without a rating' => [false, [['Manu', 88, 17, 71, 1], ['Gab', 74, 1, 73, 2]]],
+]);
 
 test('tied nets of different days share the rank in the order of the picks', function (string $first, array $expected) {
     CourseRating::factory()->bethpageRed()->create();
