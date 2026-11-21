@@ -26,8 +26,8 @@ import { cardRow } from '@/tests/scorecard-rows';
 // usePage is simulated for the top row, router.get is stubbed.
 // Mutations:
 // - the back link sent to `/` → the top row test goes red;
-// - the rating line written « 71,4 / 144 » or not linked to /courses → the
-//   course test goes red;
+// - the rating line written « 71,4 / 144 », not linked to /courses or under
+//   44 px high (min-h-8) → the course test goes red;
 // - the leaderboard or the card button kept with one pick → the one pick test
 //   goes red;
 // - the winner box below the pills → the winner test goes red;
@@ -177,6 +177,8 @@ describe('Virtual match page', () => {
         });
 
         expect(rating.getAttribute('href')).toBe('/courses');
+        // DESIGN.md: touch targets of 44 px at least.
+        expect(rating).toHaveClass('min-h-11');
     });
 
     it('reads « sans rating (slope 113) » without a rating', () => {

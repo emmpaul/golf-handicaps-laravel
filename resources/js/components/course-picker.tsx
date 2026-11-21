@@ -64,7 +64,7 @@ export function CoursePicker({
             <Link
                 href={coursesIndex()}
                 data-testid="course-rating"
-                className="mt-2 flex min-h-8 w-fit items-center font-mono text-meta-12 text-ink-2 underline underline-offset-3"
+                className="mt-0.5 flex min-h-11 w-fit items-center font-mono text-meta-12 text-ink-2 underline underline-offset-3"
             >
                 {rating}
             </Link>
