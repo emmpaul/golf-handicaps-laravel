@@ -82,7 +82,7 @@
 
 ## 9. Documentation
 
-- [ ] 9.1 `ARCHITECTURE.md` :
+- [x] 9.1 `ARCHITECTURE.md` :
     - dans « Joueurs et rounds », ajouter `VirtualMatchSuggestion` aux Queries de `Rounds` ;
     - dans « Lectures », une ligne sur `VirtualMatch` (net par joueur-round sur le par de son round, `competitionRanks()`, choix dans l'adresse, aucune écriture).
 
