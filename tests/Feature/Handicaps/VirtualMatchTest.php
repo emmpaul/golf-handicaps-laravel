@@ -2,9 +2,9 @@
 
 /*
  * Spec virtual-match, « Joueurs-rounds d'un parcours », « Un seul round par joueur », « Choix
- * gardé dans l'adresse », « Net d'un joueur-round », « Classement de la partie virtuelle »,
- * « Joueur sans index dans la partie virtuelle », « Pars et index de la carte combinée »; design
- * D2, D3.
+ * gardé dans l'adresse », « Net d'un joueur-round », « Même net que la page du round »,
+ * « Classement de la partie virtuelle », « Joueur sans index dans la partie virtuelle », « Pars et
+ * index de la carte combinée »; design D2, D3.
  *
  * Mutations that turn these tests red:
  * - the index of the latest round of the player (index_after_t) instead of index_before_t: after
@@ -16,6 +16,8 @@
  * - the holes of the oldest round picked instead of the latest: the hole 1 reads par 4;
  * - the par of the latest round picked for every line: Gab on the par 71 reads « 74 − 1 »
  *   instead of « 74 − 2 »;
+ * - the fallback of RoundLeaderboard without a rating changed and not followed here (or the
+ *   other way round): Manu reads two different handicaps on the two pages;
  * - no rating read as 0 instead of par × 10: Manu without a rating reads a negative handicap
  *   instead of 17;
  * - the tees compared without lower(trim()): the round on « Bethpage Black / red » is left out;
@@ -23,6 +25,7 @@
  */
 
 use App\Domain\Handicaps\Pick;
+use App\Domain\Handicaps\Queries\RoundLeaderboard;
 use App\Domain\Handicaps\Queries\VirtualMatch;
 use App\Models\CourseRating;
 use App\Models\Player;
@@ -186,6 +189,28 @@ test('a new round of Gab since leaves his net of the virtual match unchanged', f
 
     expect(virtualLeaderboard($match))->toBe(MANU_65_GAB_72);
 });
+
+test('Manu has the same playing handicap and net as on the page of his round', function (bool $rated, int $par1, array $expected) {
+    if ($rated) {
+        CourseRating::factory()->bethpageRed()->create();
+    }
+    $gabRound = virtualMatchRound('BETHPAGE BLACK', 'Red', '2026-11-18', [[$this->gab, VIRTUAL_GAB_74, 10]]);
+    $manuRound = virtualMatchRound('BETHPAGE BLACK', 'Red', '2026-11-19', [[$this->manu, VIRTUAL_MANU_88, 174], [$this->sean, VIRTUAL_SEAN_84, 125]], par1: $par1);
+
+    $virtual = array_find(bethpageRedMatch([
+        [$gabRound, $this->gab],
+        [$manuRound, $this->manu],
+    ])['leaderboard'], fn (array $line): bool => $line['name'] === 'Manu');
+    $roundPage = array_find(app(RoundLeaderboard::class)->for($manuRound), fn (array $line): bool => $line['name'] === 'Manu');
+
+    expect([$virtual['playingHandicap'], $virtual['net']])->toBe($expected)
+        ->and([$roundPage['playingHandicap'], $roundPage['net']])->toBe($expected);
+})->with([
+    // Scenario « Même net que la page du round »: « 88 − 23 », 65 net on both pages.
+    'rated 71,4 / 144, par 71' => [true, 4, [23, 65]],
+    // Without a rating, on its par 72: 17,4 + 72 − 72, « 88 − 17 », 71 net on both pages.
+    'without a rating, par 72' => [false, 5, [17, 71]],
+]);
 
 test('each line plays on the par of its own round, and without a rating on par × 10 and 113', function (bool $rated, array $expected) {
     if ($rated) {
