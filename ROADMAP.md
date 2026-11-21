@@ -81,7 +81,7 @@ Sur la page Handicaps, ce que le joueur peut travailler : aller contre retour, c
 
 ### 25. `virtual-match`
 
-**Dépend de** : le classement net d'un round et les ratings (archivés). **Statut** : en cours.
+**Dépend de** : le classement net d'un round et les ratings (archivés). **Statut** : implémenté le 2026-11-21, `make check` vert, passe navigateur sur la démonstration et sur une copie de la production ; restent la relecture des captures de `reports/captures/virtual-match/` et l'archivage.
 
 Une partie virtuelle réunit des rounds joués sur le même parcours et les mêmes tees à des jours différents, et dit qui aurait gagné en net, sans rien enregistrer ; la page d'un round suggère les joueurs qui ont joué ce parcours à 7 jours ou moins d'écart.
 

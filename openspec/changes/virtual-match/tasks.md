@@ -96,7 +96,7 @@
 ## 10. Vérification
 
 - [x] 10.1 `make format`, `make lint`, `make test-backend`, `make test-frontend`, puis `make check` passent. Après un échec, lire `reports/check/<étape>.log` et corriger sans affaiblir de règle.
-- [ ] 10.2 Passe navigateur : `make up`, `make demo`, `make dev`, `make browser`, puis le skill `browser-use` sur `http://localhost`, à 390 et 320 px. Vérifier :
+- [x] 10.2 Passe navigateur : `make up`, `make demo`, `make dev`, `make browser`, puis le skill `browser-use` sur `http://localhost`, à 390 et 320 px. Vérifier :
     - le round PAYNES VALLEY du 2026-10-25 et son encadré de suggestion de Gab ;
     - le lien vers la partie virtuelle à trois et l'encadré du gagnant ;
     - le retrait et l'ajout d'une pastille, avec l'adresse mise à jour ;
@@ -105,7 +105,7 @@
     - aucun défilement horizontal de la page.
 
   Lire la console, ranger les captures dans `reports/captures/virtual-match/` et finir par `make dev-stop`.
-- [ ] 10.3 Relire chaque scénario des trois deltas et noter, dans le compte rendu, le test ou la capture qui le prouve. Mettre à jour le statut de l'entrée 25 de `ROADMAP.md`.
+- [x] 10.3 Relire chaque scénario des trois deltas et noter, dans le compte rendu, le test ou la capture qui le prouve. Mettre à jour le statut de l'entrée 25 de `ROADMAP.md`.
 
 ## Workflow follow-up
 
